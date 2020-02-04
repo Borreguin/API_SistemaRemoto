@@ -319,6 +319,36 @@ class PI_point:
             df = to_df(summary.Value, tag=self.tag_name)
         return df
 
+    def time_filter(self, time_range,  expression, span=AFTimeSpan.Parse("1d"), time_unit="se"):
+        """
+        Returns a DataFrame with calculus of filter time where the condition (expression) is True
+        :param time_range: [AFTimeRange]
+        :param expression: "'UTR_ADELCA_IEC8705101.SV' = 'INDISPONIBLE'" Ex: str
+        :param span: [PIServer.span]
+        :param time_unit: ["se" (segundos), "mi" (minutos), "ho" (horas), "di" (días)]
+        :return:
+        """
+        value = self.filtered_summaries(time_range, summary_duration=span,
+                                  filter_expression= expression,
+                                  summary_type=AFSummaryTypes.Count,
+                                        # cuenta el numero de segundos
+                                  calc_basis=AFCalculationBasis.TimeWeighted,
+                                  sample_type=AFSampleType.ExpressionRecordedValues,
+                                        # con referencia al valor guardado (no interpolado)
+                                        # sample_interval=AFTimeSpan.Parse("15m"),
+                                  time_type=AFTimestampCalculation.Auto)
+        # calculo en minutos
+        if time_unit.upper() == "MI":
+            value[self.tag_name] = value[self.tag_name]/60
+
+        if time_unit.upper() == "HO":
+            value[self.tag_name] = value[self.tag_name] / 3600
+
+        if time_unit.upper() == "DI":
+            value[self.tag_name] = value[self.tag_name]/(3600*24)
+
+        return value
+
     def interpolated_value(self, timestamp):
         """
         Gets interpolated value in timestamp
@@ -447,7 +477,6 @@ def test():
                                   time_type=AFTimestampCalculation.Auto)
 
     print("end of script")
-
 
 
 if __name__ == "__main__":

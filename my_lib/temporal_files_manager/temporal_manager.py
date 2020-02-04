@@ -19,7 +19,7 @@ def root_path():
 
 
 def temporal_path():
-    return root_path() + 'static\\temp\\'
+    return os.path.join(root_path(), "temp")
 
 
 def retrieve_file(file_name, eval_time=None):

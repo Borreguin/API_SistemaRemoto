@@ -16,7 +16,8 @@ cl_tags_problema = "tags_con_novedades"
 cl_n_tags = "no_seniales"
 cl_name = "nombre"
 cl_weight = "peso"
-cl_period = "periodo_evaluación"
+cl_period_ini = "fecha_inicio"
+cl_period_end = "fecha_final"
 cl_n_minutos = "periodo_minutos"
 cl_u_negocio = "unidad_negocio"
 cl_json = "json_info"
@@ -34,7 +35,7 @@ class DBWriterDisponibilidad:
         # Our custom argument
         db = sqlite3.connect(filename)  # might need to use self.filename
         sql_str = f"CREATE TABLE IF NOT EXISTS detalle(id text NOT NULL UNIQUE, " \
-                  f"{cl_period} text, {cl_n_minutos} integer, " \
+                  f"{cl_period_ini} text, {cl_period_end} text, {cl_n_minutos} integer, " \
                   f"{cl_empresa} text, {cl_entidades} text, {cl_name} text, " \
                   f"{cl_n_tags} integer, {cl_disp_avg} numeric, " \
                   f"{cl_weight} numeric, {cl_perc_disp} numeric, {cl_json} text)"
@@ -42,14 +43,14 @@ class DBWriterDisponibilidad:
         db.commit()
 
         sql_str = f"CREATE TABLE IF NOT EXISTS resumen(id text NOT NULL UNIQUE, " \
-                  f"{cl_period} text, {cl_n_minutos} integer, " \
+                  f"{cl_period_ini} text,  {cl_period_end} text, {cl_n_minutos} integer, " \
                   f"{cl_configuration_archive} text, " \
                   f"{cl_n_tags} integer, {cl_perc_disp} numeric, {cl_json} text)"
         db.execute(sql_str)
         db.commit()
 
     def insert_or_replace_details(self, df_details: pd.DataFrame):
-        columns = [cl_period, cl_n_minutos, cl_empresa, cl_entidades, cl_name,
+        columns = [cl_period_ini, cl_period_end, cl_n_minutos, cl_empresa, cl_entidades, cl_name,
                    cl_n_tags, cl_disp_avg, cl_weight, cl_perc_disp, cl_json]
         columns.sort()
         c_val = 0
@@ -65,17 +66,19 @@ class DBWriterDisponibilidad:
 
         lst_error = list()
         for ix in df_details.index:
-            code = df_details[cl_period].loc[ix] + df_details[cl_empresa].loc[ix] + df_details[cl_entidades].loc[ix]
+            code = df_details[cl_period_ini].loc[ix] + df_details[cl_period_end].loc[ix] + \
+                   df_details[cl_empresa].loc[ix] + df_details[cl_entidades].loc[ix]
             hash_value = hashlib.md5(code.encode()).hexdigest()
             try:
-                sql_str = f'INSERT OR REPLACE INTO detalle(id, {cl_period}, {cl_n_minutos}, ' \
+                sql_str = f'INSERT OR REPLACE INTO detalle(id, {cl_period_ini}, {cl_period_end}, {cl_n_minutos}, ' \
                           f'{cl_empresa}, {cl_entidades}, {cl_name}, ' \
                           f'{cl_n_tags}, {cl_disp_avg}, {cl_weight}, ' \
                           f'{cl_perc_disp}, {cl_json}) VALUES(?,?,?,?,?,?,?,?,?,?,?)'
                 db.execute(sql_str,
                            (
                                hash_value,
-                               df_details[cl_period].loc[ix],
+                               df_details[cl_period_ini].loc[ix],
+                               df_details[cl_period_end].loc[ix],
                                df_details[cl_n_minutos].loc[ix],
                                df_details[cl_empresa].loc[ix],
                                df_details[cl_entidades].loc[ix],
@@ -97,7 +100,8 @@ class DBWriterDisponibilidad:
             return True, f"El detalle fue correctamente insertado en base de datos: [{db_path}][detalle]"
 
     def insert_or_replace_summary(self, df_summary: pd.DataFrame):
-        columns = [cl_period, cl_n_minutos, cl_configuration_archive, cl_n_tags, cl_perc_disp, cl_json]
+        columns = [cl_period_ini, cl_period_end, cl_n_minutos, cl_configuration_archive,
+                   cl_n_tags, cl_perc_disp, cl_json]
         columns.sort()
         c_val = 0
         for c in columns:
@@ -112,15 +116,17 @@ class DBWriterDisponibilidad:
 
         lst_error = list()
         for ix in df_summary.index:
-            code = df_summary[cl_period].loc[ix] + df_summary[cl_configuration_archive].loc[ix]
+            code = df_summary[cl_period_ini].loc[ix] + df_summary[cl_period_end].loc[ix] + \
+                   df_summary[cl_configuration_archive].loc[ix]
             hash_value = hashlib.md5(code.encode()).hexdigest()
             try:
-                db.execute(f'INSERT OR REPLACE INTO resumen(id, {cl_period}, {cl_n_minutos}, '
+                db.execute(f'INSERT OR REPLACE INTO resumen(id, {cl_period_ini}, {cl_period_end}, {cl_n_minutos}, '
                            f'{cl_configuration_archive}, {cl_n_tags}, {cl_perc_disp}, {cl_json}) '
                            'VALUES(?,?,?,?,?,?,?)',
                            (
                                hash_value,
-                               df_summary[cl_period].loc[ix],
+                               df_summary[cl_period_ini].loc[ix],
+                               df_summary[cl_period_end].loc[ix],
                                df_summary[cl_n_minutos].loc[ix],
                                df_summary[cl_configuration_archive].loc[ix],
                                df_summary[cl_n_tags].loc[ix],

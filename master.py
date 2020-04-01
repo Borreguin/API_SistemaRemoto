@@ -1,3 +1,24 @@
+"""
+Desarrollado en la Gerencia de Desarrollo Técnico
+by: Roberto Sánchez Febrero 2020
+motto:
+"Whatever you do, work at it with all your heart, as working for the Lord, not for human masters"
+Colossians 3:23
+
+1.	Nodo master:
+•	Lee el archivo master.xlsx
+•	Define las unidades de negocio a procesar y el directorio donde se encuentra el archivo referente
+    a dicha unidad de negocio. Ejemplo: “Unidad Negocio 1 > nodes/unidad_de_negocio_1.xls”
+•	Define el periodo a la que se ejecutará el cálculo de disponibilidad: inicio (“yyyy-mm-d1”) fin (“yyyy-mm-d2”)
+•	Elimina/reescribe los archivos temporales dentro del directorio: “temp”
+•	Crea nodos hijos mediante subprocesos distribuidos en los núcleos disponibles
+•	Ejecuta el script
+    “python node.py unidad_negocio.xls yyyy-mm-d1 yyyy-mm-d2 -s”
+•	Implementa un mecanismo que detecta la finalización de los nodos hijos
+•	Guarda en base de datos los resultados, la base de datos se encuentra en “/output/disponibilidad.db”
+
+"""
+
 import argparse, datetime as dt
 import io
 import subprocess as sb
@@ -10,7 +31,7 @@ import my_lib.db_writer as db_
 """ Variables globales"""
 script_path = os.path.dirname(os.path.abspath(__file__))
 master_path = os.path.join(script_path, "masters")
-temp_path = os.path.join(script_path, "temp")
+temp_path = os.path.join(script_path, "logs")
 pi_svr = pi.PIserver()
 time_range = None
 span = None
@@ -18,7 +39,7 @@ file_name = None
 
 """ configuración de logger """
 verbosity = False
-debug = False
+debug = True
 save_in_db = False
 lg = logging.getLogger("DEBUG")
 lg.addHandler(lu.SQLiteHandler())
@@ -38,7 +59,7 @@ cl_tags_problema = db_.cl_tags_problema
 cl_n_tags = db_.cl_n_tags
 cl_name = db_.cl_name
 cl_weight = db_.cl_weight
-cl_period = db_.cl_period
+cl_period = db_.cl_period_ini
 cl_n_minutos = db_.cl_n_minutos
 cl_json = db_.cl_json
 cl_empresa = db_.cl_empresa
@@ -60,7 +81,7 @@ def processing_master(_file_path: str, ini_date: dt.datetime, end_date: dt.datet
     global file_name
 
     start_time = dt.datetime.now()
-    """ Leyendo archivo Excel referente al nodo """
+    """ Leyendo archivo Excel referente al master """
     file_name = _file_path.split("\\")[-1]
     dict_df, msg = u.read_excel(_file_path)
     if dict_df is None:
@@ -106,11 +127,11 @@ def processing_master(_file_path: str, ini_date: dt.datetime, end_date: dt.datet
     for node in nodes:
         try:
             log_path = os.path.join(temp_path, node.replace("xlsx", "log"))
-            f = open(log_path, "r")
+            f = open(log_path, "r", encoding="utf8")
             print(f.read())
         except Exception as e:
             print(f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] "
-                  f"\t Problemas al procesar nodo [{node.replace('xlsx', '')}]")
+                  f"\t Problemas al procesar nodo [{node.replace('xlsx', '')}] \n" + str(e))
 
     run_time = dt.datetime.now() - start_time
     d_time = "{0}:{1}:{2}.{3}".format(int(run_time.seconds / 3600),

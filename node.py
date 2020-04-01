@@ -1,3 +1,22 @@
+"""
+Desarrollado en la Gerencia de Desarrollo Técnico
+by: Roberto Sánchez Febrero 2020
+motto:
+"Whatever you do, work at it with all your heart, as working for the Lord, not for human masters"
+Colossians 3:23
+
+2.	Nodo hijo:
+•	Recibe parámetros enviados por el nodo master usando la librería argparse: (ubicación del archivo Excel, fecha de cálculo, etc).
+•	Lee el archivo de nodo: “nodes/unidad_de_negocio.xls” correspondiente al nodo a ejecutar, y establece la fecha a realizar el cálculo.
+•	Las hojas de cálculo representan las subestaciones asociadas a cada unidad de negocio. Cada hoja es procesada mediante un hilo del proceso nodo hijo.
+•	Cada hoja de cálculo del archivo de nodo es leída a fin de obtener los nombres de las tags (variables) a procesar.
+•	Una vez ejecutado el nodo, genera un log de su ejecución
+•	Guarda en base de datos los resultados, la base de datos se encuentra en “/output/disponibilidad.db”
+
+
+"""
+
+
 import argparse, datetime as dt
 import queue
 import time
@@ -15,10 +34,11 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 node_path = os.path.join(script_path, "nodes")
 temp_path = os.path.join(script_path, "temp")
 pi_svr = pi.PIserver()
-time_range = None
-span = None
+time_range = None           # intervalo de tiempo en el que se desea calcular la disponibilidad  (2020-01-02 a 2020-01-02)
+span = None                 # periodo en el que se desea reportar la disponibilidad Ex: (1 día, 20 días, etc)
 file_name = None
-n_lines = 40
+n_lines = 40                # Para dar formato al log
+minutos_dia = 1440          # Constante que indica el número de minutos en el día
 
 """ configuración de logger """
 verbosity = False
@@ -42,7 +62,8 @@ cl_tags_problema = db_.cl_tags_problema
 cl_n_tags = db_.cl_n_tags
 cl_name = db_.cl_name
 cl_weight = db_.cl_weight
-cl_period = db_.cl_period
+cl_period_ini = db_.cl_period_ini
+cl_period_end = db_.cl_period_end
 cl_n_minutos = db_.cl_n_minutos
 cl_json = db_.cl_json
 cl_empresa = db_.cl_empresa
@@ -79,14 +100,15 @@ def saving_summary(df_details, n_times=0):
         return False, "Se ha intentado guardar el resumen más de 3 veces"
 
     try:
-        df_summary = DataFrame(columns=[cl_period, cl_n_minutos, cl_configuration_archive,
+        df_summary = DataFrame(columns=[cl_period_ini, cl_period_end, cl_n_minutos, cl_configuration_archive,
                                         cl_n_tags, cl_perc_disp, cl_json], index=[file_name])
 
         # Disponibilidad ponderada usando la ponderación y la disponibilidad promedio:
         df_details[cl_disp_ponderada] = df_details[cl_weight]*df_details[cl_disp_avg]
 
         # Configurando el DataFrame de resumen:
-        df_summary.loc[[file_name], [cl_period]] = df_details[cl_period].iloc[0]
+        df_summary.loc[[file_name], [cl_period_ini]] = df_details[cl_period_ini].iloc[0]
+        df_summary.loc[[file_name], [cl_period_end]] = df_details[cl_period_end].iloc[0]
         df_summary.loc[[file_name], [cl_n_minutos]] = df_details[cl_n_minutos].iloc[0]
         df_summary.loc[[file_name], [cl_configuration_archive]] = file_name
 
@@ -107,21 +129,27 @@ def saving_summary(df_details, n_times=0):
 def processing_tags(entity, tag_list, condition_list, q: queue.Queue = None):
     global time_range
     global span
-    acc_indispo = 0
-    n_tags = 0
-    fault_tags = list()
+    acc_indispo = 0             # indisponibilidad acumulada
+    n_tags = 0                  # número de tags procesadas
+    fault_tags = list()         # tags que no fueron procesadas adecuadamente
     if verbosity: print("Procesando [{0}] con [{1}] tags".format(entity, len(tag_list)))
     for tag, condition in zip(tag_list, condition_list):
         try:
+            # buscando la Tag en el servidor PI
             pt = pi.PI_point(pi_svr, tag)
             if pt.pt is None:
-                fault_tags.append(tag)
-                continue
+                fault_tags.append(tag)      # La tag no fue encontrada en el servidor PI
+                continue                    # continue con la siguiente tag
+            # creando la condición de indisponibilidad:
+            # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc.
             conditions = str(condition).split("#")
             expression = "'{tag_name}' = \"{condition}\"".format(tag_name=tag, condition=conditions[0].strip())
             for c in conditions[1:]:
                 expression += " OR '{tag_name}' = \"{condition}\"".format(tag_name=tag, condition=c.strip())
+
+            # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
             value = pt.time_filter(time_range, expression, span, time_unit="mi")
+            # acumulando el tiempo de indisponibilidad
             acc_indispo += value[tag].iloc[0]
             n_tags += 1
         except Exception as e:
@@ -204,16 +232,16 @@ def processing_node(_file_path: str, ini_date: dt.datetime, end_date: dt.datetim
 
     """ Recolectando información final desde los hilos """
     df_final = DataFrame(columns=[cl_name, cl_entidades, cl_indisp_acc, cl_n_tags,
-                                  cl_disp_avg, cl_perc_disp, cl_weight, cl_period,
+                                  cl_disp_avg, cl_perc_disp, cl_weight, cl_period_ini, cl_period_end,
                                   cl_n_minutos, cl_tags_problema],
                          index=range(n_threads))
 
     """ Calculando número de minutos en el periodo establecido """
     diff_time = end_date - ini_date
-    minutos_dia = 1440
+
     n_minutos = diff_time.days*minutos_dia + diff_time.seconds/60
-    desc = f"Proc. entidades [{file_name}]"
-    desc = desc.ljust(n_lines)
+    desc = f"Proc. entidades [{file_name}]".ljust(n_lines)              # descripción a presentar en barra de progreso
+
     for i in tqdm(range(n_threads), desc=desc[:n_lines], ncols=100):
         entity, indisp_acc, n_tags, fault_tags = out_q.get()
 
@@ -232,7 +260,8 @@ def processing_node(_file_path: str, ini_date: dt.datetime, end_date: dt.datetim
         if len(fault_tags) > 0:
             df_final.loc[[i],cl_tags_problema] = '\n'.join(fault_tags)
 
-    df_final[cl_period] = ini_date.strftime(yyyy_mm_dd_hh_mm_ss) + " @ " + end_date.strftime(yyyy_mm_dd_hh_mm_ss)
+    df_final[cl_period_ini] = ini_date.strftime(yyyy_mm_dd_hh_mm_ss)
+    df_final[cl_period_end] = end_date.strftime(yyyy_mm_dd_hh_mm_ss)
     df_final[cl_n_minutos] = n_minutos
     df_final[cl_weight] = df_final[cl_n_tags]/df_final[cl_n_tags].sum()
     df_final.sort_values(by=[cl_disp_avg], inplace=True)
@@ -265,7 +294,7 @@ def processing_node(_file_path: str, ini_date: dt.datetime, end_date: dt.datetim
         df_final[cl_entidades] = df_final.index
         _, msg_1 = saving_details(df_final)
         _, msg_2 = saving_summary(df_final)
-        print("\n"+ msg_1, "\n" + msg_2)
+        print("\n" + msg_1, "\n" + msg_2)
 
 
     msg = "\nProceso finalizado en: \t\t{0} \n" \

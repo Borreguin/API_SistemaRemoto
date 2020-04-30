@@ -26,7 +26,7 @@ class PIserver:
         piServers = PIServers()
         self.server = piServers.DefaultPIServer
 
-    def find_PI_point(self, tag_name:str):
+    def find_PI_point(self, tag_name: str):
         """
         Find a PI_point in PIserver
         https://techsupport.osisoft.com/Documentation/PI-AF-SDK/html/T_OSIsoft_AF_PI_PIPoint.htm
@@ -37,8 +37,8 @@ class PIserver:
         try:
             pt = PIPoint.FindPIPoint(self.server, tag_name)
         except Exception as e:
-            print(e)
-            print("[pi_connect] [{0}] not found".format(tag_name))
+            pass
+            # print("[pi_connect] [{0}] not found".format(tag_name))
         return pt
 
     def find_PI_point_list(self, list_tag_name: list) -> list:
@@ -53,78 +53,6 @@ class PIserver:
             pi_point = PI_point(self, tag_name=tag)
             pi_point_list.append(pi_point)
         return pi_point_list
-
-    @staticmethod
-    def time_range(ini_time, end_time):
-        """
-        AFTimeRange:
-        https://techsupport.osisoft.com/Documentation/PI-AF-SDK/Html/T_OSIsoft_AF_Time_AFTimeRange.htm
-        :param ini_time: initial time (yyyy-mm-dd HH:MM:SS) [str, datetime]
-        :param end_time: ending time (yyyy-mm-dd HH:MM:SS) [str, datetime]
-        :return: AFTimeRange
-        """
-        timerange = None
-        if isinstance(ini_time, datetime.datetime):
-            ini_time = ini_time.strftime("%Y-%m-%d %H:%M:%S")
-        if isinstance(end_time, datetime.datetime):
-            end_time = end_time.strftime("%Y-%m-%d %H:%M:%S")
-
-        try:
-            timerange = AFTimeRange(ini_time, end_time)
-        except Exception as e:
-            print(e)
-            print("[pi_connect] [{0}, {1}] no correct format".format(ini_time, end_time))
-        return timerange
-
-    @property
-    def time_range_for_today(self, ):
-        """
-        Time range of the current day from 0:00 to current time
-        :return: AFTimeRange
-        """
-        dt = datetime.datetime.now()
-        str_td = dt.strftime("%Y-%m-%d")
-        return AFTimeRange(str_td, str(dt))
-
-    @property
-    def time_range_for_today_all_day(self, ):
-        """
-        Time range of the current day from 0:00 to current time
-        :return: AFTimeRange
-        """
-        dt = datetime.datetime.now()
-        str_td = dt.strftime("%Y-%m-%d")
-        dt_fin = dt.date() + datetime.timedelta(days=1)
-        return AFTimeRange(str_td, dt_fin.strftime("%Y-%m-%d"))
-
-    @staticmethod
-    def start_and_time_of(time_range):
-        """
-        Gets the Start and End time of a AFTimeRange
-        :param time_range:  AFTimeRange(str_ini_date, str_end_date)
-        :return: Start and End time in format: yyyy-mm-dd HH:MM:SS [str, str]
-        """
-        assert isinstance(time_range, AFTimeRange)
-        return time_range.StartTime.ToString("yyyy-MM-dd HH:mm:s"), time_range.EndTime.ToString("yyyy-MM-dd HH:mm:s")
-
-    @staticmethod
-    def span(delta_time):
-        """
-        AFTimeSpan object
-        https://techsupport.osisoft.com/Documentation/PI-AF-SDK/Html/Overload_OSIsoft_AF_Time_AFTimeSpan_Parse.htm
-        https://techsupport.osisoft.com/Documentation/PI-AF-SDK/Html/M_OSIsoft_AF_Time_AFTimeSpan_Parse_1.htm
-        :param delta_time: ex: "30m" [str] Format according the following regular expressions:
-        [+|-]<number>[.<number>] <interval> { [+|-]<number>[.<number>] <interval> }* or
-        [+|-]{ hh | [hh][:[mm][:ss[.ff]]] }
-        :return: AFTimeSpan object
-        """
-        span = None
-        try:
-            span = AFTimeSpan.Parse(delta_time)
-        except Exception as e:
-            print(e)
-            print("[pi_connect] [{0}] no correct format for span value".format(delta_time))
-        return span
 
     def interpolated_of_tag_list(self, tag_list, time_range, span, numeric=False):
         """
@@ -273,12 +201,12 @@ class PI_point:
 
         return values
 
-    def filtered_summaries(self,  time_range, summary_duration=AFTimeSpan.Parse("15m"),
+    def filtered_summaries(self, time_range, summary_duration=AFTimeSpan.Parse("15m"),
                            # filter_expression= "'UTR_ADELCA_IEC8705101.SV' = 'INDISPONIBLE'",
-                           filter_expression= "'POMASQUI230JAMON_2_P.LINEA_RDV.AV' > 31",
-                           summary_type= AFSummaryTypes.Total,
-                           calc_basis= AFCalculationBasis.TimeWeighted,
-                           sample_type= AFSampleType.ExpressionRecordedValues,
+                           filter_expression="'POMASQUI230JAMON_2_P.LINEA_RDV.AV' > 31",
+                           summary_type=AFSummaryTypes.Total,
+                           calc_basis=AFCalculationBasis.TimeWeighted,
+                           sample_type=AFSampleType.ExpressionRecordedValues,
                            sample_interval=AFTimeSpan.Parse("15m"),
                            time_type=AFTimestampCalculation.Auto):
         """
@@ -309,17 +237,21 @@ class PI_point:
                                                sample_interval, time_type)
         except Exception as e:
             print(e)
-            print("[pi_connect] [{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}] no correct object".format(time_range, summary_duration,
-                                               filter_expression, summary_type,
-                                               calc_basis, sample_type,
-                                               sample_interval, time_type))
+            print("[pi_connect] [{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}] no correct object".format(time_range,
+                                                                                                   summary_duration,
+                                                                                                   filter_expression,
+                                                                                                   summary_type,
+                                                                                                   calc_basis,
+                                                                                                   sample_type,
+                                                                                                   sample_interval,
+                                                                                                   time_type))
 
         df = pd.DataFrame()
         for summary in values:
             df = to_df(summary.Value, tag=self.tag_name)
         return df
 
-    def time_filter(self, time_range,  expression, span=AFTimeSpan.Parse("1d"), time_unit="se"):
+    def time_filter(self, time_range, expression, span=AFTimeSpan.Parse("1d"), time_unit="se"):
         """
         Returns a DataFrame with calculus of filter time where the condition (expression) is True
         :param time_range: [AFTimeRange]
@@ -328,24 +260,30 @@ class PI_point:
         :param time_unit: ["se" (segundos), "mi" (minutos), "ho" (horas), "di" (días)]
         :return:
         """
+        if span is None:
+            start, end = _datetime_start_and_time_of(time_range)
+            t_delta = end - start
+            minutes = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
+            span = _span(str(minutes) + "m")
+
         value = self.filtered_summaries(time_range, summary_duration=span,
-                                  filter_expression= expression,
-                                  summary_type=AFSummaryTypes.Count,
+                                        filter_expression=expression,
+                                        summary_type=AFSummaryTypes.Count,
                                         # cuenta el numero de segundos
-                                  calc_basis=AFCalculationBasis.TimeWeighted,
-                                  sample_type=AFSampleType.ExpressionRecordedValues,
+                                        calc_basis=AFCalculationBasis.TimeWeighted,
+                                        sample_type=AFSampleType.ExpressionRecordedValues,
                                         # con referencia al valor guardado (no interpolado)
                                         # sample_interval=AFTimeSpan.Parse("15m"),
-                                  time_type=AFTimestampCalculation.Auto)
+                                        time_type=AFTimestampCalculation.Auto)
         # calculo en minutos
         if time_unit.upper() == "MI":
-            value[self.tag_name] = value[self.tag_name]/60
+            value[self.tag_name] = value[self.tag_name] / 60
 
         if time_unit.upper() == "HO":
             value[self.tag_name] = value[self.tag_name] / 3600
 
         if time_unit.upper() == "DI":
-            value[self.tag_name] = value[self.tag_name]/(3600*24)
+            value[self.tag_name] = value[self.tag_name] / (3600 * 24)
 
         return value
 
@@ -427,15 +365,99 @@ def to_df(values, tag, numeric=True):
     return df
 
 
+def _time_range(ini_time, end_time):
+    """
+    AFTimeRange:
+    https://techsupport.osisoft.com/Documentation/PI-AF-SDK/Html/T_OSIsoft_AF_Time_AFTimeRange.htm
+    :param ini_time: initial time (yyyy-mm-dd HH:MM:SS) [str, datetime]
+    :param end_time: ending time (yyyy-mm-dd HH:MM:SS) [str, datetime]
+    :return: AFTimeRange
+    """
+    timerange = None
+    if isinstance(ini_time, datetime.datetime):
+        ini_time = ini_time.strftime("%Y-%m-%d %H:%M:%S")
+    if isinstance(end_time, datetime.datetime):
+        end_time = end_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        timerange = AFTimeRange(ini_time, end_time)
+    except Exception as e:
+        print(e)
+        print("[pi_connect] [{0}, {1}] no correct format".format(ini_time, end_time))
+    return timerange
+
+
+def _time_range_for_today():
+    """
+    Time range of the current day from 0:00 to current time
+    :return: AFTimeRange
+    """
+    dt = datetime.datetime.now()
+    str_td = dt.strftime("%Y-%m-%d")
+    return AFTimeRange(str_td, dt.strftime("%Y-%m-%d %H:%M:%S"))
+
+
+def _time_range_for_today_all_day():
+    """
+    Time range of the current day from 0:00 to current time
+    :return: AFTimeRange
+    """
+    dt = datetime.datetime.now()
+    str_td = dt.strftime("%Y-%m-%d")
+    dt_fin = dt.date() + datetime.timedelta(days=1)
+    return AFTimeRange(str_td, dt_fin.strftime("%Y-%m-%d"))
+
+
+def _start_and_end_time_of(time_range):
+    """
+    Gets the Start and End time of a AFTimeRange
+    :param time_range:  AFTimeRange(str_ini_date, str_end_date)
+    :return: Start and End time in format: yyyy-mm-dd HH:MM:SS [str, str]
+    """
+    assert isinstance(time_range, AFTimeRange)
+    return time_range.StartTime.ToString("yyyy-MM-dd HH:mm:s"), time_range.EndTime.ToString("yyyy-MM-dd HH:mm:s")
+
+
+def _datetime_start_and_time_of(time_range):
+    """
+    Gets the Start and End time of a AFTimerange as datetime
+    :param time_range: AFTimeRange(str_ini_date, str_end_date)
+    :return: as datetime object
+    """
+    start, end = _start_and_end_time_of(time_range)
+    return datetime.datetime.strptime(start, "%Y-%m-%d %H:%M:%S"), \
+           datetime.datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+
+
+def _span(delta_time):
+    """
+    AFTimeSpan object
+    https://techsupport.osisoft.com/Documentation/PI-AF-SDK/Html/Overload_OSIsoft_AF_Time_AFTimeSpan_Parse.htm
+    https://techsupport.osisoft.com/Documentation/PI-AF-SDK/Html/M_OSIsoft_AF_Time_AFTimeSpan_Parse_1.htm
+    :param delta_time: ex: "30m" [str] Format according the following regular expressions:
+    [+|-]<number>[.<number>] <interval> { [+|-]<number>[.<number>] <interval> }* or
+    [+|-]{ hh | [hh][:[mm][:ss[.ff]]] }
+    :return: AFTimeSpan object
+    """
+    span = None
+    try:
+        span = AFTimeSpan.Parse(delta_time)
+    except Exception as e:
+        print(e)
+        print("[pi_connect] [{0}] no correct format for span value".format(delta_time))
+    return span
+
+
 def test():
     import matplotlib.pyplot as plt
     pi_svr = PIserver()
 
     tag_name = "CAL_DIST_QUITO_P.CARGA_TOT_1_CAL.AV"
     pt = PI_point(pi_svr, tag_name)
-    time_range = pi_svr.time_range("2018-02-12", "2018-02-14")
-    time_range2 = pi_svr.time_range("2019-09-01", "2019-09-30")
-    span = pi_svr.span("1h 30m")
+
+    time_range = _time_range("2018-02-12", "2018-02-14")
+    time_range2 = _time_range("2019-09-01", "2019-09-30")
+    span = _span("1h 30m")
 
     df1 = pt.interpolated(time_range, span)
     df2 = pt.plot_values(time_range, 200)
@@ -449,7 +471,6 @@ def test():
     df2.plot(title="Metodo plot values")
     df_raw.plot(title="Recorded values")
 
-
     tag_list = ['JAMONDIN230POMAS_1_P.LINEA_ICC.AV', 'POMASQUI230JAMON_1_P.LINEA_RDV.AV',
                 'POMASQUI230JAMON_2_P.LINEA_RDV.AV',
                 'JAMONDIN230POMAS_1_P.LINEA_ICC.AQ', 'POMASQUI230JAMON_1_P.LINEA_RDV.AQ']
@@ -458,7 +479,7 @@ def test():
     # plt.show()
 
     df_average = pt.average(time_range, span)
-    span = pi_svr.span("60m")
+    span = _span("60m")
     df_max = pt.max(time_range, span)
     print(df_average)
     print(df_max)
@@ -466,10 +487,9 @@ def test():
     df_max.plot(title="Max values")
     # plt.show()
 
-
     value = pt.filtered_summaries(time_range2, summary_duration=AFTimeSpan.Parse("1d"),
                                   # filter_expression= "'POMASQUI230JAMON_2_P.LINEA_RDV.AV' > 30",
-                                  filter_expression= "'TADAY230MOLIN_1_IT.LIN52-2152_IE4.EQ' = \"TE\"",
+                                  filter_expression="'TADAY230MOLIN_1_IT.LIN52-2152_IE4.EQ' = \"TE\"",
                                   summary_type=AFSummaryTypes.Count,
                                   calc_basis=AFCalculationBasis.TimeWeighted,
                                   sample_type=AFSampleType.ExpressionRecordedValues,

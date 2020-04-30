@@ -7,12 +7,26 @@ from my_lib.PI_connection import pi_connect as pi
 pi_svr = pi.PIserver()
 script_path = os.path.dirname(os.path.abspath(__file__))
 
+
 def valid_date(s):
     try:
         return dt.datetime.strptime(s, "%Y-%m-%d")
     except ValueError:
         msg = "El parámetro: '{0}' no es una fecha válida, (formato YYYY-MM-DD).".format(s)
         raise argparse.ArgumentTypeError(msg)
+
+
+def get_dates_for_last_month():
+    d_n = dt.datetime.now()
+    date_ini = dt.datetime(year=d_n.year, month=d_n.month-1, day=1)
+    date_end = dt.datetime(year=d_n.year, month=d_n.month, day=d_n.day) - dt.timedelta(days=d_n.day)
+    return date_ini, date_end
+
+def check_date_yyyy_mm_dd(s):
+    try:
+        return True, dt.datetime.strptime(s, "%Y-%m-%d")
+    except Exception as e:
+        return False, str(e)
 
 
 def read_excel(file_name):
@@ -79,7 +93,7 @@ def create_datetime_and_span(ini_date: dt.datetime, end_date: dt.datetime):
 
     """ Create time_range """
     try:
-        time_range_aux = pi_svr.time_range(str(ini_date), str(end_date))
+        time_range_aux = pi._time_range(str(ini_date), str(end_date))
     except Exception as e:
         return None, None, "No se puede crear el time_range con los siguientes parámetros [{0}, {1}]" \
             .format(ini_date, end_date)
@@ -88,7 +102,7 @@ def create_datetime_and_span(ini_date: dt.datetime, end_date: dt.datetime):
     span_aux = end_date - ini_date
     try:
         span_aux = max(1, span_aux.days)
-        span_aux = pi_svr.span(str(span_aux) + "d")
+        span_aux = pi._span(str(span_aux) + "d")
     except Exception as e:
         return None, None, "No se pudo calcular el span [{0}, {1}] \n ".format(ini_date, end_date) + str(e)
 

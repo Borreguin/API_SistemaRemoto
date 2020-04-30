@@ -1,0 +1,21 @@
+pydev debugger: process 23092 is connecting
+
+
+[2020-04-29 22:20:57] 	Procesando información de [ADELCA] en el periodo: 
+			[2020-03-01 00:00:00, 2020-03-31 00:00:00]
+Carg. entidades [ADELCA]                :   0%|                               | 0/1 [00:00<?, ?it/s]Carg. entidades [ADELCA]                : 100%|██████████████████████| 1/1 [00:00<00:00, 333.46it/s]
+Proc. entidades [ADELCA]                :   0%|                               | 0/1 [00:00<?, ?it/s]
+[ADELCA] [ADELCA S.A] Tags no encontradas: 
+ADELCA230MILAGRO_Q.LINEA_IEC.AQ
+ADELCA230BAR_1_V.BARRA_LINE_IEC.AQ
+ADELCA230T02_P.CARGA_IEC.AQ
+Proc. entidades [ADELCA]                : 100%|███████████████████████| 1/1 [00:04<00:00,  4.25s/it]Proc. entidades [ADELCA]                : 100%|███████████████████████| 1/1 [00:04<00:00,  4.25s/it]
+No se han procesado las siguientes tags: 
+ ADELCA230MILAGRO_Q.LINEA_IEC.AQ
+ADELCA230BAR_1_V.BARRA_LINE_IEC.AQ
+ADELCA230T02_P.CARGA_IEC.AQ
+
+[2020-04-29 22:21:11] 	 Proceso finalizado exitosamente
+Nodo [ADELCA] procesado en: 		0:00:04.265583 
+Numero de tags procesadas: 	8
+[0m

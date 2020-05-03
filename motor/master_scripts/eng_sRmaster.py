@@ -24,6 +24,7 @@ import io, os
 import subprocess as sb
 import traceback
 from settings import initial_settings as init
+from motor.node_scripts.eng_sRnode import eng_results
 # general variables
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
@@ -40,46 +41,83 @@ yyyy_mm_dd_hh_mm_ss = "%Y-%m-%d %H:%M:%S"
 lg = init.LogDefaultConfig("Report.log").logger
 
 
-def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime):
+def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
     mongo_config = init.MONGOCLIENT_SETTINGS
     connect(**mongo_config)
-
+    """ Buscando los nodos con los que se va a trabajar """
     all_nodes = SRNode.objects()
+    all_nodes = [n for n in all_nodes if n.activado]
     if len(all_nodes) == 0:
         msg = f"No hay nodos a procesar en db:[{mongo_config['db']}]"
         return False, None, msg
+    name_list = [n.nombre for n in all_nodes]
+    return run_node_list(name_list, report_ini_date, report_end_date, save_in_db, force)
+
+
+def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end_date: dt.datetime,
+                  save_in_db=False, force=False):
+
+    """ variables para llevar logs"""
+    msg = list()
+    results = dict()
+
+    """ check si es una lista de strings """
+    check = all(isinstance(l, str) for l in node_list_name)
+    if not check:
+        return False, results, "La lista 'node_list_name' no es una lista válida de nombre de nodoss"
+
     try:
         child_processes = list()
-        for node in all_nodes:
+        for node in node_list_name:
 
             # "Procesando cada nodo individual:
-            log_path = os.path.join(output_path, f'{node.nombre}.log')
+            log_path = os.path.join(output_path, f'{node}.log')
             with io.open(log_path, mode='wb') as out:
-                p = sb.Popen(
-                    ["python", node_script, node.nombre, report_ini_date.strftime(yyyy_mm_dd),
-                     report_end_date.strftime(yyyy_mm_dd), "--s"],
-                    stdout=out, stderr=out)
+                to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd),
+                          report_end_date.strftime(yyyy_mm_dd)]
+                if save_in_db:
+                    to_run += ["--s"]
+                if force:
+                    to_run += ["--f"]
+                p = sb.Popen(to_run, stdout=out, stderr=out)
             # empezando un proceso a la vez
             child_processes.append(p)
-            print(f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Empezando el nodo [{node.nombre}]")
+            to_print = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Empezando el nodo [{node}]"
+            print(to_print)
+            msg.append(to_print)
 
         # now you can join them together
         # uniendo todos los procesos juntos:
-        print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Procesando todos los nodos")
+        print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Procesando todos los nodos:")
         for cp in child_processes:
             cp.wait()
-
-        print(f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos")
+            # para dar seguimiento a los resultados:
+            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{cp.args[2]}]"
+            if cp.returncode in [0, 9]:
+                to_print = to_print.replace("#st", "OK   ")
+            elif cp.returncode in [8, 10]:
+                to_print = to_print.replace("#st", "WARN ")
+            else:
+                to_print = to_print.replace("#st","ERROR")
+            # details para identificar como finalizo el cálculo
+            details = [d[1] for d in eng_results if d[0] == cp.returncode]
+            results.update({str(cp.args[2]): details})
+            print(to_print)
+            msg.append(to_print)
+        to_print = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos"
+        print(to_print)
+        msg.append(to_print)
+        return True, results, msg
 
     except Exception as e:
         msg = f"No se pudo procesar todos los nodos \n [{str(e)}]\n [{traceback.format_exc()}]"
         lg.error(msg)
-        print(msg)
+        return False, None, (msg)
 
 
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()
-    run_all_nodes(report_ini_date, report_end_date)
+    run_all_nodes(report_ini_date, report_end_date, save_in_db=True)
 
 
 if __name__ == "__main__":

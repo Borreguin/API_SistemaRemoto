@@ -50,6 +50,21 @@ lg.setLevel(logging.WARNING)
 yyyy_mm_dd = "%Y-%m-%d"
 yyyy_mm_dd_hh_mm_ss = "%Y-%m-%d %H:%M:%S"
 
+# Tipos de errores:
+_0_ok = (0, "Nodo procesado correctamente")
+_1_inesperado = (1, "Error no determinado")
+_2_no_existe = (2, "No se encontro el nodo")
+_3_no_reconocido = (3, "Objeto nodo no reconocido")
+_4_no_hay_conexion = (4, "No es posible la conexión con el servidor PI")
+_5_no_posible_entidades = (5, "No se ha obtenido las entidades en el nodo")
+_6_no_existe_entidades = (6, "No hay entidades válidas a procesar en el nodo")
+_7_no_es_posible_guardar = (7, "No se ha podido guardar el reporte del nodo")
+_8_reporte_existente = (8, "No ha sido calculado, el reporte ya existe en DB")
+_9_guardado = (9, "Reporte guardado en base de datos")
+_10_sobrescrito = (10, "Reporte sobrescrito en base de datos")
+eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_conexion,
+               _5_no_posible_entidades, _6_no_existe_entidades, _7_no_es_posible_guardar,
+               _8_reporte_existente, _9_guardado, _10_sobrescrito]
 
 def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: dt.datetime):
 
@@ -162,29 +177,32 @@ def processing_tags(entity: SREntity, tag_list, condition_list, q: queue.Queue =
     return True, entity_report, fault_tags, msg
 
 
-def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False):
+def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
     """
     Procesa un nodo
+    :param force: Indica si debe forzar el guardado del reporte
     :param nodo: [str, SRNode] Nombre del nodo, o su respectivo objeto SRNode
     :param ini_date:  fecha inicial de reporte
     :param end_date:  fecha final de reporte
     :param save_in_db:  indica si se guardará en base de datos
-    :return:
+    :return: Success, NodeReport or None, (int msg, str msg)
     """
     global sR_node_name
     global report_ini_date
     global report_end_date
     global minutos_en_periodo
+    reporte_ya_existe = False
 
     if isinstance(nodo, str):
         connect(**mongo_config)
+        print(mongo_config)
         sR_node = SRNode.objects(nombre=nodo).first()
         if sR_node is None:
-            return False, None, f'No se encontro el nodo {nodo}'
+            return False, None, (_2_no_existe[0], f'No se encontro el nodo {nodo}')
     elif isinstance(nodo, SRNode):
         sR_node = nodo
     else:
-        return False, None, f'Objeto nodo no reconocido: {nodo}'
+        return False, None, (_3_no_reconocido[0], f'Objeto nodo no reconocido: {nodo}')
 
     """ Actualizar fecha y fin de reporte """
     sR_node_name = sR_node.nombre
@@ -196,13 +214,23 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     """ Creando reporte de nodo """
     node_report = SRNodeDetails(nodo=sR_node, fecha_inicio=report_ini_date, fecha_final=report_end_date)
 
+    if save_in_db or force:
+        """ Observar si existe el nodo en la base de datos """
+        node_report_db = SRNodeDetails.objects(id_report=node_report.id_report).first()
+        reporte_ya_existe = (node_report_db is not None)
+        """ Si se desea guardar y ya existe, no se continúa """
+        if reporte_ya_existe and save_in_db and not force:
+            return False, node_report_db, _8_reporte_existente
+        if reporte_ya_existe and force:
+            node_report_db.delete()
+
     """ verificar si existe conexión con el servidor PI: """
     try:
         pi_svr.server.Connect()
     except Exception as e:
         msg = f"No es posible la conexión con el servidor [{pi_svr.server.Name}] " \
               f"\n [{str(e)}] \n [{traceback.format_exc()}]"
-        return False, None, msg
+        return False, None, (_4_no_hay_conexion[0], msg)
 
     """ Seleccionando las entidades a trabajar (estado: activado) """
     """ entities es una lista de SREntity """
@@ -210,10 +238,12 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         entities = sR_node.entidades
         entities = [e for e in entities if e.activado]
     except Exception as e:
-        return False, None, f"No se ha obtenido las entidades en el nodo [{sR_node.nombre}]: \n{str(e)}"
+        return False, None, (_5_no_posible_entidades[0],
+                             "No se ha obtenido las entidades en el nodo [{sR_node.nombre}]: \n{str(e)}")
 
     if len(entities) == 0:
-        return False, None, f"No hay entidades a procesar en el nodo [{sR_node.nombre}]"
+        return False, None, (_6_no_existe_entidades[0],
+                             f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
 
     """ Trabajando con cada entidad, cada entidad tiene tags a calcular """
     out_q = queue.Queue()
@@ -262,7 +292,8 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         if not success or report_entidad.numero_tags == 0:
             fault_entities.append(report_entidad.nombre)
             msg = f"\nNo se pudo procesar la entidad [{report_entidad.nombre}]: \n{msg}"
-            print(msg) if verbosity else None
+            if report_entidad.numero_tags == 0:
+                msg += "No se encontro tags válidas"
             lg.error(msg)
             continue
 
@@ -278,18 +309,26 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     node_report.calculate_all()
     node_report.tiempo_calculo_segundos = run_time.total_seconds()
     if len(node_report.reportes_entidades) == 0:
-        return False, node_report, f"El nodo {sR_node_name} no contiene entidades válidas para procesar"
+        return False, node_report, (_6_no_existe_entidades[0],
+                                    f"El nodo {sR_node_name} no contiene entidades válidas para procesar")
+    msg_save = (0, str())
+    try:
+        if force or save_in_db:
+            if reporte_ya_existe:
+                msg_save = (_10_sobrescrito[0], "Reporte sobrescrito en base de datos")
+            else:
+                msg_save = (_9_guardado[0], "Reporte escrito en base de datos")
 
-    if save_in_db:
-        try:
-            node_report.save()
-        except Exception as e:
-            return False, fault_entities, \
-                   f"No se ha podido guardar el reporte del nodo {sR_node_name} debido a: \n {str(e)}"
+            node_report.save(force=True)
 
-    msg = f"\nNodo [{sR_node_name}] procesado en: \t\t{run_time} \n" \
+    except Exception as e:
+        return False, node_report, (_7_no_es_posible_guardar[0],
+                   f"No se ha podido guardar el reporte del nodo {sR_node_name} debido a: \n {str(e)}")
+
+
+    msg = f"{msg_save[1]}\nNodo [{sR_node_name}] procesado en: \t\t{run_time} \n" \
           f"Numero de tags procesadas: \t{node_report.numero_tags_total}"
-    return True, node_report, msg
+    return True, node_report, (msg_save[0], msg)
 
 
 def test():
@@ -332,12 +371,12 @@ def test():
                 test_consignaciones.save()
             # process this node:
             print(f"\nProcesando el nodo: {node.nombre}")
-            success, fault_entities, msg = processing_node(node, report_ini_date, report_end_date)
+            success, NodeReport, msg = processing_node(node, report_ini_date, report_end_date)
             if not success:
-                print(msg)
                 lg.error(msg)
-                continue
-            print(msg)
+            else:
+                print(msg)
+
         except Exception as e:
             msg = f"No se pudo procesar el nodo [{sR_node_name}] \n [{str(e)}]\n [{traceback.format_exc()}]"
             lg.error(msg)
@@ -375,32 +414,35 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--save", help="guardar resultado en base de datos",
                         required=False, action="store_true")
 
+    # modo guardar en base de datos
+    parser.add_argument("-f", "--force", help="forzar guardar resultado en base de datos",
+                        required=False, action="store_true")
+
     args = parser.parse_args()
+    print(args)
     verbosity = args.verbosity
-    save_in_db = args.save
     lg.name = "node: " + args.nombre
     success, node_report, msg = None, None, ""
 
-    print("\n[{0}] \tProcesando información de [{1}] en el periodo: \n\t\t\t[{2}, {3}]"
+    print("\n[{0}] \tProcesando información de [{1}] en el periodo:\t[{2}, {3}]"
           .format(dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss), args.nombre, args.fecha_ini, args.fecha_fin))
 
     try:
-
-        success, node_report, msg = processing_node(args.nombre, args.fecha_ini, args.fecha_fin)
+        success, node_report, msg = processing_node(args.nombre, args.fecha_ini, args.fecha_fin, args.save, args.force)
     except Exception as e:
         tb = traceback.format_exc()
         lg.error(f"El nodo [{args.nombre}] no ha sido procesado de manera exitosa: \n {str(e)} \n{tb}")
+        exit(1)
 
     if success:
         if len(node_report.entidades_fallidas) > 0:
             print("No se han procesado las siguientes entidades: \n{0}".format("\n".join(node_report.entidades_fallidas)))
         if len(node_report.tags_fallidas) > 0:
             print("No se han procesado las siguientes tags: \n {0}".format("\n".join(node_report.tags_fallidas)))
-        print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado exitosamente" + msg)
-        exit(0)
+        print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado exitosamente:\n {msg}")
+        exit(int(msg[0]))
     else:
-        msg = f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado con problemas. " \
-              f"Revise el archivo log en [/logs] {msg} \n"
-        lg.error(msg)
-        print(msg)
-        exit(-1)
+        to_print = f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado con problemas. " \
+              f"\nRevise el archivo log en [/output] \n{msg}\n"
+        lg.error(to_print)
+        exit(int(msg[0]))

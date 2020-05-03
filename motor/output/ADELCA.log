@@ -1,21 +1,10 @@
-pydev debugger: process 23092 is connecting
+Namespace(fecha_fin=datetime.datetime(2020, 1, 31, 0, 0), fecha_ini=datetime.datetime(2020, 1, 1, 0, 0), force=True, nombre='ADELCA', save=False, verbosity=False)
 
+[2020-05-03 13:06:08] 	Procesando información de [ADELCA] en el periodo:	[2020-01-01 00:00:00, 2020-01-31 00:00:00]
+{'host': 'localhost', 'port': 2717, 'db': 'DB_DISP_EMS_TEST'}
+Carg. entidades [ADELCA]                :   0%|                               | 0/1 [00:00<?, ?it/s]Carg. entidades [ADELCA]                : 100%|██████████████████████| 1/1 [00:00<00:00, 491.48it/s]
+Proc. entidades [ADELCA]                :   0%|                               | 0/1 [00:00<?, ?it/s]Proc. entidades [ADELCA]                : 100%|███████████████████████| 1/1 [00:03<00:00,  3.23s/it]Proc. entidades [ADELCA]                : 100%|███████████████████████| 1/1 [00:03<00:00,  3.23s/it]
 
-[2020-04-29 22:20:57] 	Procesando información de [ADELCA] en el periodo: 
-			[2020-03-01 00:00:00, 2020-03-31 00:00:00]
-Carg. entidades [ADELCA]                :   0%|                               | 0/1 [00:00<?, ?it/s]Carg. entidades [ADELCA]                : 100%|██████████████████████| 1/1 [00:00<00:00, 333.46it/s]
-Proc. entidades [ADELCA]                :   0%|                               | 0/1 [00:00<?, ?it/s]
-[ADELCA] [ADELCA S.A] Tags no encontradas: 
-ADELCA230MILAGRO_Q.LINEA_IEC.AQ
-ADELCA230BAR_1_V.BARRA_LINE_IEC.AQ
-ADELCA230T02_P.CARGA_IEC.AQ
-Proc. entidades [ADELCA]                : 100%|███████████████████████| 1/1 [00:04<00:00,  4.25s/it]Proc. entidades [ADELCA]                : 100%|███████████████████████| 1/1 [00:04<00:00,  4.25s/it]
-No se han procesado las siguientes tags: 
- ADELCA230MILAGRO_Q.LINEA_IEC.AQ
-ADELCA230BAR_1_V.BARRA_LINE_IEC.AQ
-ADELCA230T02_P.CARGA_IEC.AQ
-
-[2020-04-29 22:21:11] 	 Proceso finalizado exitosamente
-Nodo [ADELCA] procesado en: 		0:00:04.265583 
-Numero de tags procesadas: 	8
+[2020-05-03 13:06:12] 	 Proceso finalizado exitosamente:
+ (10, 'Reporte sobrescrito en base de datos\nNodo [ADELCA] procesado en: \t\t0:00:03.247234 \nNumero de tags procesadas: \t8')
 [0m

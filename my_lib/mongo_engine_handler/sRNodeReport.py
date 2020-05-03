@@ -77,6 +77,8 @@ class SRNodeDetails(Document):
     tiempo_calculo_segundos = FloatField(required=False)
     tags_fallidas = ListField(StringField(), default=[])
     entidades_fallidas = ListField(StringField(), default=[])
+    actualizado = DateTimeField(default=dt.datetime.now())
+    ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
     meta = {"collection": "REPORT|Nodos"}
 
     def __init__(self, *args, **values):

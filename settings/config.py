@@ -15,7 +15,7 @@ config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
 config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 config["ROTATING_FILE_HANDLER_HELP"] = "https://docs.python.org/3.6/library/logging.handlers.html#logging.handlers.RotatingFileHandler.__init__",
-config["ROTATING_FILE_HANDLER"] = {"filename": "app_flask.log", "maxBytes": 1000000, "backupCount": 5, "mode": "a"}
+config["ROTATING_FILE_HANDLER"] = {"filename": "app_flask.log", "maxBytes": 5000000, "backupCount": 5, "mode": "a"}
 config["ROTATING_FILE_HANDLER_LOG_LEVEL"] = {"value": "info", "options": ["error", "warning", "info", "debug", "off"]}
 
 # MONGODB CONFIGURATION

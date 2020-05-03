@@ -35,8 +35,12 @@ class sRemotoSerializers:
             "filter_expression": fields.String(required=True, description="Expresión de filtro indisponibilidad"),
             "activado": fields.Boolean(default=True, description="Activación de tag")})
 
-        self.list_tagname = api.model("Lista Tagname",{
+        self.list_tagname = api.model("Lista Tagname", {
             "tags": fields.List(fields.Nested(self.tagname))
+        })
+
+        self.tags = api.model("Lista nombre tags", {
+            "tags": fields.List(fields.String())
         })
 
         self.entidad = api.model("Configurar Entidad",

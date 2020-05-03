@@ -44,11 +44,11 @@ class SREntity(EmbeddedDocument):
         # relate an existing consignacion
         self.consignaciones = consignaciones
 
-    def add_or_replace_tags(self, tag_list:list):
+    def add_or_replace_tags(self, tag_list: list):
         # check si todas las tags son de tipo SRTag
         check_tags = [isinstance(t, SRTag) for t in tag_list]
         if not all(check_tags):
-            lg = [str(tag_list[i])  for i, v in enumerate(check_tags) if not v]
+            lg = [str(tag_list[i]) for i, v in enumerate(check_tags) if not v]
             return False, [f"La siguiente lista de tags no es compatible:"] + lg
 
         # unificando las lista y crear una sola
@@ -59,6 +59,20 @@ class SREntity(EmbeddedDocument):
         final_list = [unique_tags[k] for k in unique_tags.keys()]
         self.tags = final_list
         return True, "Insertada las tags de manera correcta"
+
+    def remove_tags(self, tag_list:list):
+        # check si todas las tags son de tipo str
+        check_tags = [isinstance(t, str) for t in tag_list]
+        if not all(check_tags):
+            lg = [str(tag_list[i]) for i, v in enumerate(check_tags) if not v]
+            return False, [f"La siguiente lista de tags no es compatible:"] + lg
+        n_remove = 0
+        for tag in tag_list:
+            new_list = [t for t in self.tags if t.tag_name != tag]
+            if len(new_list) != len(self.tags):
+                n_remove += 1
+            self.tags = new_list
+        return True, f"Se ha removido [{str(n_remove)}] tags"
 
     def get_consignments(self):
         try:
@@ -114,6 +128,12 @@ class SRNode(Document):
         if len(check) == 0:
             return False, f"No existe entidad [{nombre_entidad}] en nodo [{self.nombre}]"
         return self.entidades[check[0]].add_or_replace_tags(tag_list)
+
+    def remove_tags_in_entity(self, tag_list: list, nombre_entidad: str):
+        check = [i for i, e in enumerate(self.entidades) if nombre_entidad == e.nombre]
+        if len(check) == 0:
+            return False, f"No existe entidad [{nombre_entidad}] en nodo [{self.nombre}]"
+        return self.entidades[check[0]].remove_tags(tag_list)
 
     def delete_all(self):
         for e in self.entidades:

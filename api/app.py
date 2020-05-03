@@ -72,12 +72,7 @@ def configure_home_api_swagger():
 
 def configure_mongo_engine():
     global app
-    if init.FLASK_DEBUG:
-        mongo_client_settings = init.MONGOCLIENT_SETTINGS
-        mongo_client_settings.update(dict(db="DB_DISP_EMS_TEST"))
-    else:
-        mongo_client_settings = init.MONGOCLIENT_SETTINGS
-    app.config['MONGODB_SETTINGS'] = mongo_client_settings
+    app.config['MONGODB_SETTINGS'] = init.MONGOCLIENT_SETTINGS
     db = MongoEngine(app)
 
 

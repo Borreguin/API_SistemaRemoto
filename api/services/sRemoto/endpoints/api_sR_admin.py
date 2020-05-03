@@ -208,6 +208,23 @@ class SRTagsAPI(Resource):
         except Exception as e:
             return default_error_handler(e)
 
+    @api.expect(ser_from.tags)
+    def delete(self, nombre, entidad):
+        """ Elimina una lista de tags de una entidad en un nodo """
+        try:
+            tags = dict(request.json)["tags"]
+            nodo = SRNode.objects(nombre=nombre).first()
+            if nodo is None:
+                return dict(success=False, errors=f"No existe nodo [{nombre}]"), 404
+            success, msg = nodo.remove_tags_in_entity(tag_list=tags, nombre_entidad=entidad)
+            if success:
+                nodo.save()
+                correct, r = nodo.search_this(entidad)
+                return (r.to_dict(), 200) if correct else (r, 400)
+            return dict(success=False, errors=msg), 400
+        except Exception as e:
+            return default_error_handler(e)
+
 
 @ns.route('/nodo/<string:nombre>/<string:entidad>/tag')
 class SRTagAPI(Resource):

@@ -29,6 +29,10 @@ project_path = os.path.dirname(script_path)
 """ initial configuration """
 config = raw_config
 
+"""" FLASK CONFIGURATION """
+FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
+FLASK_DEBUG = config["FLASK_DEBUG"]
+
 """ Log file settings: """
 sR_node_name = config["ROTATING_FILE_HANDLER"]["filename"]
 log_path = os.path.join(project_path, "logs")
@@ -42,6 +46,9 @@ MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
 MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
 MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
 
+if FLASK_DEBUG:
+    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
+
 """ Configuration of Mongo Engine """
 """
 Connections in MongoEngine are registered globally and are identified with aliases
@@ -52,9 +59,7 @@ Therefore no need to initialize other connections.
 SUPPORTED_FORMAT_DATES = config["SUPPORTED_FORMAT_DATES"]
 DEFAULT_DATE_FORMAT = config["DEFAULT_DATE_FORMAT"]
 
-"""" FLASK CONFIGURATION """
-FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
-FLASK_DEBUG = config["FLASK_DEBUG"]
+
 
 RESTPLUS_SWAGGER_UI_DOC_EXPANSION = config["RESTPLUS_SWAGGER_UI_DOC_EXPANSION"]
 RESTPLUS_VALIDATE = config["RESTPLUS_VALIDATE"]

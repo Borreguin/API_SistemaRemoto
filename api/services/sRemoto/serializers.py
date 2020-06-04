@@ -45,16 +45,16 @@ class sRemotoSerializers:
 
         self.entidad = api.model("Configurar Entidad",
                 {
-                    "id_entidad": fields.String(required=True, description="Identificación única. Ex: Nombre UTR"),
-                    "nombre": fields.String(required=True, description="Nombre de la entidad"),
-                    "tipo": fields.String(required=True, description="Tipo de entidad: Central, Subestación, etc."),
+                    "id_utr": fields.String(required=True, description="Identificación única. Ex: Nombre UTR"),
+                    "entidad_nombre": fields.String(required=True, description="Nombre de la entity_list"),
+                    "entidad_tipo": fields.String(required=True, description="Tipo de entity_list: Unidad de Negocio, Empresa, etc"),
                     "tags": fields.List(fields.Nested(self.tagname)),
-                    "activado": fields.Boolean(default=True, description="Activación de la entidad")
+                    "activado": fields.Boolean(default=True, description="Activación de la entity_list")
                 })
 
         self.node = api.model("Configurar Nodo",{
             "nombre": fields.String(required=True, description="Nombre del nodo"),
-            "tipo": fields.String(required=True, description="Tipo de nodo. Ex: , Subestación, etc."),
+            "tipo": fields.String(required=True, description="Tipo de nodo. Ex: , Empresa, Subdivisión, etc."),
             "actualizado": fields.DateTime(default=dt.datetime.now()),
             "entidades": fields.List(fields.Nested(self.entidad)),
             "activado": fields.Boolean(default=True, description="Activación del nodo")

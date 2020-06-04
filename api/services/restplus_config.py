@@ -10,9 +10,15 @@ import traceback
 from flask import request
 import datetime as dt
 from flask_restplus import Api
-from settings.initial_settings import FLASK_DEBUG
 from sqlalchemy.orm.exc import NoResultFound
 from settings.initial_settings import LogDefaultConfig
+from settings.initial_settings import MONGOCLIENT_SETTINGS
+
+""" mongo client config"""
+from pymongo import MongoClient
+mongo_client = MONGOCLIENT_SETTINGS
+dup_key_error = "duplicate key error"
+import re
 
 api_log = LogDefaultConfig("api_services.log").logger
 
@@ -34,6 +40,32 @@ def default_error_handler(e):
     api_log.error(traceback.format_exc())
     if hasattr(e, 'data'):
         return dict(success=False, errors=str(e.data["errors"])), 400
+    if dup_key_error in str(e):
+
+        r_exp = "collection: (.*) index:"
+        db, collection = re.search(r_exp, str(e)).group(1).split(".")
+        db_c = mongo_client.pop('db', None)
+        if db != db_c:
+            print(f"No hay coincidencia de base de datos: se esperaba {db} pero se encuentra configurado: {db_c}")
+        r_exp = "key: {(.*)}"
+        key, value = re.search(r_exp, str(e)).group(1).strip().split(":")
+        filter_dict = {key.strip(): value.replace('"', "").strip()}
+        client = MongoClient(**mongo_client)
+        collection_to_search = client[db][collection]
+        conflict_object = collection_to_search.find_one(filter_dict)
+        client.close()
+        to_send = dict()
+        for n, k in enumerate(conflict_object.keys()):
+            if n > 4:
+                break
+            elif "id" not in k:
+                to_send[k] = str(conflict_object[k])
+        basic_info = to_send.copy()
+        to_send["más_detalles"] = str(conflict_object["_id"])
+        to_send["conflicto"] = filter_dict
+        return dict(success=False, errors=f"Elemento duplicado en "
+                                          f"conflicto con: {basic_info}",
+                    details=to_send), 409
     return dict(success=False, errors=str(e)), 500
 
     # if not FLASK_DEBUG:

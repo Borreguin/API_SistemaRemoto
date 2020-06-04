@@ -8,7 +8,7 @@ Colossians 3:23
 2.	Nodo hijo:
 •	Recibe parámetros enviados por el nodo master usando la librería argparse: (ubicación del archivo Excel, fecha de cálculo, etc).
 •	Lee las configuraciones de nodo: correspondiente al nodo a ejecutar, y establece la fecha a realizar el cálculo.
-•	Cada nodo contiene entidades (Subestaciones, centrales, etc). Cada entidad es procesada mediante un hilo del proceso nodo
+•	Cada nodo contiene entidades (Subestaciones, centrales, etc). Cada entity_list es procesada mediante un hilo del proceso nodo
 •	Cada nodo es leído desde la base de datos MongoDB
 •	Una vez ejecutado el nodo, genera un log de su ejecución
 •	Guarda en base de datos los resultados, la base de datos se encuentra en “../../_db/mongo_db”
@@ -99,29 +99,28 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
     return time_ranges
 
 
-def processing_tags(entity: SREntity, tag_list, condition_list, q: queue.Queue = None):
+def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None):
     global report_ini_date
     global report_end_date
     global minutos_en_periodo
 
-    # reporte de entidad
-    entity_report = SREntityDetails(id_entidad=entity.id_entidad, nombre=entity.nombre, tipo=entity.tipo,
-                                    periodo_evaluacion_minutos=minutos_en_periodo)
+    # reporte de entity_list
+    utr_report = SRUTRDetails(id_utr=utr.id_utr, utr_nombre=utr.utr_nombre, utr_tipo=utr.utr_tipo,
+                                 periodo_evaluacion_minutos=minutos_en_periodo)
 
     fault_tags = list()  # tags que no fueron procesadas adecuadamente
-    print(f"Procesando [{entity}] con [{len(tag_list)}] tags") if verbosity else None
+    print(f"Procesando [{utr.utr_nombre}] con [{len(tag_list)}] tags") if verbosity else None
 
     # obtener consignaciones en el periodo de tiempo para generar periodos de consulta
     # se debe exceptuar periodos de consignación
-    consDB = Consignments.objects(id=entity.consignaciones.id).first()
-    consignaciones_entidad = consDB.consignments_in_time_range(report_ini_date, report_end_date)
-    time_ranges = generate_time_ranges(consignaciones_entidad, report_ini_date, report_end_date)
+    consDB = Consignments.objects(id=utr.consignaciones.id).first()
+    consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
+    time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
 
     # adjuntar consignaciones tomadas en cuenta:
-    entity_report.consignaciones_detalle = consignaciones_entidad
+    utr_report.consignaciones_detalle = consignaciones_utr
 
-    # reporte de tags
-    tags_report = list()
+    # reportar por cada tag e incluir en el reporte utr
     msg = str()
     for tag, condition in zip(tag_list, condition_list):
         try:
@@ -163,18 +162,24 @@ def processing_tags(entity: SREntity, tag_list, condition_list, q: queue.Queue =
                 # acumulando el tiempo de indisponibilidad
                 indisponible_minutos += value[tag].iloc[0]
             tag_report = SRTagDetails(tag_name=tag, indisponible_minutos=indisponible_minutos)
-            tags_report.append(tag_report)
+            utr_report.indisponibilidad_detalle.append(tag_report)
 
         except Exception as e:
             fault_tags.append(tag)
             msg += f"[tag]: {str(e)} \n"
             print(msg) if verbosity else None
 
-    entity_report.indisponibilidad_detalle = tags_report
-    entity_report.calculate()
+    # la UTR no tiene tags válidas para el cálculo:
+    if len(utr_report.indisponibilidad_detalle) == 0:
+        if q is not None:
+            q.put((False, utr_report, fault_tags, f"La UTR {utr.id_utr} no tiene tags válidas"))
+        return False, utr_report, fault_tags, f"La UTR {utr.id_utr} no tiene tags válidas"
+
+    # All is OK until here:
+    utr_report.calculate()
     if q is not None:
-        q.put((True, entity_report, fault_tags, msg))
-    return True, entity_report, fault_tags, msg
+        q.put((True, utr_report, fault_tags, msg))
+    return True, utr_report, fault_tags, msg
 
 
 def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
@@ -212,11 +217,11 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     minutos_en_periodo = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
 
     """ Creando reporte de nodo """
-    node_report = SRNodeDetails(nodo=sR_node, fecha_inicio=report_ini_date, fecha_final=report_end_date)
+    report_node = SRNodeDetails(nodo=sR_node, fecha_inicio=report_ini_date, fecha_final=report_end_date)
 
     if save_in_db or force:
         """ Observar si existe el nodo en la base de datos """
-        node_report_db = SRNodeDetails.objects(id_report=node_report.id_report).first()
+        node_report_db = SRNodeDetails.objects(id_report=report_node.id_report).first()
         reporte_ya_existe = (node_report_db is not None)
         """ Si se desea guardar y ya existe, no se continúa """
         if reporte_ya_existe and save_in_db and not force:
@@ -245,71 +250,83 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         return False, None, (_6_no_existe_entidades[0],
                              f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
 
-    """ Trabajando con cada entidad, cada entidad tiene tags a calcular """
+    """ Trabajando con cada entity_list, cada entity_list tiene utrs que tienen tags a calcular """
     out_q = queue.Queue()
     fault_entities = list()
+    fault_utrs = list()
     start_time = dt.datetime.now()
     n_threads = 0
-    desc = f"Carg. entidades [{sR_node_name}]"
+    desc = f"Carg. UTRs [{sR_node_name}]"
     desc = desc.ljust(n_lines)
+    structure = dict()              # to keep in memory the report structure
     for entity in tqdm(entities, desc=desc[:n_lines], ncols=100):
 
         print(f"\nIniciando: [{entity.nombre}]") if verbosity else None
 
         """ Seleccionar la lista de tags a trabajar (activado: de la tag) """
+        UTRs = entity.utrs
+        for utr in UTRs:
+            # lista de tags a procesar y sus condiciones:
+            SR_Tags = utr.tags
+            lst_tags = [t.tag_name for t in SR_Tags if t.activado]
+            lst_conditions = [t.filter_expression for t in SR_Tags if t.activado]
 
-        # lista de tags a procesar y sus condiciones:
-        SR_Tags = entity.tags
-        lst_tags = [t.tag_name for t in SR_Tags if t.activado]
-        lst_conditions = [t.filter_expression for t in SR_Tags if t.activado]
-
-        # si existe una lista entonces empezar hilo para procesar
-        if len(lst_tags) > 0:
-            th.Thread(name=entity.id_entidad,
-                      target=processing_tags,
-                      kwargs={"entity": entity,
-                              "tag_list": lst_tags,
-                              "condition_list": lst_conditions,
-                              "q": out_q}).start()
-            n_threads += 1
-        else:
-            fault_entities.append(entity.nombre)
-
-    desc = f"Proc. entidades [{sR_node_name}]".ljust(n_lines)  # descripción a presentar en barra de progreso
+            # si existe una lista entonces empezar hilo para procesar
+            if len(lst_tags) > 0:
+                th.Thread(name=utr.id_utr,
+                          target=processing_tags,
+                          kwargs={"utr": utr,
+                                  "tag_list": lst_tags,
+                                  "condition_list": lst_conditions,
+                                  "q": out_q}).start()
+                n_threads += 1
+                structure[utr.id_utr] = entity.entidad_nombre
+            else:
+                fault_utrs.append(utr.id_utr)
 
     """ Recuperando los resultados de los informes """
-    reportes_entidades = list()
-    tags_fallidas = list()
-    for i in tqdm(range(n_threads), desc=desc[:n_lines], ncols=100):
-        success, report_entidad, fault_tags, msg = out_q.get()
+    desc = f"Proc. UTRs [{sR_node_name}]".ljust(n_lines)  # descripción a presentar en barra de progreso
+    # Estructura para recopilar los reportes usando la estructura en memoria
+    in_memory_reports = dict()
+    for entity in entities:
+        report_entity = SREntityDetails(entidad_nombre=entity.entidad_nombre, entidad_tipo=entity.entidad_tipo,
+                                        periodo_evaluacion_minutos=minutos_en_periodo)
+        in_memory_reports[entity.entidad_nombre] = report_entity
 
-        # Añadiendo resultados:
+    for i in tqdm(range(n_threads), desc=desc[:n_lines], ncols=100):
+        success, utr_report, fault_tags, msg = out_q.get()
+        report_node.tags_fallidas += fault_tags
+
+        # reportar tags no encontradas en log file
         if len(fault_tags) > 0:
-            warn = f"\n[{sR_node_name}] [{report_entidad.nombre}] Tags no encontradas: \n" + '\n'.join(fault_tags)
+            warn = f"\n[{sR_node_name}] [{utr_report.id_utr}] Tags no encontradas: \n" + '\n'.join(fault_tags)
             lg.warning(warn)
 
         # verificando que los resultados sean correctos:
-        if not success or report_entidad.numero_tags == 0:
-            fault_entities.append(report_entidad.nombre)
-            msg = f"\nNo se pudo procesar la entidad [{report_entidad.nombre}]: \n{msg}"
-            if report_entidad.numero_tags == 0:
+        if not success or utr_report.numero_tags == 0:
+            report_node.utr_fallidas.append(utr_report.id_utr)
+            msg = f"\nNo se pudo procesar la UTR [{utr_report.id_utr}]: \n{msg}"
+            if utr_report.numero_tags == 0:
                 msg += "No se encontro tags válidas"
             lg.error(msg)
             continue
 
-        # asignando reportes de entidad al informe general
-        reportes_entidades.append(report_entidad)
-        tags_fallidas = tags_fallidas + fault_tags
+        # este reporte utr se guarda en su reporte de entidad correspondiente
+        entity_name = structure[utr_report.id_utr]
+        in_memory_reports[entity_name].reportes_utrs.append(utr_report)
+
 
     """ Calculando tiempo de ejecución """
     run_time = dt.datetime.now() - start_time
-    node_report.reportes_entidades = reportes_entidades
-    node_report.tags_fallidas = tags_fallidas
-    node_report.entidades_fallidas = fault_entities
-    node_report.calculate_all()
-    node_report.tiempo_calculo_segundos = run_time.total_seconds()
-    if len(node_report.reportes_entidades) == 0:
-        return False, node_report, (_6_no_existe_entidades[0],
+    """ Calculando reporte en cada entidad """
+    [in_memory_reports[k].calculate() for k in in_memory_reports.keys()]
+    report_node.reportes_entidades = [in_memory_reports[k] for k in in_memory_reports.keys()
+                                      if in_memory_reports[k].numero_tags > 0]
+    report_node.entidades_fallidas = [r.entidad_nombre for r in report_node.reportes_entidades if r.numero_tags == 0]
+    report_node.calculate_all()
+    report_node.tiempo_calculo_segundos = run_time.total_seconds()
+    if report_node.numero_tags_total == 0:
+        return False, report_node, (_6_no_existe_entidades[0],
                                     f"El nodo {sR_node_name} no contiene entidades válidas para procesar")
     msg_save = (0, str())
     try:
@@ -319,19 +336,24 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
             else:
                 msg_save = (_9_guardado[0], "Reporte escrito en base de datos")
 
-            node_report.save(force=True)
+            report_node.save(force=True)
 
     except Exception as e:
-        return False, node_report, (_7_no_es_posible_guardar[0],
+        return False, report_node, (_7_no_es_posible_guardar[0],
                    f"No se ha podido guardar el reporte del nodo {sR_node_name} debido a: \n {str(e)}")
 
 
     msg = f"{msg_save[1]}\nNodo [{sR_node_name}] procesado en: \t\t{run_time} \n" \
-          f"Numero de tags procesadas: \t{node_report.numero_tags_total}"
-    return True, node_report, (msg_save[0], msg)
+          f"Numero de tags procesadas: \t{report_node.numero_tags_total}"
+    return True, report_node, (msg_save[0], msg)
 
 
 def test():
+    """
+    Este test prueba:
+        - todos los nodos en Nodos:
+    :return:
+    """
     import random as r
     global sR_node_name
     global report_ini_date
@@ -350,28 +372,32 @@ def test():
         print("No hay nodos a procesar")
         exit(-1)
 
+    all_nodes = [n for n in all_nodes if n.activado]
     for node in all_nodes:
         try:
             print(f">>> Procesando el nodo: \n{node}")
             for entidad in node.entidades:
                 print(f"--- Entidad: \n{entidad}")
-                # add consignments to test with:
-                test_consignaciones = Consignments.objects(id_entidad=entidad.id_entidad).first()
-                print(f"Insertando consignaciones ficticias para las pruebas")
-                for c in range(2):
-                    n_days = r.uniform(1, 60)
-                    no_consignacion = "Test_consignacion" + str(r.randint(1, 1000))
-                    t_ini_consig = report_end_date - dt.timedelta(days=n_days)
-                    t_end_consig = t_ini_consig + dt.timedelta(days=r.uniform(0, 4))
-                    consignacion = Consignment(fecha_inicio=t_ini_consig, fecha_final=t_end_consig,
-                                                    no_consignacion=no_consignacion)
-                    # insertando la consignación
-                    print(test_consignaciones.insert_consignments(consignacion))
-                    # [print(c) for c in consignaciones.consignaciones]
-                test_consignaciones.save()
+            """
+                for utr in entidad.utrs:
+                    # add consignments to test with:
+                    test_consignaciones = Consignments.objects(id_entidad=utr.id_utr).first()
+                    print(f"Insertando consignaciones ficticias para las pruebas")
+                    for c in range(2):
+                        n_days = r.uniform(1, 60)
+                        no_consignacion = "Test_consignacion" + str(r.randint(1, 1000))
+                        t_ini_consig = report_end_date - dt.timedelta(days=n_days)
+                        t_end_consig = t_ini_consig + dt.timedelta(days=r.uniform(0, 4))
+                        consignacion = Consignment(fecha_inicio=t_ini_consig, fecha_final=t_end_consig,
+                                                        no_consignacion=no_consignacion)
+                        # insertando la consignación
+                        print(test_consignaciones.insert_consignments(consignacion))
+                        # [print(c) for c in consignaciones.consignaciones]
+                    test_consignaciones.save()
+            """
             # process this node:
             print(f"\nProcesando el nodo: {node.nombre}")
-            success, NodeReport, msg = processing_node(node, report_ini_date, report_end_date)
+            success, NodeReport, msg = processing_node(node, report_ini_date, report_end_date, force=True)
             if not success:
                 lg.error(msg)
             else:
@@ -388,8 +414,8 @@ def test():
 
 if __name__ == "__main__":
 
-    #if debug:
-    #    test()
+    # if debug:
+    #     test()
 
     # Configurando para obtener parámetros exteriores:
     parser = argparse.ArgumentParser()
@@ -421,10 +447,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
     verbosity = args.verbosity
-    lg.name = "node: " + args.nombre
     success, node_report, msg = None, None, ""
 
-    print("\n[{0}] \tProcesando información de [{1}] en el periodo:\t[{2}, {3}]"
+    print("\n[{0}] \tProcesando información de [{1}] en el periodo: [{2}, {3}]"
           .format(dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss), args.nombre, args.fecha_ini, args.fecha_fin))
 
     try:

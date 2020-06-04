@@ -22,7 +22,6 @@ from api.services.sRemoto import parsers
 # importando clases para leer desde MongoDB
 from my_lib.mongo_engine_handler.sRNode import *
 
-
 # configurando logger y el servicio web
 log = init.LogDefaultConfig("ws_sRemoto.log").logger
 ns = api.namespace('admin-sRemoto', description='Relativas a la administración de nodos de Sistema Remoto')
@@ -34,7 +33,7 @@ api = ser_from.add_serializers()
 @ns.route('/nodo/<string:nombre>')
 class SRNodeAPI(Resource):
 
-    def get(self, nombre:str="Nombre del nodo a buscar"):
+    def get(self, nombre: str = "Nombre del nodo a buscar"):
         """ Busca si un nodo tipo SRNode existe en base de datos """
         try:
             nodo = SRNode.objects(nombre=nombre).first()
@@ -45,7 +44,7 @@ class SRNodeAPI(Resource):
             return default_error_handler(e)
 
     @api.expect(ser_from.name_update)
-    def put(self, nombre: str="Nombre de la entidad a cambiar"):
+    def put(self, nombre: str = "Nombre del nodo a cambiar"):
         """
         Actualiza el nombre de un nodo
         """
@@ -61,18 +60,49 @@ class SRNodeAPI(Resource):
         except Exception as e:
             return default_error_handler(e)
 
-    @api.expect(ser_from.name_delete)
-    def delete(self, nombre):
-        """ Elimina el nodo """
-        name_delete = request.json["eliminar_elemento"]
-        if name_delete != nombre:
-            return None, 400
+
+@ns.route('/nodo/id/<string:id>')
+class SRNodeIDAPI(Resource):
+    def delete(self, id):
+        """ Elimina nodo usando su ID como referencia """
         try:
-            nodo = SRNode.objects(nombre=name_delete).first()
+            nodo = SRNode.objects(id_node=id).first()
             if nodo is None:
-                return nodo, 404
-            nodo.delete_all()
+                return dict(success=False, errors="No se encontró el nodo"), 404
+            nodo.delete()
             return nodo.to_dict(), 200
+        except Exception as e:
+            return default_error_handler(e)
+
+    def put(self, id):
+        """ Actualiza cambios menores en el nodo (nombres, tipos, activaciones) """
+        try:
+            request_data = dict(request.json)
+            id_node = request_data["id_node"]
+            node = SRNode.objects(id_node=id_node).first()
+            if node is None:
+                return dict(success=False, errors="No se encontró el nodo"), 404
+            success, msg = node.update_summary_info(request_data)
+            if not success:
+                return dict(success=False, errors=msg), 400
+            node.save()
+            return node.to_summary(), 200
+        except Exception as e:
+            return default_error_handler(e)
+
+    def post(self, id):
+        """ Crea un nuevo nodo usando ID """
+        try:
+            request_data = dict(request.json)
+            nodo = SRNode.objects(id_node=id).first()
+            if nodo is not None:
+                return dict(success=False, errors="El nodo ya existe, no puede ser creado"), 400
+            nodo = SRNode(nombre=request_data["nombre"], tipo=request_data["tipo"], activado=request_data["activado"])
+            success, msg = nodo.update_summary_info(request_data)
+            if not success:
+                return dict(success=False, errors=msg), 400
+            nodo.save()
+            return nodo.to_summary(), 200
         except Exception as e:
             return default_error_handler(e)
 
@@ -80,7 +110,7 @@ class SRNodeAPI(Resource):
 @ns.route('/nodo')
 class PostSRNodeAPI(Resource):
     @api.expect(ser_from.node)
-    @api.response(400, 'No es posible crear este nodo')
+    @api.response(409, 'No es posible crear este nodo')
     def post(self):
         """ Crear un SRNode """
         try:
@@ -108,7 +138,7 @@ class SREntidadAPI(Resource):
                 return nodo, 404
             request_data = dict(request.json)
             entidad = SREntity(**request_data)
-            nodo.add_or_replace_entidad(entidad)
+            nodo.add_or_replace_entities(entidad)
             nodo.save()
             return nodo.to_dict(), 200
         except Exception as e:
@@ -137,7 +167,7 @@ class SREntidadAPI(Resource):
 
 
 @ns.route('/nodo/<string:nombre>/<string:entidad>')
-class SREntidadesAPI(Resource):
+class SREntidadesAPI1(Resource):
     @api.response(404, 'No se encuentran resultados')
     def get(self, nombre, entidad):
         """ Muestra la entidad
@@ -148,14 +178,14 @@ class SREntidadesAPI(Resource):
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
                 return nodo, 404
-            success, result = nodo.search_this(entidad)
+            success, result = nodo.search_entity(entidad)
             return (result.to_dict(), 200) if success else (dict(success=success, errors=result), 404)
         except Exception as e:
             return default_error_handler(e)
 
 
 @ns.route('/nodo/<string:nombre>/entidades')
-class SREntidadesAPI(Resource):
+class SREntidadesAPI2(Resource):
     @api.response(404, 'No se encuentran resultados')
     def get(self, nombre):
         """ Muestra las entidades de un nodo
@@ -187,7 +217,7 @@ class SRTagsAPI(Resource):
             success, msg = nodo.add_or_replace_tags_in_entity(tag_list, entidad)
             if success:
                 nodo.save()
-                correct, r = nodo.search_this(entidad)
+                correct, r = nodo.search_entity(entidad)
                 return (r.to_dict(), 200) if correct else (r, 400)
             return dict(success=False, errors=msg), 400
         except Exception as e:
@@ -219,7 +249,7 @@ class SRTagsAPI(Resource):
             success, msg = nodo.remove_tags_in_entity(tag_list=tags, nombre_entidad=entidad)
             if success:
                 nodo.save()
-                correct, r = nodo.search_this(entidad)
+                correct, r = nodo.search_entity(entidad)
                 return (r.to_dict(), 200) if correct else (r, 400)
             return dict(success=False, errors=msg), 400
         except Exception as e:
@@ -243,7 +273,7 @@ class SRTagAPI(Resource):
             success, msg = nodo.add_or_replace_tags_in_entity([tag], entidad)
             if success:
                 nodo.save()
-                correct, r = nodo.search_this(entidad)
+                correct, r = nodo.search_entity(entidad)
                 return (r.to_dict(), 200) if correct else (r, 400)
             return dict(success=False, errors=msg), 400
         except Exception as e:
@@ -295,30 +325,31 @@ class SRNodoAPI(Resource):
             if len(nodes) == 0:
                 return dict(success=False, errors=f"No hay nodos en la base de datos"), 404
             if filter is None or len(filter) == 0:
-                to_show = [n.nombre for n in nodes]
+                to_show = [n.to_summary() for n in nodes]
                 return to_show, 200
             filter = str(filter).replace("*", ".*")
             regex = re.compile(filter, re.IGNORECASE)
             nodes = SRNode.objects(nombre=regex)
-            to_show = [n.nombre for n in nodes]
+            to_show = [n.to_summary() for n in nodes]
             return to_show, 200
         except Exception as e:
             return default_error_handler(e)
 
 
-@ns.route('/nodo/<string:nombre>/<string:tipo>/from-excel')
+@ns.route('/nodo/<string:tipo>/<string:nombre>/from-excel')
 class SRNodeFromExcel(Resource):
     @api.response(200, 'El nodo ha sido ingresado de manera correcta')
     @api.expect(parsers.excel_upload)
     def post(self, nombre, tipo):
         """ Permite añadir un nodo mediante un archivo excel
             Si el nodo ha sido ingresado correctamente, entonces el código es 200
+            Si el nodo ya existe entonces error 409
         """
         try:
             args = parsers.excel_upload.parse_args()
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is not None:
-                return dict(success=False, errors=f"El nodo {[nombre]} ya existe"), 400
+                return dict(success=False, errors=f"El nodo {[nombre]} ya existe"), 409
 
             if args['excel_file'].mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
                                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
@@ -341,19 +372,22 @@ class SRNodeFromExcel(Resource):
                 # Guardar como archivo Excel con versionamiento
                 destination = os.path.join(init.EXCEL_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
-                return str(node), 200
+                return node.to_summary(), 200
             else:
                 return dict(success=False, errors="El formato del archivo no es aceptado"), 400
         except Exception as e:
             return default_error_handler(e)
 
     @api.response(200, 'El nodo ha sido actualizado de manera correcta')
-    @api.expect(parsers.excel_upload)
+    @api.expect(parsers.excel_upload_w_option)
     def put(self, nombre, tipo):
         """ Permite actualizar un nodo mediante un archivo excel
             Si el nodo no existe entonces error 404
+            DEFAULT:
             Si las entidades internas no existen entonces se añaden a la lista de entidades
-            Si las tags ya existen entonces estas son actualizadas, caso contrario se añaden a la lista de tags
+            Las tags se actualizan conforme a lo especificado en el archivo
+            REEMPLAZAR:
+            El nodo completo es sustituido de acuerdo a lo especificado en el archivo
         """
 
         args = parsers.excel_upload.parse_args()
@@ -379,13 +413,19 @@ class SRNodeFromExcel(Resource):
                 if not success:
                     return dict(success=False, errors=str(new_node)), 400
                 nodo.actualizado = dt.datetime.now()
-                for entidad in new_node.entidades:
-                    nodo.add_or_replace_entidad(entidad)
-                nodo.save()
+                if args['option'] is None:
+                    success, msg = nodo.add_or_replace_entities(new_node.entidades)
+                    if not success:
+                        return dict(success=False, errors=str(msg)), 400
+                    nodo.save()
+                elif str(args['option']).upper() == "REEMPLAZAR":
+                    nodo.delete()
+                    new_node.save()
+                    nodo = new_node
                 # Guardar como archivo Excel con versionamiento
                 destination = os.path.join(init.EXCEL_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
-                return str(nodo), 200
+                return nodo.to_summary(), 200
             else:
                 return dict(success=False, errors="El formato del archivo no es aceptado"), 400
         except Exception as e:
@@ -399,7 +439,7 @@ def save_excel_file_from_bytes(destination, stream_excel_file):
         first_file = destination.replace(".xls", "_1.xls")
         for i in range(n, 0, -1):
             file_n = destination.replace(f".xls", f"_{str(i)}.xls")
-            file_n_1 = destination.replace(f".xls", f"_{str(i+1)}.xls")
+            file_n_1 = destination.replace(f".xls", f"_{str(i + 1)}.xls")
             if os.path.exists(file_n):
                 os.rename(file_n, file_n_1)
         if os.path.exists(last_file):
@@ -413,3 +453,18 @@ def save_excel_file_from_bytes(destination, stream_excel_file):
 
     with open(destination, 'wb') as f:
         f.write(stream_excel_file)
+
+
+"""
+@ns.route('/upload')
+class UploadFile(Resource):
+    @api.response(200, 'Archivo subido correctamente')
+    @api.expect(parsers.file_upload)
+    def post(self):
+        try:
+            args = parsers.file_upload.parse_args()
+            print(args['file'].mimetype)
+            return dict(success=True), 200
+        except Exception as e:
+            return default_error_handler(e)
+"""

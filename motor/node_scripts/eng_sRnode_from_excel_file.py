@@ -239,7 +239,7 @@ def processing_node(_file_path: str, ini_date: dt.datetime, end_date: dt.datetim
     """ Definiendo entidades para trabajar """
     entities = list(df_main[cl_entidades])
 
-    """ Trabajando con cada entidad, cada entidad tiene tags a calcular """
+    """ Trabajando con cada entity_list, cada entity_list tiene tags a calcular """
     out_q = queue.Queue()
     fault_entities = list()
     start_time = dt.datetime.now()
@@ -258,7 +258,7 @@ def processing_node(_file_path: str, ini_date: dt.datetime, end_date: dt.datetim
             th.Thread(name=entity,
                       target=processing_tags,
                       kwargs={"entity": entity,
-                              "tag_list": lst_tags,
+                              "id_utr_list": lst_tags,
                               "condition_list": lst_conditions,
                               "q": out_q}).start()
             n_threads += 1
@@ -282,12 +282,12 @@ def processing_node(_file_path: str, ini_date: dt.datetime, end_date: dt.datetim
 
         # verificando que los resultados sean correctos:
         if not success or n_tags == 0:
-            msg = f"\nNo se pudo procesar la entidad [{entity}] debido a: \n {fault_tags}"
+            msg = f"\nNo se pudo procesar la entity_list [{entity}] debido a: \n {fault_tags}"
             print(msg)
             lg.error(msg)
             continue
 
-        # asignando nombre de la entidad
+        # asignando nombre de la entity_list
         name_entity = df_main[df_main[cl_entidades] == entity][cl_name].iloc[0]
         df_final[cl_name].loc[i] = name_entity
 

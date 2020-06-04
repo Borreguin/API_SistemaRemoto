@@ -17,6 +17,16 @@ excel_upload.add_argument('excel_file',
                          location='files',
                          required=True,
                          help='xls, xlsx file')
+excel_upload_w_option = excel_upload
+excel_upload_w_option.add_argument('option', type=str, required=False, help="'REEMPLAZAR' para sustituir por un nuevo nodo")
+
+file_upload = reqparse.RequestParser()
+file_upload.add_argument('file',
+                         type=werkzeug.datastructures.FileStorage,
+                         location='files',
+                         required=True,
+                         help='xls, xlsx file')
+
 
 """ parser for data range"""
 time_range = reqparse.RequestParser()
@@ -65,15 +75,15 @@ range_time_with_span_and_method.add_argument("method", type=str, help="./help/in
 
 """ arguments for registers service """
 tag_list = reqparse.RequestParser()
-tag_list.add_argument("tag_list", type=list, help="List of tag_names",
+tag_list.add_argument("id_utr_list", type=list, help="List of tag_names",
                       required=True, default=["dev1.tag1", "dev2.tag2", "dev3.tag3"])
 
-"""arguments for tag_list with time format"""
+"""arguments for id_utr_list with time format"""
 tag_list_w_time_format = tag_list.copy()
 tag_list_w_time_format.add_argument("format_time", type=str, required=False, default="%Y-%m-%d %H:%M:%S",
                         help="Format: " + str(fmt_time_list))
 
-""" arguments for tag_list, time_range and time_format """
+""" arguments for id_utr_list, time_range and time_format """
 tag_list_time_range_w_time_format = tag_list_w_time_format.copy()
 tag_list_time_range_w_time_format.add_argument("start_time", type=str, required=False,
                         default=start_time.strftime(fmt_time_default),

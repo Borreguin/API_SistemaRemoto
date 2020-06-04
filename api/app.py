@@ -20,6 +20,7 @@ from flask import request
 # namespaces: Todos los servicios de esta API
 from api.services.sRemoto.endpoints.api_sR_admin import ns as namespace_sR_admin
 from api.services.sRemoto.endpoints.api_sR_cal_disponibilidad import ns as namespace_sR_cal_disponibilidad
+from api.services.Diagrams.endpoints.api_diagrams import ns as namespace_diagrams
 
 """ global variables """
 app = Flask(__name__)                                                   # Flask application
@@ -65,6 +66,7 @@ def configure_home_api_swagger():
     # añadiendo los servicios de cálculo:
     api_p.add_namespace(namespace_sR_admin)
     api_p.add_namespace(namespace_sR_cal_disponibilidad)
+    api_p.add_namespace(namespace_diagrams)
 
     # registrando las rutas:
     app.register_blueprint(blueprint)

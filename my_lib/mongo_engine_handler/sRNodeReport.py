@@ -13,53 +13,99 @@ class SRTagDetails(EmbeddedDocument):
         return dict(tag_name=self.tag_name, indisponible_minutos=self.indisponible_minutos)
 
 
-class SREntityDetails(EmbeddedDocument):
-    id_entidad = StringField(required=True)
-    nombre = StringField(required=True)
-    tipo = StringField(required=True)
+class SRUTRDetails(EmbeddedDocument):
+    id_utr = StringField(required=True)
+    utr_nombre = StringField(required=True)
+    utr_tipo = StringField(required=True)
     indisponibilidad_acumulada_minutos = IntField(required=True)
-    indisponibilidad_detalle = ListField(EmbeddedDocumentField(SRTagDetails), required=True)
+    indisponibilidad_detalle = ListField(EmbeddedDocumentField(SRTagDetails), required=True, default=list())
     consignaciones_acumuladas_minutos = IntField(required=True, default=0)
     consignaciones_detalle = ListField(EmbeddedDocumentField(Consignment))
     numero_tags = IntField(required=True)
     periodo_evaluacion_minutos = IntField(required=True)
-    periodo_efectivo_minutos = IntField(required=True)
+    periodo_efectivo_minutos = IntField(required=True, default=0)
     # periodo_efectivo_minutos:
     # el periodo real a evaluar = periodo_evaluacion_minutos - consignaciones_acumuladas_minutos
-    disponibilidad_promedio_minutos = FloatField(required=True, min_value=0)
+    disponibilidad_promedio_minutos = FloatField(required=True, min_value=0, default=0)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=0, max_value=100, default=0)
     ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.calculate()
 
     def calculate(self):
         self.numero_tags = len(self.indisponibilidad_detalle)
         self.indisponibilidad_acumulada_minutos = sum([t.indisponible_minutos for t in self.indisponibilidad_detalle])
         self.consignaciones_acumuladas_minutos = sum([c.t_minutos for c in self.consignaciones_detalle])
         if self.periodo_evaluacion_minutos is None and len(self.indisponibilidad_detalle) > 0:
-            raise ValueError("Parámetro: 'periodo_efectivo_minutos' y 'indisponibilidad_detalle' son necesarios para el cálculo")
+            raise ValueError("Parámetro: 'periodo_efectivo_minutos' y 'indisponibilidad_detalle' son necesarios para "
+                             "el cálculo")
         if self.periodo_evaluacion_minutos is not None and self.numero_tags > 0:
             self.periodo_efectivo_minutos = self.periodo_evaluacion_minutos - self.consignaciones_acumuladas_minutos
             self.disponibilidad_promedio_minutos = self.periodo_efectivo_minutos - \
-                                               (self.indisponibilidad_acumulada_minutos/self.numero_tags)
+                                                   (self.indisponibilidad_acumulada_minutos / self.numero_tags)
             if self.periodo_efectivo_minutos > 0:
-                self.disponibilidad_promedio_porcentage = (self.disponibilidad_promedio_minutos/self.periodo_efectivo_minutos)*100
+                self.disponibilidad_promedio_porcentage = (self.disponibilidad_promedio_minutos
+                                                           / self.periodo_efectivo_minutos) * 100
 
     def __str__(self):
-        return f"{self.nombre}: [{len(self.indisponibilidad_detalle)}] tags " \
+        return f"{self.utr_nombre}: [{len(self.indisponibilidad_detalle)}] tags " \
                f"[{len(self.consignaciones_detalle)}] consig. " \
                f"(eval:{self.periodo_evaluacion_minutos} - cnsg:{self.consignaciones_acumuladas_minutos} = " \
-               f" eftv:{self.periodo_efectivo_minutos} => disp_avg:{round(self.disponibilidad_promedio_minutos,1)} " \
+               f" eftv:{self.periodo_efectivo_minutos} => disp_avg:{round(self.disponibilidad_promedio_minutos, 1)} " \
                f" %disp: {round(self.disponibilidad_promedio_porcentage, 2)})"
 
     def to_dict(self):
-        return dict(id_entidad=self.id_entidad, nombre=self.nombre, tipo=self.tipo,
-                    tag_details=[t.to_dict() for t in self.indisponibilidad_detalle], numero_tags=len(self.indisponibilidad_detalle),
+        return dict(id_entidad=self.id_utr, nombre=self.utr_nombre, tipo=self.utr_tipo,
+                    tag_details=[t.to_dict() for t in self.indisponibilidad_detalle],
+                    numero_tags=len(self.indisponibilidad_detalle),
                     indisponibilidad_acumulada_minutos=self.indisponibilidad_acumulada_minutos,
                     consignaciones=[c.to_dict() for c in self.consignaciones_detalle],
                     consignaciones_acumuladas_minutos=self.consignaciones_acumuladas_minutos,
+                    ponderacion=self.ponderacion)
+
+
+class SREntityDetails(EmbeddedDocument):
+    entidad_nombre = StringField(required=True)
+    entidad_tipo = StringField(required=True)
+    reportes_utrs = ListField(EmbeddedDocumentField(SRUTRDetails), required=True, default=list())
+    numero_tags = IntField(required=True, default=0)
+    periodo_evaluacion_minutos = IntField(required=True)
+    # el periodo real a evaluar = periodo_evaluacion_minutos - consignaciones_acumuladas_minutos
+    disponibilidad_promedio_ponderada_minutos = FloatField(required=True, min_value=0, default=0)
+    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=0, max_value=100, default=0)
+    ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def calculate(self):
+        self.numero_tags = sum([u.numero_tags for u in self.reportes_utrs])
+        if self.periodo_evaluacion_minutos is None and len(self.reportes_utrs) > 0:
+            raise ValueError("Parámetro: 'periodo_evaluacion_minutos' y 'reportes_utrs' son necesarios para el cálculo")
+
+        if self.numero_tags > 0:
+            # calculo de las ponderaciones de cada UTR usando el número de tags como criterio
+            for u in self.reportes_utrs:
+                u.ponderacion = u.numero_tags / self.numero_tags
+
+            self.disponibilidad_promedio_ponderada_porcentage = \
+                sum([u.ponderacion * u.disponibilidad_promedio_porcentage for u in self.reportes_utrs])
+            self.disponibilidad_promedio_ponderada_minutos = \
+                sum([int(u.ponderacion * u.disponibilidad_promedio_minutos) for u in self.reportes_utrs])
+
+    def __str__(self):
+        return f"{self.entidad_tipo}:{self.entidad_nombre} [{len(self.reportes_utrs)}] utrs " \
+               f"[{str(self.numero_tags)}] tags. " \
+               f"(%disp_avg_pond:{round(self.disponibilidad_promedio_ponderada_porcentage, 3)} " \
+               f" min_avg_pond:{round(self.disponibilidad_promedio_ponderada_minutos, 1)})"
+
+    def to_dict(self):
+        return dict(entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo, numero_tags=self.numero_tags,
+                    reportes_utrs=[r.to_dict() for r in self.reportes_utrs],
+                    disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
+                    disponibilidad_promedio_ponderada_minutos=self.disponibilidad_promedio_ponderada_minutos,
+                    periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
                     ponderacion=self.ponderacion)
 
 
@@ -72,10 +118,11 @@ class SRNodeDetails(Document):
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
     numero_tags_total = IntField(required=True)
-    reportes_entidades = ListField(EmbeddedDocumentField(SREntityDetails), required=True)
+    reportes_entidades = ListField(EmbeddedDocumentField(SREntityDetails), required=True, default=list())
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=0, max_value=100)
     tiempo_calculo_segundos = FloatField(required=False)
     tags_fallidas = ListField(StringField(), default=[])
+    utr_fallidas = ListField(StringField(), default=[])
     entidades_fallidas = ListField(StringField(), default=[])
     actualizado = DateTimeField(default=dt.datetime.now())
     ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
@@ -91,7 +138,6 @@ class SRNodeDetails(Document):
             self.id_report = hashlib.md5(id.encode()).hexdigest()
         self.calculate_all()
 
-
     def calculate_all(self):
         self.numero_tags_total = sum([e.numero_tags for e in self.reportes_entidades])
         t_delta = self.fecha_final - self.fecha_inicio
@@ -99,5 +145,6 @@ class SRNodeDetails(Document):
         for e in self.reportes_entidades:
             if self.numero_tags_total > 0:
                 e.ponderacion = e.numero_tags / self.numero_tags_total
-        self.disponibilidad_promedio_ponderada_porcentage = sum([e.ponderacion * e.disponibilidad_promedio_porcentage
-                                                                 for e in self.reportes_entidades])
+                self.disponibilidad_promedio_ponderada_porcentage = \
+                    sum([e.ponderacion * e.disponibilidad_promedio_ponderada_porcentage
+                         for e in self.reportes_entidades])

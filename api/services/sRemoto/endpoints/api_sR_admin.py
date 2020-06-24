@@ -370,7 +370,7 @@ class SRNodeFromExcel(Resource):
                 node.actualizado = dt.datetime.now()
                 node.save()
                 # Guardar como archivo Excel con versionamiento
-                destination = os.path.join(init.EXCEL_REPO, filename)
+                destination = os.path.join(init.SREMOTO_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
                 return node.to_summary(), 200
             else:
@@ -423,7 +423,7 @@ class SRNodeFromExcel(Resource):
                     new_node.save()
                     nodo = new_node
                 # Guardar como archivo Excel con versionamiento
-                destination = os.path.join(init.EXCEL_REPO, filename)
+                destination = os.path.join(init.SREMOTO_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
                 return nodo.to_summary(), 200
             else:
@@ -435,11 +435,11 @@ class SRNodeFromExcel(Resource):
 def save_excel_file_from_bytes(destination, stream_excel_file):
     try:
         n = 7
-        last_file = destination.replace(".xls", f"_{n}.xls")
-        first_file = destination.replace(".xls", "_1.xls")
+        last_file = destination.replace(".xls", f"@{n}.xls")
+        first_file = destination.replace(".xls", "@1.xls")
         for i in range(n, 0, -1):
-            file_n = destination.replace(f".xls", f"_{str(i)}.xls")
-            file_n_1 = destination.replace(f".xls", f"_{str(i + 1)}.xls")
+            file_n = destination.replace(f".xls", f"@{str(i)}.xls")
+            file_n_1 = destination.replace(f".xls", f"@{str(i + 1)}.xls")
             if os.path.exists(file_n):
                 os.rename(file_n, file_n_1)
         if os.path.exists(last_file):
@@ -448,7 +448,7 @@ def save_excel_file_from_bytes(destination, stream_excel_file):
             os.rename(destination, first_file)
 
     except Exception as e:
-        version = dt.datetime.now().strftime("_%Y-%b-%d_%Hh%M")
+        version = dt.datetime.now().strftime("@%Y-%b-%d_%Hh%M")
         destination = destination.replace(".xls", f"{version}.xls")
 
     with open(destination, 'wb') as f:

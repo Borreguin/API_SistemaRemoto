@@ -34,6 +34,7 @@ debug = init.FLASK_DEBUG
 
 """ Import clases for MongoDB """
 from my_lib.mongo_engine_handler.sRNodeReport import *
+from my_lib.mongo_engine_handler.sRFinalReport import *
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"
@@ -43,7 +44,11 @@ lg = init.LogDefaultConfig("Report.log").logger
 
 def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
     mongo_config = init.MONGOCLIENT_SETTINGS
-    connect(**mongo_config)
+    try:
+        connect(**mongo_config)
+    except Exception as e:
+        pass
+
     """ Buscando los nodos con los que se va a trabajar """
     all_nodes = SRNode.objects()
     all_nodes = [n for n in all_nodes if n.activado]
@@ -70,7 +75,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
         child_processes = list()
         for node in node_list_name:
 
-            # "Procesando cada nodo individual:
+            # Procesando cada nodo individual:
             log_path = os.path.join(output_path, f'{node}.log')
             with io.open(log_path, mode='wb') as out:
                 to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd),
@@ -89,24 +94,28 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
         # now you can join them together
         # uniendo todos los procesos juntos:
         print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Procesando todos los nodos:")
+        fails = 0
         for cp in child_processes:
             cp.wait()
             # para dar seguimiento a los resultados:
             to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{cp.args[2]}]"
-            if cp.returncode in [0, 9]:
+            if cp.returncode in [0, 9, 10]:
                 to_print = to_print.replace("#st", "OK   ")
-            elif cp.returncode in [8, 10]:
+            elif cp.returncode in [8]:
                 to_print = to_print.replace("#st", "WARN ")
             else:
                 to_print = to_print.replace("#st","ERROR")
+                fails += 1
             # details para identificar como finalizo el cálculo
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
-            results.update({str(cp.args[2]): details})
+            results.update({str(cp.args[2]): details[0]})
             print(to_print)
             msg.append(to_print)
         to_print = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos"
         print(to_print)
         msg.append(to_print)
+        if fails == len(child_processes):
+            return False, results, msg
         return True, results, msg
 
     except Exception as e:
@@ -115,9 +124,46 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
         return False, None, (msg)
 
 
+def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
+    # Connect if is needed
+    mongo_config = init.MONGOCLIENT_SETTINGS
+    try:
+        connect(**mongo_config)
+    except Exception as e:
+        print(e)
+
+    final_report = SRFinalReport(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+    final_report_v = SRFinalReport.objects(id_report=final_report.id_report).first()
+    report_exists = final_report_v is not None
+    if save_in_db and not force and report_exists:
+        return False, final_report_v, "El reporte ya existe en base de datos"
+
+    """ Buscando los nodos con los que se va a trabajar """
+    all_nodes = SRNode.objects()
+    all_nodes = [n for n in all_nodes if n.activado]
+    for node in all_nodes:
+        report_v = SRNodeDetails(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
+                                 fecha_final=report_end_date)
+        report = SRNodeDetails.objects(id_report=report_v.id_report).first()
+        if report is None:
+            final_report.novedades["nodos_fallidos"] +=1
+            continue
+        node_summary_report = SRNodeSummaryReport(**report.to_summary())
+        final_report.append_node_summary_report(node_summary_report)
+
+    final_report.calculate()
+    if report_exists and force:
+        final_report_v.delete()
+    # Save in database
+    final_report.save()
+
+    return True, final_report, "El reporte ha sido calculado exitosamente"
+
+
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()
-    run_all_nodes(report_ini_date, report_end_date, save_in_db=True)
+    # run_all_nodes(report_ini_date, report_end_date, save_in_db=True)
+    run_summary(report_ini_date, report_end_date)
 
 
 if __name__ == "__main__":

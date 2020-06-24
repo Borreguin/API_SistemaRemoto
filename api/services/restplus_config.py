@@ -30,6 +30,14 @@ api = Api(version='0.1', title='API - Cálculo de disponibilidad EMS',
           ordered=True)
 
 
+# Special JSON encoder for special cases:
+def custom_json_encoder(o):
+    # this deals with Datetime types:
+    if isinstance(o, dt.datetime):
+        return o.isoformat()
+
+
+
 @api.errorhandler(Exception)
 def default_error_handler(e):
     global api_log

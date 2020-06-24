@@ -21,6 +21,7 @@ import traceback
 
 from my_lib import utils as u
 from my_lib.PI_connection import pi_connect as pi
+from my_lib.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from settings import initial_settings as init
 import os, logging
 import threading as th
@@ -217,17 +218,28 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     minutos_en_periodo = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
 
     """ Creando reporte de nodo """
-    report_node = SRNodeDetails(nodo=sR_node, fecha_inicio=report_ini_date, fecha_final=report_end_date)
+    report_node = SRNodeDetails(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date, fecha_final=report_end_date)
+    status_node = TemporalProcessingStateReport(id_report=report_node.id_report, msg=f"Empezando cálculo del nodo: {sR_node_name}")
+    status_node.info["nombre"] = report_node.nombre
+    status_node.info["tipo"] = report_node.tipo
+    status_node.update_now()
 
     if save_in_db or force:
         """ Observar si existe el nodo en la base de datos """
-        node_report_db = SRNodeDetails.objects(id_report=report_node.id_report).first()
-        reporte_ya_existe = (node_report_db is not None)
-        """ Si se desea guardar y ya existe, no se continúa """
-        if reporte_ya_existe and save_in_db and not force:
-            return False, node_report_db, _8_reporte_existente
-        if reporte_ya_existe and force:
-            node_report_db.delete()
+        try:
+            node_report_db = SRNodeDetails.objects(id_report=report_node.id_report).first()
+            reporte_ya_existe = (node_report_db is not None)
+            """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
+            if reporte_ya_existe and save_in_db and not force:
+                status_node.finished()
+                status_node.msg = _8_reporte_existente[1]
+                status_node.update_now()
+                return False, node_report_db, _8_reporte_existente
+            if reporte_ya_existe and force:
+                node_report_db.delete()
+
+        except Exception as e:
+            print("Problema de concistencia en la base de datos")
 
     """ verificar si existe conexión con el servidor PI: """
     try:
@@ -235,6 +247,9 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     except Exception as e:
         msg = f"No es posible la conexión con el servidor [{pi_svr.server.Name}] " \
               f"\n [{str(e)}] \n [{traceback.format_exc()}]"
+        status_node.failed()
+        status_node.msg = _4_no_hay_conexion[1]
+        status_node.update_now()
         return False, None, (_4_no_hay_conexion[0], msg)
 
     """ Seleccionando las entidades a trabajar (estado: activado) """
@@ -243,10 +258,16 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         entities = sR_node.entidades
         entities = [e for e in entities if e.activado]
     except Exception as e:
+        status_node.failed()
+        status_node.msg = _5_no_posible_entidades[1]
+        status_node.update_now()
         return False, None, (_5_no_posible_entidades[0],
                              "No se ha obtenido las entidades en el nodo [{sR_node.nombre}]: \n{str(e)}")
 
     if len(entities) == 0:
+        status_node.failed()
+        status_node.msg = _6_no_existe_entidades[1]
+        status_node.update_now()
         return False, None, (_6_no_existe_entidades[0],
                              f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
 
@@ -297,6 +318,11 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         success, utr_report, fault_tags, msg = out_q.get()
         report_node.tags_fallidas += fault_tags
 
+        # reportar en base de datos:
+        status_node.msg = f"Procesando nodo {sR_node_name}"
+        status_node.percentage = round(i/n_threads, 2)
+        status_node.update_now()
+
         # reportar tags no encontradas en log file
         if len(fault_tags) > 0:
             warn = f"\n[{sR_node_name}] [{utr_report.id_utr}] Tags no encontradas: \n" + '\n'.join(fault_tags)
@@ -326,6 +352,9 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     report_node.calculate_all()
     report_node.tiempo_calculo_segundos = run_time.total_seconds()
     if report_node.numero_tags_total == 0:
+        status_node.failed()
+        status_node.msg = _6_no_existe_entidades[1]
+        status_node.update_now()
         return False, report_node, (_6_no_existe_entidades[0],
                                     f"El nodo {sR_node_name} no contiene entidades válidas para procesar")
     msg_save = (0, str())
@@ -339,12 +368,19 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
             report_node.save(force=True)
 
     except Exception as e:
+        status_node.failed()
+        status_node.msg = _7_no_es_posible_guardar[1]
+        status_node.update_now()
         return False, report_node, (_7_no_es_posible_guardar[0],
                    f"No se ha podido guardar el reporte del nodo {sR_node_name} debido a: \n {str(e)}")
 
 
     msg = f"{msg_save[1]}\nNodo [{sR_node_name}] procesado en: \t\t{run_time} \n" \
           f"Numero de tags procesadas: \t{report_node.numero_tags_total}"
+    status_node.finished()
+    status_node.msg = msg_save[1]
+    status_node.info["run_time_seconds"] = run_time.total_seconds()
+    status_node.update_now()
     return True, report_node, (msg_save[0], msg)
 
 
@@ -354,7 +390,6 @@ def test():
         - todos los nodos en Nodos:
     :return:
     """
-    import random as r
     global sR_node_name
     global report_ini_date
     global report_end_date
@@ -461,7 +496,8 @@ if __name__ == "__main__":
 
     if success:
         if len(node_report.entidades_fallidas) > 0:
-            print("No se han procesado las siguientes entidades: \n{0}".format("\n".join(node_report.entidades_fallidas)))
+            print("No se han procesado las siguientes entidades: \n{0}"
+                  .format("\n".join(node_report.entidades_fallidas)))
         if len(node_report.tags_fallidas) > 0:
             print("No se han procesado las siguientes tags: \n {0}".format("\n".join(node_report.tags_fallidas)))
         print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado exitosamente:\n {msg}")

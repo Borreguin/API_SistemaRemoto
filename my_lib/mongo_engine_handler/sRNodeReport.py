@@ -111,9 +111,9 @@ class SREntityDetails(EmbeddedDocument):
 
 class SRNodeDetails(Document):
     id_report = StringField(required=True, unique=True)
-    nodo = LazyReferenceField(SRNode, required=True, passthrough=True)
-    nombre = StringField(required=True)
-    tipo = StringField(required=True)
+    nodo = LazyReferenceField(SRNode, required=True, passthrough=False)
+    nombre = StringField(required=True, default=None)
+    tipo = StringField(required=True, default=None)
     periodo_evaluacion_minutos = IntField(required=True)
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
@@ -130,13 +130,11 @@ class SRNodeDetails(Document):
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
-        if self.nodo is not None:
-            self.nombre = self.nodo.nombre
-            self.tipo = self.nodo.tipo
+        if self.nombre is not None and self.tipo is not None:
             id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() \
-                 + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + self.fecha_final.strftime('%d-%m-%Y %H:%M')
+             + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + self.fecha_final.strftime('%d-%m-%Y %H:%M')
             self.id_report = hashlib.md5(id.encode()).hexdigest()
-        self.calculate_all()
+            self.calculate_all()
 
     def calculate_all(self):
         self.numero_tags_total = sum([e.numero_tags for e in self.reportes_entidades])
@@ -148,3 +146,33 @@ class SRNodeDetails(Document):
                 self.disponibilidad_promedio_ponderada_porcentage = \
                     sum([e.ponderacion * e.disponibilidad_promedio_ponderada_porcentage
                          for e in self.reportes_entidades])
+        self.reportes_entidades = sorted(self.reportes_entidades, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
+        for ix, entidad in enumerate(self.reportes_entidades):
+            reportes_utrs = sorted(entidad.reportes_utrs, key=lambda k: k["disponibilidad_promedio_porcentage"])
+            self.reportes_entidades[ix].reportes_utrs = reportes_utrs
+
+
+    def to_dict(self):
+        return dict(id_node=str(self.nodo.id), id_report=self.id_report, tipo=self.tipo, nombre=self.nombre,
+                    fecha_inicio=str(self.fecha_inicio),
+                    fecha_final=str(self.fecha_final), actualizado=str(self.actualizado),
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos,
+                    periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
+                    disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
+                    tags_fallidas=self.tags_fallidas, utr_fallidas=self.utr_fallidas,
+                    entidades_fallidas=self.entidades_fallidas,
+                    ponderacion=self.ponderacion,
+                    numero_tags_total=self.numero_tags_total,
+                    reportes_entidades=[r.to_dict() for r in self.reportes_entidades])
+
+    def to_summary(self):
+        novedades=dict(tags_fallidas=self.tags_fallidas, utr_fallidas=self.utr_fallidas,
+                    entidades_fallidas=self.entidades_fallidas)
+        n_entidades = len(self.reportes_entidades)
+        n_rtus = sum([len(e.reportes_utrs) for e in self.reportes_entidades])
+        procesamiento=dict(numero_tags_total=self.numero_tags_total, numero_utrs_procesadas=n_rtus,
+                           numero_entidades_procesadas=n_entidades)
+        return dict(id_report=self.id_report, nombre=self.nombre, tipo=self.tipo,
+                    disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
+                    novedades=novedades, procesamiento=procesamiento, actualizado=self.actualizado,
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos)

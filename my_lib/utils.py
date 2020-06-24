@@ -1,5 +1,7 @@
 import argparse, os
 import datetime as dt
+import hashlib
+
 import pandas as pd
 import pickle as pkl
 from my_lib.PI_connection import pi_connect as pi
@@ -18,9 +20,10 @@ def valid_date(s):
 
 def get_dates_for_last_month():
     d_n = dt.datetime.now()
-    date_ini = dt.datetime(year=d_n.year, month=d_n.month-1, day=1)
+    date_ini = dt.datetime(year=d_n.year, month=d_n.month - 1, day=1)
     date_end = dt.datetime(year=d_n.year, month=d_n.month, day=d_n.day) - dt.timedelta(days=d_n.day)
     return date_ini, date_end
+
 
 def check_date_yyyy_mm_dd(s):
     try:
@@ -85,12 +88,11 @@ def read_excel(file_name):
             return None, str(e)
     elif pkl_exists and last_time == file_time:
         with open(pkl_file, 'rb') as handle:
-            dt_excel= pkl.load(handle)
+            dt_excel = pkl.load(handle)
         return dt_excel, "[{0}] Leído correctamente".format(file_name)
 
 
 def create_datetime_and_span(ini_date: dt.datetime, end_date: dt.datetime):
-
     """ Create time_range """
     try:
         time_range_aux = pi._time_range(str(ini_date), str(end_date))
@@ -106,4 +108,43 @@ def create_datetime_and_span(ini_date: dt.datetime, end_date: dt.datetime):
     except Exception as e:
         return None, None, "No se pudo calcular el span [{0}, {1}] \n ".format(ini_date, end_date) + str(e)
 
-    return time_range_aux, span_aux, "Cálculo correcto de time_range y span [{0}, {1}, {2}]".format(ini_date, end_date, span_aux)
+    return time_range_aux, span_aux, "Cálculo correcto de time_range y span [{0}, {1}, {2}]".format(ini_date, end_date,
+                                                                                                    span_aux)
+
+
+def group_files(repo, files):
+    # let´s group files with similar name
+    to_work = [os.path.splitext(f)[0] for f in files]
+    groups = sorted(list(set([n.split("@")[0] for n in to_work])))
+    done_list = list()
+    result = dict()
+    for ix, group in enumerate(to_work):
+        if group in groups and to_work.index(group) not in done_list:
+            result[group] = [files[to_work.index(group)]]
+            done_list.append(to_work.index(group))
+        else:
+            continue
+        rest_list = [i for i in range(len(to_work)) if i not in done_list]
+        for iy in rest_list:
+            if group in to_work[iy] or to_work[iy] in group:
+                done_list.append(iy)
+                result[group].append(files[iy])
+
+    rest_list = [i for i in range(len(to_work)) if i not in done_list]
+    if len(rest_list) > 0:
+        for r in rest_list:
+            result[files[r]] = [files[r]]
+    final = dict()
+    for k in sorted(result.keys()):
+        final[k] = [dict(name=file,
+                         datetime=str(dt.datetime.fromtimestamp(os.path.getmtime(os.path.join(repo, file)))))
+                    for file in result[k]]
+
+    return final
+
+
+def get_id(params: list):
+    id = str()
+    for p in params:
+        id += str(p).lower().strip()
+    return hashlib.md5(id.encode()).hexdigest()

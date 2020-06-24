@@ -71,10 +71,18 @@ SQLALCHEMY_TRACK_MODIFICATIONS = config["SQLALCHEMY_TRACK_MODIFICATIONS"]
 
 """" EXCEL REPO CONFIGURATION """
 EXCEL_REPO = config["EXCEL_REPO"]
-EXCEL_REPO = os.path.join(project_path, EXCEL_REPO)
-if not os.path.exists(EXCEL_REPO):
-    os.makedirs(EXCEL_REPO)
+SREMOTO_REPO = config["SREMOTO_EXCEL_REPO"]
+SCENTRAL_REPO = config["SCENTRAL_EXCEL_REPO"]
+REPOS = [EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO]
+FINAL_REPO = list()
+for repo in REPOS:
+    this_repo = os.path.join(project_path, repo)
+    if not os.path.exists(this_repo):
+        os.makedirs(this_repo)
+    FINAL_REPO.append(this_repo)
 
+# getting the definitive path for each one in same order:
+EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO = FINAL_REPO
 
 class LogDefaultConfig():
     """

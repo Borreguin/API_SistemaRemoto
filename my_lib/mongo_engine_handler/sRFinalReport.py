@@ -15,7 +15,9 @@ class SRNodeSummaryReport(EmbeddedDocument):
     def to_dict(self):
         return dict(id_report=self.id_report, nombre=self.nombre, tipo=self.tipo,
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
-                    procesamiento=self.procesamiento, novedades=self.novedades, actualizado=str(self.actualizado))
+                    procesamiento=self.procesamiento, novedades=self.novedades,
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos,
+                    actualizado=str(self.actualizado))
 
 
 class SRFinalReport(Document):
@@ -27,6 +29,7 @@ class SRFinalReport(Document):
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=0, max_value=100)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=0, max_value=100)
     reportes_nodos = ListField(EmbeddedDocumentField(SRNodeSummaryReport))
+    tiempo_calculo_segundos = FloatField(default=0)
     procesamiento = DictField(default=dict(numero_tags_total=0, numero_utrs_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
     novedades = DictField(default=dict(tags_fallidas=0, utr_fallidas=0,
@@ -41,7 +44,8 @@ class SRFinalReport(Document):
         self.id_report = hashlib.md5(id.encode()).hexdigest()
         t_delta = self.fecha_final - self.fecha_inicio
         self.periodo_evaluacion_minutos = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
-        self.actualizado = dt.datetime.now()
+        if self.actualizado is None:
+            self.actualizado = dt.datetime.now()
 
     def append_node_summary_report(self, node_summary_report: SRNodeSummaryReport):
         self.reportes_nodos.append(node_summary_report)
@@ -88,6 +92,7 @@ class SRFinalReport(Document):
                     fecha_final=str(self.fecha_final), periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
-                    reportes_nodos=[r.to_dict() for r in self.reportes_nodos], procesamiento= self.procesamiento,
-                    novedades=self.novedades)
+                    reportes_nodos=[r.to_dict() for r in self.reportes_nodos], procesamiento=self.procesamiento,
+                    novedades=self.novedades, actualizado=str(self.actualizado),
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos)
 

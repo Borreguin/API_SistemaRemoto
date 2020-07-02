@@ -29,6 +29,12 @@ class TemporalProcessingStateReport(Document):
                     processing=self.processing, fail=self.fail,
                     finish=self.finish, info=self.info, msg=self.msg)
 
+    def to_summary(self):
+        return dict(id_report=self.id_report, percentage=self.percentage,
+                    created=str(self.created), modified=str(self.created),
+                    processing=self.processing, fail=self.fail,
+                    finish=self.finish, info=self.info, msg=self.msg)
+
     def finished(self):
         self.finish = True
         self.processing = False

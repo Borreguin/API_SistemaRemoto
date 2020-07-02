@@ -19,6 +19,8 @@ from api.services.sRemoto import serializers as srl
 from motor.master_scripts.eng_sRmaster import *
 from flask import request
 # importando clases para leer desde MongoDB
+from my_lib.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
+
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()
 
@@ -110,6 +112,7 @@ class Disponibilidad(Resource):
         except Exception as e:
             return default_error_handler(e)
 
+
 @api.errorhandler(Exception)
 @ns.route('/disponibilidad/nodos/<string:ini_date>/<string:end_date>')
 class DisponibilidadNodo(Resource):
@@ -169,15 +172,13 @@ class DisponibilidadNodo(Resource):
             elif not success1:
                 return dict(success=False, errors=result), 409
 
-
         except Exception as e:
             return default_error_handler(e)
 
     @staticmethod
     @api.expect(ser_from.nodos)
     def delete(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
-        """ Calcula si no existe la disponibilidad de los nodos especificados en la lista
-            Si ya existe reportes asociados a los nodos, estos <b>no son recalculados</b>
+        """ Elimina si existe la disponibilidad de los nodos especificados en la lista
             Fecha inicial formato:  <b>yyyy-mm-dd</b>
             Fecha final formato:    <b>yyyy-mm-dd</b>
         """
@@ -195,6 +196,7 @@ class DisponibilidadNodo(Resource):
                 if sR_node is None:
                     not_found.append(node)
                     continue
+                # delete details report fo this node
                 report_v = SRNodeDetails(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
                                          fecha_inicio=ini_date, fecha_final=end_date)
                 report = SRNodeDetails.objects(id_report=report_v.id_report).first()
@@ -203,9 +205,18 @@ class DisponibilidadNodo(Resource):
                     continue
                 report.delete()
                 deleted.append(node)
+                # delete status report if exists
+                status_report = TemporalProcessingStateReport.objects(id_report=report_v.id_report).first()
+                if status_report is not None:
+                    status_report.delete()
+
             if len(deleted) == 0:
                 return dict(success=False, deleted=deleted, not_found=not_found), 404
+            success, _, msg = run_summary(ini_date, end_date, save_in_db=True, force=True)
+            if not success:
+                return dict(success=False, deleted=[], not_found=not_found), 400
             return dict(success=True, deleted=deleted, not_found=not_found), 200
+
         except Exception as e:
             return default_error_handler(e)
 
@@ -233,6 +244,45 @@ class DisponibilidadNodo(Resource):
                 return dict(success=False, errors="No existe el cálculo para este nodo en la fecha indicada"), 400
             else:
                 return report.to_dict(), 200
+
+        except Exception as e:
+            return default_error_handler(e)
+
+
+@api.errorhandler(Exception)
+@ns.route('/estado/disponibilidad/<string:ini_date>/<string:end_date>')
+class DisponibilidadStatusNodo(Resource):
+    @staticmethod
+    def get(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+        """ Obtiene el estado del cálculo de los reportes de disponibilidad existentes en el periodo especificado
+            Nota: Este servicio es válido solamente al momento de consultar el estado de un cálculo en proceso
+            en otro contexto, este servicio no garantiza un comportamiento correcto
+            Fecha inicial formato:  <b>yyyy-mm-dd</b>
+            Fecha final formato:    <b>yyyy-mm-dd</b>
+        """
+        try:
+            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            if not success1 or not success2:
+                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+                return dict(success=False, errors=msg), 400
+            # check the existing nodes:
+            all_nodes = SRNode.objects()
+            all_nodes = [n for n in all_nodes if n.activado]
+            if len(all_nodes) == 0:
+                msg = f"No se ecnuentran nodos que procesar"
+                return dict(success=False, msg=msg), 404
+
+            # scan reports within this date range:
+            to_send = list()
+            for node in all_nodes:
+                v_report = SRNodeDetails(nodo=node, nombre=node.nombre, tipo=node.tipo,
+                                         fecha_inicio=ini_date, fecha_final=end_date)
+                tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
+                if tmp_report is None:
+                    continue
+                to_send.append(tmp_report.to_summary())
+            return dict(success=True, status=to_send), 200
 
         except Exception as e:
             return default_error_handler(e)

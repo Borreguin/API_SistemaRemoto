@@ -320,7 +320,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
 
         # reportar en base de datos:
         status_node.msg = f"Procesando nodo {sR_node_name}"
-        status_node.percentage = round(i/n_threads, 2)
+        status_node.percentage = round(i/n_threads*100, 2)
         status_node.update_now()
 
         # reportar tags no encontradas en log file

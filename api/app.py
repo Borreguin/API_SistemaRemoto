@@ -15,7 +15,7 @@ from settings import initial_settings as init
 from api.services.restplus_config import api as api_p
 import datetime as dt
 from flask import request
-
+from waitress import serve
 
 # namespaces: Todos los servicios de esta API
 from api.services.sRemoto.endpoints.api_sR_admin import ns as namespace_sR_admin
@@ -116,6 +116,8 @@ def main():
         print("WARNING!! El log de la base de datos MongoDB está activado. "
               "Esto puede llenar de manera rápida el espacio en disco")
 
+    # serve the application
+    serve(app, host='0.0.0.0', port=5000)
     app.run(debug=init.FLASK_DEBUG)
 
 

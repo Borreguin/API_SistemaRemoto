@@ -22,6 +22,7 @@ Colossians 3:23
 from my_lib import utils as u
 import io, os
 import subprocess as sb
+import datetime as dt
 import traceback
 from settings import initial_settings as init
 from motor.node_scripts.eng_sRnode import eng_results
@@ -40,9 +41,12 @@ from my_lib.mongo_engine_handler.sRFinalReport import *
 yyyy_mm_dd = "%Y-%m-%d"
 yyyy_mm_dd_hh_mm_ss = "%Y-%m-%d %H:%M:%S"
 lg = init.LogDefaultConfig("Report.log").logger
+start_time_script = dt.datetime.now()
 
 
 def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
+    global start_time_script
+    start_time_script = dt.datetime.now()
     mongo_config = init.MONGOCLIENT_SETTINGS
     try:
         connect(**mongo_config)
@@ -61,13 +65,15 @@ def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, sa
 
 def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end_date: dt.datetime,
                   save_in_db=False, force=False):
+    global start_time_script
+    start_time_script = dt.datetime.now()
 
     """ variables para llevar logs"""
     msg = list()
     results = dict()
 
     """ check si es una lista de strings """
-    check = all(isinstance(l, str) for l in node_list_name)
+    check = all(isinstance(li, str) for li in node_list_name)
     if not check:
         return False, results, "La lista 'node_list_name' no es una lista válida de nombre de nodoss"
 
@@ -104,7 +110,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
             elif cp.returncode in [8]:
                 to_print = to_print.replace("#st", "WARN ")
             else:
-                to_print = to_print.replace("#st","ERROR")
+                to_print = to_print.replace("#st", "ERROR")
                 fails += 1
             # details para identificar como finalizo el cálculo
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
@@ -121,7 +127,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
     except Exception as e:
         msg = f"No se pudo procesar todos los nodos \n [{str(e)}]\n [{traceback.format_exc()}]"
         lg.error(msg)
-        return False, None, (msg)
+        return False, None, msg
 
 
 def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
@@ -146,7 +152,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
                                  fecha_final=report_end_date)
         report = SRNodeDetails.objects(id_report=report_v.id_report).first()
         if report is None:
-            final_report.novedades["nodos_fallidos"] +=1
+            final_report.novedades["nodos_fallidos"] += 1
             continue
         node_summary_report = SRNodeSummaryReport(**report.to_summary())
         final_report.append_node_summary_report(node_summary_report)
@@ -154,6 +160,9 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     final_report.calculate()
     if report_exists and force:
         final_report_v.delete()
+    delta_time = dt.datetime.now() - start_time_script
+    final_report.actualizado = dt.datetime.now()
+    final_report.tiempo_calculo_segundos = delta_time.total_seconds()
     # Save in database
     final_report.save()
 

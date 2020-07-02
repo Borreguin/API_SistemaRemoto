@@ -56,7 +56,7 @@ class SRUTRDetails(EmbeddedDocument):
                f" %disp: {round(self.disponibilidad_promedio_porcentage, 2)})"
 
     def to_dict(self):
-        return dict(id_entidad=self.id_utr, nombre=self.utr_nombre, tipo=self.utr_tipo,
+        return dict(id_utr=self.id_utr, nombre=self.utr_nombre, tipo=self.utr_tipo,
                     tag_details=[t.to_dict() for t in self.indisponibilidad_detalle],
                     numero_tags=len(self.indisponibilidad_detalle),
                     indisponibilidad_acumulada_minutos=self.indisponibilidad_acumulada_minutos,

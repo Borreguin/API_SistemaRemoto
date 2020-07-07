@@ -11,8 +11,12 @@ import os, sys
 from flask import Blueprint
 from flask_mongoengine import MongoEngine
 # añadiendo a sys el path del proyecto:
+# permitiendo el uso de librerías propias:
 api_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(api_path)
+sys.path.append(api_path)
+sys.path.append(project_path)
+
 from settings import initial_settings as init
 # importando la configuración general de la API
 from api.services.restplus_config import api as api_p

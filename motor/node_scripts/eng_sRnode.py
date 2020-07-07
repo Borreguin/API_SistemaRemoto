@@ -346,8 +346,11 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     run_time = dt.datetime.now() - start_time
     """ Calculando reporte en cada entidad """
     [in_memory_reports[k].calculate() for k in in_memory_reports.keys()]
+    [in_memory_reports[k].reportes_utrs.sort(key=lambda x: x.disponibilidad_promedio_porcentage)
+     for k in in_memory_reports.keys()]
     report_node.reportes_entidades = [in_memory_reports[k] for k in in_memory_reports.keys()
                                       if in_memory_reports[k].numero_tags > 0]
+    report_node.reportes_entidades.sort(key=lambda x:x.disponibilidad_promedio_ponderada_porcentage)
     report_node.entidades_fallidas = [r.entidad_nombre for r in report_node.reportes_entidades if r.numero_tags == 0]
     report_node.calculate_all()
     report_node.tiempo_calculo_segundos = run_time.total_seconds()

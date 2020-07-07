@@ -31,7 +31,11 @@ config = raw_config
 
 """" FLASK CONFIGURATION """
 FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
-FLASK_DEBUG = config["FLASK_DEBUG"]
+production_path = os.path.join(script_path, "Production_server.txt")
+if os.path.exists(production_path):
+    FLASK_DEBUG = False
+else:
+    FLASK_DEBUG = config["FLASK_DEBUG"]
 
 """ Log file settings: """
 sR_node_name = config["ROTATING_FILE_HANDLER"]["filename"]

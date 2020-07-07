@@ -41,6 +41,10 @@ class SRUTRDetails(EmbeddedDocument):
             raise ValueError("Parámetro: 'periodo_efectivo_minutos' y 'indisponibilidad_detalle' son necesarios para "
                              "el cálculo")
         if self.periodo_evaluacion_minutos is not None and self.numero_tags > 0:
+            # ordenar el reporte de tags:
+            self.indisponibilidad_detalle = sorted(self.indisponibilidad_detalle,
+                                                   key=lambda k:k['indisponible_minutos'],
+                                                   reverse=True)
             self.periodo_efectivo_minutos = self.periodo_evaluacion_minutos - self.consignaciones_acumuladas_minutos
             self.disponibilidad_promedio_minutos = self.periodo_efectivo_minutos - \
                                                    (self.indisponibilidad_acumulada_minutos / self.numero_tags)
@@ -62,6 +66,7 @@ class SRUTRDetails(EmbeddedDocument):
                     indisponibilidad_acumulada_minutos=self.indisponibilidad_acumulada_minutos,
                     consignaciones=[c.to_dict() for c in self.consignaciones_detalle],
                     consignaciones_acumuladas_minutos=self.consignaciones_acumuladas_minutos,
+                    disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
                     ponderacion=self.ponderacion)
 
 

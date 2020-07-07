@@ -7,9 +7,12 @@
 """
 from flask import Flask
 from flask import send_from_directory
-import os
+import os, sys
 from flask import Blueprint
 from flask_mongoengine import MongoEngine
+# añadiendo a sys el path del proyecto:
+api_path = os.path.dirname(os.path.abspath(__file__))
+project_path = os.path.dirname(api_path)
 from settings import initial_settings as init
 # importando la configuración general de la API
 from api.services.restplus_config import api as api_p
@@ -117,8 +120,10 @@ def main():
               "Esto puede llenar de manera rápida el espacio en disco")
 
     # serve the application
-    serve(app, host='0.0.0.0', port=5000)
-    app.run(debug=init.FLASK_DEBUG)
+    if init.FLASK_DEBUG:
+        app.run(debug=init.FLASK_DEBUG)
+    else:
+        serve(app, host='0.0.0.0', port=5000)
 
 
 if __name__ == "__main__":

@@ -25,13 +25,13 @@ from .config import config as raw_config
 """ script path"""
 script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
-
+print("Loading configurations from: " + script_path)
 """ initial configuration """
 config = raw_config
 
 """" FLASK CONFIGURATION """
 FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
-production_path = os.path.join(project_path, "Production_server.txt")
+production_path = os.path.join(script_path, "Production_server.txt")
 print(production_path, os.path.exists(production_path))
 if os.path.exists(production_path):
     FLASK_DEBUG = False

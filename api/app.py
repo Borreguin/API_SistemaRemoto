@@ -116,7 +116,11 @@ def main():
     # añadiendo los servicios necesarios:
     configure_home_api_swagger()
     # iniciando la API
-    log.info('>>>>> Starting development server at http://{}/services/ <<<<<'.format(app.config['SERVER_NAME']))
+    if init.FLASK_DEBUG:
+        log.info('>>>>> Starting development server<<<<<')
+    else:
+        log.info(">>>>> Starting production server <<<<<")
+
     # iniciando base de datos Mongo
     configure_mongo_engine()
     if init.MONGO_LOG_LEVEL == "ON":

@@ -32,6 +32,7 @@ config = raw_config
 """" FLASK CONFIGURATION """
 FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
 production_path = os.path.join(project_path, "Production_server.txt")
+print(production_path, os.path.exists(production_path))
 if os.path.exists(production_path):
     FLASK_DEBUG = False
 else:

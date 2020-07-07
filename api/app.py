@@ -131,7 +131,7 @@ def main():
     if init.FLASK_DEBUG:
         app.run(debug=init.FLASK_DEBUG)
     else:
-        serve(app, host='0.0.0.0', port=5000)
+        serve(app, host='0.0.0.0', port=7820)
 
 
 if __name__ == "__main__":

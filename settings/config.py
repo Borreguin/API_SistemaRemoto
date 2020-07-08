@@ -1,7 +1,7 @@
 config = dict()
 
 config["name"] = "settings"
-config["version"] = "0.1"
+config["version"] = "0.2"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
 config["FLASK_DEBUG"] = True
@@ -29,3 +29,6 @@ config["SCENTRAL_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_central_excel"
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]
 config["DEFAULT_DATE_FORMAT"] = "%Y-%m-%d %H:%M:%S"
+
+# PIServer configurations:
+config["PISERVERS"] = ["10.1.10.108", "10.1.10.109"]

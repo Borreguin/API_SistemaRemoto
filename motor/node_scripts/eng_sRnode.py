@@ -14,26 +14,40 @@ Colossians 3:23
 •	Guarda en base de datos los resultados, la base de datos se encuentra en “../../_db/mongo_db”
 
 """
-import argparse
+import argparse, os, sys
 import datetime as dt
 import queue
 import traceback
+# import custom libraries:
+script_path = os.path.dirname(os.path.abspath(__file__))
+motor_path = os.path.dirname(script_path)
+project_path = os.path.dirname(motor_path)
+sys.path.append(script_path)
+sys.path.append(motor_path)
+sys.path.append(project_path)
 
 from my_lib import utils as u
 from my_lib.PI_connection import pi_connect as pi
 from my_lib.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from settings import initial_settings as init
-import os, logging
+import logging
 import threading as th
 from tqdm import tqdm
+from random import randint
 
 """ Import clases for MongoDB """
 from my_lib.mongo_engine_handler.sRNodeReport import *
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
-script_path = os.path.dirname(os.path.abspath(__file__))
-motor_path = os.path.dirname(script_path)
-pi_svr = pi.PIserver()
+if init.FLASK_DEBUG:
+    # pi server por defecto
+    pi_svr = pi.PIserver()
+else:
+    # seleccionando cualquiera disponible
+    idx = randint(0, len(init.PISERVERS))
+    PiServerName = init.PISERVERS[idx]
+    pi_svr = pi.PIserver(PiServerName)
+
 report_ini_date = None
 report_end_date = None
 minutos_en_periodo = None

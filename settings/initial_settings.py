@@ -78,6 +78,8 @@ TEMP_PATH = os.path.join(project_path, "temp")
 if not os.path.exists(TEMP_PATH):
     os.makedirs(TEMP_PATH)
 
+""" PIServer Config """
+PISERVERS = config["PISERVERS"]
 
 """" EXCEL REPO CONFIGURATION """
 EXCEL_REPO = config["EXCEL_REPO"]

@@ -21,6 +21,7 @@ from api.services.sRemoto import serializers as srl
 from api.services.sRemoto import parsers
 # importando clases para leer desde MongoDB
 from my_lib.mongo_engine_handler.sRNode import *
+from random import randint
 
 # configurando logger y el servicio web
 log = init.LogDefaultConfig("ws_sRemoto.log").logger
@@ -355,9 +356,17 @@ class SRNodeFromExcel(Resource):
                                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
                 excel_file = args['excel_file']
                 stream_excel_file = excel_file.stream.read()
-                filename = excel_file.filename
-                df_main = pd.read_excel(excel_file, sheet_name="main")
-                df_tags = pd.read_excel(excel_file, sheet_name="tags")
+                # path del archivo temporal a guardar para poderlo leer inmediatamente
+                temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_filename")
+                with open(temp_file, 'wb') as f:
+                    f.write(stream_excel_file)
+
+                df_main = pd.read_excel(temp_file, sheet_name="main", engine="xlrd")
+                df_tags = pd.read_excel(temp_file, sheet_name="tags", engine="xlrd")
+
+                # una vez leído, eliminar archivo temporal
+                # os.remove(temp_file)
+
                 # create a virtual node:
                 v_node = SRNodeFromDataFrames(nombre, tipo, df_main, df_tags)
                 success, msg = v_node.validate()
@@ -399,10 +408,19 @@ class SRNodeFromExcel(Resource):
             if args['excel_file'].mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
                                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
                 excel_file = args['excel_file']
-                stream_excel_file = excel_file.stream.read()
                 filename = excel_file.filename
-                df_main = pd.read_excel(stream_excel_file, sheet_name="main")
-                df_tags = pd.read_excel(stream_excel_file, sheet_name="tags")
+                stream_excel_file = excel_file.stream.read()
+
+                # path del archivo temporal a guardar para poderlo leer inmediatamente
+                temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_filename")
+                with open(temp_file, 'wb') as f:
+                    f.write(stream_excel_file)
+
+                df_main = pd.read_excel(temp_file, sheet_name="main", engine = "xlrd")
+                df_tags = pd.read_excel(temp_file, sheet_name="tags", engine = "xlrd")
+
+                # una vez leído, eliminar archivo temporal
+                # os.remove(temp_file)
                 # create a virtual node:
                 v_node = SRNodeFromDataFrames(nombre, tipo, df_main, df_tags)
                 success, msg = v_node.validate()

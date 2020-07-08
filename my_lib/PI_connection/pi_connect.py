@@ -22,9 +22,18 @@ from OSIsoft.AF.UnitsOfMeasure import *
 
 
 class PIserver:
-    def __init__(self, ):
-        piServers = PIServers()
-        self.server = piServers.DefaultPIServer
+    def __init__(self, name=None):
+        # if PIserver is not found:
+        self.server = None
+        if name is None:
+            piServers = PIServers()
+            self.server = piServers.DefaultPIServer
+        else:
+            piServers = list(PIServers().GetPIServers())
+            for piServer in piServers:
+                if name == piServer.Name:
+                    self.server = piServer
+
 
     def find_PI_point(self, tag_name: str):
         """

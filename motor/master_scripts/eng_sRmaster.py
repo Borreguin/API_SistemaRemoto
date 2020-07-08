@@ -164,8 +164,9 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     final_report.actualizado = dt.datetime.now()
     final_report.tiempo_calculo_segundos = delta_time.total_seconds()
     # Save in database
+    if final_report is None:
+        return False, final_report, "El reporte no ha sido calculado"
     final_report.save()
-
     return True, final_report, "El reporte ha sido calculado exitosamente"
 
 

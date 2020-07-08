@@ -45,9 +45,11 @@ if init.FLASK_DEBUG:
 else:
     # seleccionando cualquiera disponible
     idx = randint(0, len(init.PISERVERS)-1)
-    PiServerName = init.PISERVERS[idx]
+    print(idx)
+    PiServerName = init.PISERVERS[int(idx)]
     pi_svr = pi.PIserver(PiServerName)
 
+print(f"PIServer Connection: {pi_svr}")
 report_ini_date = None
 report_end_date = None
 minutos_en_periodo = None

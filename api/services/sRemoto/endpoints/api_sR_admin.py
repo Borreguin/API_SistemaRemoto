@@ -358,7 +358,7 @@ class SRNodeFromExcel(Resource):
                 filename = excel_file.filename
                 stream_excel_file = excel_file.stream.read()
                 # path del archivo temporal a guardar para poderlo leer inmediatamente
-                temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_filename")
+                temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_{filename}")
                 with open(temp_file, 'wb') as f:
                     f.write(stream_excel_file)
 
@@ -413,7 +413,7 @@ class SRNodeFromExcel(Resource):
                 stream_excel_file = excel_file.stream.read()
 
                 # path del archivo temporal a guardar para poderlo leer inmediatamente
-                temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_filename")
+                temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_{filename}")
                 with open(temp_file, 'wb') as f:
                     f.write(stream_excel_file)
 

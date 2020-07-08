@@ -58,7 +58,7 @@ def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, sa
     all_nodes = [n for n in all_nodes if n.activado]
     if len(all_nodes) == 0:
         msg = f"No hay nodos a procesar en db:[{mongo_config['db']}]"
-        return False, None, msg
+        return False, [], msg
     name_list = [n.nombre for n in all_nodes]
     return run_node_list(name_list, report_ini_date, report_end_date, save_in_db, force)
 

@@ -44,7 +44,7 @@ if init.FLASK_DEBUG:
     pi_svr = pi.PIserver()
 else:
     # seleccionando cualquiera disponible
-    idx = randint(0, len(init.PISERVERS))
+    idx = randint(0, len(init.PISERVERS)-1)
     PiServerName = init.PISERVERS[idx]
     pi_svr = pi.PIserver(PiServerName)
 

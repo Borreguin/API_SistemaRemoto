@@ -355,17 +355,18 @@ class SRNodeFromExcel(Resource):
             if args['excel_file'].mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
                                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
                 excel_file = args['excel_file']
+                filename = excel_file.filename
                 stream_excel_file = excel_file.stream.read()
                 # path del archivo temporal a guardar para poderlo leer inmediatamente
                 temp_file = os.path.join(init.TEMP_PATH, f"{str(randint(0, 100))}_filename")
                 with open(temp_file, 'wb') as f:
                     f.write(stream_excel_file)
 
-                df_main = pd.read_excel(temp_file, sheet_name="main", engine="xlrd")
-                df_tags = pd.read_excel(temp_file, sheet_name="tags", engine="xlrd")
+                df_main = pd.read_excel(temp_file, sheet_name="main")
+                df_tags = pd.read_excel(temp_file, sheet_name="tags")
 
                 # una vez leído, eliminar archivo temporal
-                # os.remove(temp_file)
+                os.remove(temp_file)
 
                 # create a virtual node:
                 v_node = SRNodeFromDataFrames(nombre, tipo, df_main, df_tags)
@@ -416,11 +417,11 @@ class SRNodeFromExcel(Resource):
                 with open(temp_file, 'wb') as f:
                     f.write(stream_excel_file)
 
-                df_main = pd.read_excel(temp_file, sheet_name="main", engine = "xlrd")
-                df_tags = pd.read_excel(temp_file, sheet_name="tags", engine = "xlrd")
+                df_main = pd.read_excel(temp_file, sheet_name="main")
+                df_tags = pd.read_excel(temp_file, sheet_name="tags")
 
                 # una vez leído, eliminar archivo temporal
-                # os.remove(temp_file)
+                os.remove(temp_file)
                 # create a virtual node:
                 v_node = SRNodeFromDataFrames(nombre, tipo, df_main, df_tags)
                 success, msg = v_node.validate()

@@ -149,7 +149,7 @@ class DisponibilidadNodo(Resource):
 @ns.route('/disponibilidad/nodos/<string:ini_date>/<string:end_date>')
 class DisponibilidadNodos(Resource):
     @staticmethod
-    @api.expect(ser_from.nodos)
+    @api.expect(ser_from.nodes)
     def put(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
         """ Calcula/sobre-escribe la disponibilidad de los nodos especificados en la lista
             Si ya existe reportes asociados a los nodos, estos son <b>recalculados</b>
@@ -177,7 +177,7 @@ class DisponibilidadNodos(Resource):
             return default_error_handler(e)
 
     @staticmethod
-    @api.expect(ser_from.nodos)
+    @api.expect(ser_from.nodes)
     def post(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
         """ Calcula si no existe la disponibilidad de los nodos especificados en la lista
             Si ya existe reportes asociados a los nodos, estos <b>no son recalculados</b>
@@ -208,7 +208,7 @@ class DisponibilidadNodos(Resource):
             return default_error_handler(e)
 
     @staticmethod
-    @api.expect(ser_from.nodos)
+    @api.expect(ser_from.nodes)
     def delete(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
         """ Elimina si existe la disponibilidad de los nodos especificados en la lista
             Fecha inicial formato:  <b>yyyy-mm-dd</b>

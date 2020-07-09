@@ -65,7 +65,11 @@ class sRemotoSerializers:
             "nombre": fields.String(required=True, description="Nombre de nodo")
         })
 
-        self.nodos = api.model("Lista nombre de nodos", {
+        self.nodos = api.model("Lista de tipos y nombres de nodos", {
             "nodos": fields.List(fields.Nested(self.nodo), default=[dict(tipo="Empresa", nombre="Nombre")])
+        })
+
+        self.nodes = api.model("Lista nombre de nodos", {
+            "nodos": fields.List(fields.String(), default=["nodo1", "nodo2", "etc"])
         })
         return api

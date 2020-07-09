@@ -114,8 +114,40 @@ class Disponibilidad(Resource):
 
 
 @api.errorhandler(Exception)
-@ns.route('/disponibilidad/nodos/<string:ini_date>/<string:end_date>')
+@ns.route('/disponibilidad/nodo/<string:ini_date>/<string:end_date>')
 class DisponibilidadNodo(Resource):
+    @staticmethod
+    @api.expect(ser_from.nodo)
+    def put(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+        """ Calcula/sobre-escribe la disponibilidad de un nodo especificado por tipo y nombre
+            Si ya existe reporte asociados al nodo, este es <b>recalculado</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd</b>
+            Fecha final formato:    <b>yyyy-mm-dd</b>
+        """
+        try:
+            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            if not success1 or not success2:
+                msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+                return dict(success=False, errors=msg), 400
+
+            node_list_name = [request.json["nombre"]]
+            success1, result, msg1 = run_node_list(node_list_name, ini_date, end_date, save_in_db=True, force=True)
+            if success1:
+                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                if success2:
+                    return dict(result=result, msg=msg1, report=report.to_dict()), 200
+                else:
+                    return dict(success=False, errors=msg2), 409
+            elif not success1:
+                return dict(success=False, errors=result), 409
+        except Exception as e:
+            return default_error_handler(e)
+
+
+@api.errorhandler(Exception)
+@ns.route('/disponibilidad/nodos/<string:ini_date>/<string:end_date>')
+class DisponibilidadNodos(Resource):
     @staticmethod
     @api.expect(ser_from.nodos)
     def put(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
@@ -227,8 +259,7 @@ class DisponibilidadNodo(Resource):
     @staticmethod
     def get(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
         """ Obtiene el reporte de disponibilidad de los nodos especificados en la lista
-            Si el reporte no existe, entonces su valor será null
-            Si la lista de nodos es vacía, entonces se traen todos los reportes existentes en la fecha definida
+            Si el reporte no existe, entonces su valor será 404
             Fecha inicial formato:  <b>yyyy-mm-dd</b>
             Fecha final formato:    <b>yyyy-mm-dd</b>
         """
@@ -241,9 +272,38 @@ class DisponibilidadNodo(Resource):
             v_report = SRNodeDetails(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
             report = SRNodeDetails.objects(id_report=v_report.id_report).first()
             if report is None:
-                return dict(success=False, errors="No existe el cálculo para este nodo en la fecha indicada"), 400
+                return dict(success=False, errors="No existe el cálculo para este nodo en la fecha indicada"), 404
             else:
                 return report.to_dict(), 200
+
+        except Exception as e:
+            return default_error_handler(e)
+
+    @staticmethod
+    def delete(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+        """ Elimina el reporte de disponibilidad del nodo especificado
+            Si el reporte no existe, entonces código 404
+            Fecha inicial formato:  <b>yyyy-mm-dd</b>
+            Fecha final formato:    <b>yyyy-mm-dd</b>
+        """
+        try:
+            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            if not success1 or not success2:
+                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+                return dict(success=False, errors=msg), 400
+            v_report = SRNodeDetails(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
+            report = SRNodeDetails.objects(id_report=v_report.id_report).first()
+            if report is None:
+                return dict(success=False, errors="No existe el cálculo para este nodo en la fecha indicada"), 404
+            else:
+                report.delete()
+                success, final_report, msg = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                if not success:
+                    return dict(success=False, errors="No se puede calcular el reporte final"), 404
+                return dict(success=True, report=final_report.to_dict(),
+                            msg=f"El reporte del nodo {nombre} ha sido eliminado, "
+                                f"y el reporte final ha sido re-calculado"), 200
 
         except Exception as e:
             return default_error_handler(e)

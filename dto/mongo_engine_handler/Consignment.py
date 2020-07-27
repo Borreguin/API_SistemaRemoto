@@ -19,7 +19,7 @@ class Consignment(EmbeddedDocument):
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
     t_minutos = IntField(required=True)
-    detalle = StringField()
+    detalle = DictField()
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -29,7 +29,7 @@ class Consignment(EmbeddedDocument):
         if self.fecha_inicio >= self.fecha_final:
             raise ValueError("La fecha de inicio no puede ser mayor o igual a la fecha de fin")
         t = self.fecha_final - self.fecha_inicio
-        self.t_minutos = t.days*(60*24) + t.seconds//60 + t.seconds % 60
+        self.t_minutos = t.days * (60 * 24) + t.seconds // 60 + t.seconds % 60
 
     def __str__(self):
         return f"({self.no_consignacion}: min={self.t_minutos}) [{self.fecha_inicio.strftime('%d-%m-%Y %H:%M')}, " \
@@ -37,18 +37,19 @@ class Consignment(EmbeddedDocument):
 
     def to_dict(self):
         return dict(no_consignacion=self.no_consignacion,
-                    fecha_inicio=self.fecha_inicio, fecha_final=self.fecha_final,
+                    fecha_inicio=str(self.fecha_inicio), fecha_final=str(self.fecha_final),
                     detalle=self.detalle)
 
 
 class Consignments(Document):
-    id_entidad = StringField(required=True, unique=True)
+    id_elemento = StringField(required=True, unique=True)
+    elemento = DictField(required=False)
     consignacion_reciente = EmbeddedDocumentField(Consignment)
     consignaciones = ListField(EmbeddedDocumentField(Consignment))
     meta = {"collection": "INFO|Consignaciones"}
 
     def get_last_consignment(self):
-        t, ixr = dt.datetime(1900,1,1), -1
+        t, ixr = dt.datetime(1900, 1, 1), -1
         for ix, c in enumerate(self.consignaciones):
             # check last date:
             if c.fecha_final > t:
@@ -87,13 +88,13 @@ class Consignments(Document):
     def delete_consignment(self, no_consignacion):
         new_consignaciones = [c for c in self.consignaciones if c.no_consignacion != no_consignacion]
         if len(new_consignaciones) == len(self.consignaciones):
-            return False, f"No existe la consignación [{no_consignacion}] en la entidad [{self.id_entidad}]"
+            return False, f"No existe la consignación [{no_consignacion}] en elemento [{self.id_elemento}]"
         self.consignaciones = new_consignaciones
         return True, f"Consignación [{no_consignacion}] ha sido eliminada"
 
-    def consignments_in_time_range(self, ini_date:dt.datetime, end_time:dt.datetime):
-        return [c for c in self.consignaciones if ini_date <= c.fecha_inicio < end_time or  ini_date < c.fecha_final <= end_time]
-
+    def consignments_in_time_range(self, ini_date: dt.datetime, end_time: dt.datetime):
+        return [c for c in self.consignaciones if
+                ini_date <= c.fecha_inicio < end_time or ini_date < c.fecha_final <= end_time]
 
     def __str__(self):
-        return f"{self.id_entidad}: ({self.consignacion_reciente}) [{len(self.consignaciones)}]"
+        return f"{self.id_elemento}: ({self.consignacion_reciente}) [{len(self.consignaciones)}]"

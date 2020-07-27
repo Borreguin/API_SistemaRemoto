@@ -20,7 +20,7 @@ from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 from api.services.sRemoto import parsers
 # importando clases para leer desde MongoDB
-from my_lib.mongo_engine_handler.sRNode import *
+from dto.mongo_engine_handler.sRNode import *
 from random import randint
 
 # configurando logger y el servicio web
@@ -31,13 +31,13 @@ ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()
 
 
-@ns.route('/nodo/<string:nombre>')
+@ns.route('/nodo/<string:tipo>/<string:nombre>')
 class SRNodeAPI(Resource):
 
-    def get(self, nombre: str = "Nombre del nodo a buscar"):
+    def get(self, tipo: str = "Tipo de nodo", nombre: str = "Nombre del nodo a buscar"):
         """ Busca si un nodo tipo SRNode existe en base de datos """
         try:
-            nodo = SRNode.objects(nombre=nombre).first()
+            nodo = SRNode.objects(nombre=nombre, tipo=tipo).first()
             if nodo is None:
                 return nodo, 404
             return nodo.to_dict(), 200
@@ -60,6 +60,84 @@ class SRNodeAPI(Resource):
             return nodo.to_dict(), 200
         except Exception as e:
             return default_error_handler(e)
+
+
+@ns.route('/nodo/<string:tipo>/<string:nombre>/<string:entidad_tipo>/<string:entidad_nombre>')
+class SREntidadAPI(Resource):
+    def get(self, tipo: str = "Tipo nodo", nombre: str = "Nombre nodo", entidad_tipo: str = "Entidad tipo",
+            entidad_nombre: str = "Entidad nombre"):
+        """ Retorna las entidades de un nodo """
+
+        try:
+            nodo = SRNode.objects(nombre=nombre, tipo=tipo).first()
+            if nodo is None:
+                return nodo, 404
+            for entidad in nodo.entidades:
+                if entidad.entidad_tipo == entidad_tipo and entidad.entidad_nombre == entidad_nombre:
+                    return entidad.to_dict(), 200
+            return None, 404
+        except Exception as e:
+            return default_error_handler(e)
+
+
+@ns.route('/rtu/<string:id_nodo>/<string:id_entidad>')
+class SRRTUAPI(Resource):
+
+    def get(self, id_nodo: str = "id nodo", id_entidad: str = "id entidad"):
+        """ Regresa la lista de RTU de una entidad
+            Id nodo: id único del nodo
+            Id entidad: id único de la entidad
+            <b>404</b> Si el nodo o la entidad no existe
+        """
+
+        try:
+            nodo = SRNode.objects(id_node=id_nodo).first()
+            if nodo is None:
+                return dict(success=False, msg="No se encuentra el nodo"), 404
+            idx = None
+            for ix, _entidad in enumerate(nodo.entidades):
+                if _entidad.id_entidad == id_entidad:
+                    idx = ix
+                    break
+            if idx is None:
+                return dict(success=False, msg="No se encuentra la entidad"), 404
+
+            utrs = nodo.entidades[idx].utrs
+            return dict(success=True, utrs=[u.to_dict() for u in utrs]), 200
+        except Exception as e:
+            return default_error_handler(e)
+
+
+    @api.expect(ser_from.rtu)
+    def post(self, id_nodo: str = "id nodo", id_entidad: str = "id entidad"):
+        """ Ingresa una nueva RTU en una entidad
+            Id nodo: id único del nodo
+            Id entidad: id único de la entidad
+            <b>404</b> Si el nodo o la entidad no existe
+        """
+
+        try:
+            request_data = dict(request.json)
+            nodo = SRNode.objects(id_node=id_nodo).first()
+            if nodo is None:
+                return dict(success=False, msg="No se encuentra el nodo"), 404
+            idx = None
+            for ix, _entidad in enumerate(nodo.entidades):
+                if _entidad.id_entidad == id_entidad:
+                    idx = ix
+                    break
+            if idx is None:
+                return dict(success=False, msg="No se encuentra la entidad"), 404
+            rtu = SRUTR(id_utr=request_data["id_utr"],utr_tipo=request_data["tipo"], utr_nombre=request_data["nombre"])
+            success, msg = nodo.entidades[idx].add_or_replace_utrs([rtu])
+            if success:
+                nodo.save()
+                return dict(success=success, msg=msg), 200
+            else:
+                return dict(success=success, msg=msg), 409
+        except Exception as e:
+            return default_error_handler(e)
+
 
 
 @ns.route('/nodo/id/<string:id>')
@@ -108,12 +186,14 @@ class SRNodeIDAPI(Resource):
             return default_error_handler(e)
 
 
+# TODO: Remove if is needed
+"""
 @ns.route('/nodo')
 class PostSRNodeAPI(Resource):
     @api.expect(ser_from.node)
     @api.response(409, 'No es posible crear este nodo')
     def post(self):
-        """ Crear un SRNode """
+        #Crear un SRNode 
         try:
             request_data = dict(request.json)
             nodo = SRNode(**request_data)
@@ -121,18 +201,19 @@ class PostSRNodeAPI(Resource):
             return nodo.to_dict(), 200
         except Exception as e:
             return default_error_handler(e)
+"""
 
-
+# TODO: Remove if is needed
+"""
 @ns.route('/nodo/<string:nombre>/entidad')
 class SREntidadAPI(Resource):
     @api.expect(ser_from.entidad)
     @api.response(404, 'No se puede añadir. El nodo especificado en "nombre" no existe')
     def put(self, nombre):
-        """ Añadir/substituir una entidad en el nodo "nombre"
-            Si el nodo no existe entonces error 404
-            La entidad es añadida a un nodo ya existente
-            Si la entidad ya existe entonces es reemplazada
-        """
+    #Añadir/substituir una entidad en el nodo "nombre"
+    #Si el nodo no existe entonces error 404
+    #La entidad es añadida a un nodo ya existente
+    #Si la entidad ya existe entonces es reemplazada
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -144,14 +225,14 @@ class SREntidadAPI(Resource):
             return nodo.to_dict(), 200
         except Exception as e:
             return default_error_handler(e)
-
+"""
+"""
     @api.response(404, 'No se encuentran resultados')
     @api.expect(ser_from.name_delete)
     def delete(self, nombre):
-        """ Eliminar una entidad en el nodo "nombre"
-            Si el nodo no existe entonces error 404
-            Si la entidad no existe entonces error 404
-        """
+        # Eliminar una entidad en el nodo "nombre"
+        #   Si el nodo no existe entonces error 404
+        #   Si la entidad no existe entonces error 404
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -165,16 +246,16 @@ class SREntidadAPI(Resource):
                 return dict(success=success, errors=msg), 404
         except Exception as e:
             return default_error_handler(e)
-
-
+"""
+# TODO: Remove if is needed
+"""
 @ns.route('/nodo/<string:nombre>/<string:entidad>')
 class SREntidadesAPI1(Resource):
     @api.response(404, 'No se encuentran resultados')
     def get(self, nombre, entidad):
-        """ Muestra la entidad
-            Si el nodo no existe entonces error 404
-            Si la entidad no existe entonces error 404
-        """
+        # Muestra la entidad
+        # Si el nodo no existe entonces error 404
+        # Si la entidad no existe entonces error 404
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -183,15 +264,14 @@ class SREntidadesAPI1(Resource):
             return (result.to_dict(), 200) if success else (dict(success=success, errors=result), 404)
         except Exception as e:
             return default_error_handler(e)
-
-
+"""
+"""     
 @ns.route('/nodo/<string:nombre>/entidades')
 class SREntidadesAPI2(Resource):
     @api.response(404, 'No se encuentran resultados')
     def get(self, nombre):
-        """ Muestra las entidades de un nodo
-            Si nodo no existe entonces error 404
-        """
+        # Muestra las entidades de un nodo
+        # Si nodo no existe entonces error 404
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -199,16 +279,16 @@ class SREntidadesAPI2(Resource):
             return [e.to_dict() for e in nodo.entidades], 200
         except Exception as e:
             return default_error_handler(e)
-
-
+"""
+# TODO: Check this services
+"""
 @ns.route('/nodo/<string:nombre>/<string:entidad>/tags')
 class SRTagsAPI(Resource):
     @api.expect(ser_from.list_tagname)
     def put(self, nombre, entidad):
-        """ Actualiza la configuración de tags en una entidad
-            Si el nodo no existe entoces error 404
-            Si entidad no existe entonces error 404
-        """
+        # Actualiza la configuración de tags en una entidad
+        # Si el nodo no existe entoces error 404
+        # Si entidad no existe entonces error 404
         try:
             tags = dict(request.json)["tags"]
             tag_list = [SRTag(**t) for t in tags]
@@ -223,9 +303,10 @@ class SRTagsAPI(Resource):
             return dict(success=False, errors=msg), 400
         except Exception as e:
             return default_error_handler(e)
-
+"""
+"""
     def get(self, nombre, entidad):
-        """ Muestra las tags dentro de una entidad """
+        # Muestra las tags dentro de una entidad 
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -238,10 +319,11 @@ class SRTagsAPI(Resource):
             return dict(success=False, errors=f"No existe entidad [{entidad}] en nodo [{nombre}]"), 404
         except Exception as e:
             return default_error_handler(e)
-
+"""
+"""
     @api.expect(ser_from.tags)
     def delete(self, nombre, entidad):
-        """ Elimina una lista de tags de una entidad en un nodo """
+        # Elimina una lista de tags de una entidad en un nodo 
         try:
             tags = dict(request.json)["tags"]
             nodo = SRNode.objects(nombre=nombre).first()
@@ -255,16 +337,17 @@ class SRTagsAPI(Resource):
             return dict(success=False, errors=msg), 400
         except Exception as e:
             return default_error_handler(e)
+"""
 
-
+# TODO: check if is needed
+"""
 @ns.route('/nodo/<string:nombre>/<string:entidad>/tag')
 class SRTagAPI(Resource):
     @api.expect(ser_from.tagname)
     def put(self, nombre, entidad):
-        """ Modifica la configuración de una tag
-            Si la entidad no existe en el nodo entonces habrá un error 404
-            Si la tag no existe en la entidad entonces se crea una nueva
-        """
+        # Modifica la configuración de una tag
+        # Si la entidad no existe en el nodo entonces habrá un error 404
+        # Si la tag no existe en la entidad entonces se crea una nueva
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -279,13 +362,13 @@ class SRTagAPI(Resource):
             return dict(success=False, errors=msg), 400
         except Exception as e:
             return default_error_handler(e)
-
+"""
+"""
     @api.expect(ser_from.name_delete)
     def delete(self, nombre, entidad):
-        """ Elimina la configuración de una tag
-            Si la entidad no existe en el nodo entonces habrá un error 404
-            Si la tag no existe en la entidad entonces habrá un error 404
-        """
+        # Elimina la configuración de una tag
+        #   Si la entidad no existe en el nodo entonces habrá un error 404
+        #   Si la tag no existe en la entidad entonces habrá un error 404
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
@@ -308,7 +391,7 @@ class SRTagAPI(Resource):
             return nodo.entidades[id_e].to_dict(), 200
         except Exception as e:
             return default_error_handler(e)
-
+"""
 
 @ns.route('/nodos/')
 @ns.route('/nodos/<string:filter>')

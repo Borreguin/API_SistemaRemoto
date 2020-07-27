@@ -6,7 +6,7 @@ from api.services.restplus_config import default_error_handler
 # importando configuraciones iniciales
 from settings import initial_settings as init
 from api.services.restplus_config import api
-from my_lib.mongo_engine_handler.DiagramSerializer import *
+from dto.mongo_engine_handler.DiagramSerializer import *
 
 # configurando logger y el servicio web
 log = init.LogDefaultConfig("ws_sRemoto.log").logger

@@ -43,6 +43,18 @@ class sRemotoSerializers:
             "tags": fields.List(fields.String())
         })
 
+        self.rtu = api.model("Configurar RTU",
+                                 {
+                                     "id_utr": fields.String(required=True,
+                                                             description="Identificación única de la RTU. Ex: TBOX TEST DNP3"),
+                                     "tipo": fields.String(required=True,
+                                                                     description="Tipo de RTU: Subestación, Central, etc"),
+                                     "nombre": fields.String(required=True,
+                                                                   description="Nombre de la RTU "),
+                                     "activado": fields.Boolean(default=True,
+                                                                description="Activación de la entity_list")
+                                 })
+
         self.entidad = api.model("Configurar Entidad",
                 {
                     "id_utr": fields.String(required=True, description="Identificación única. Ex: Nombre UTR"),
@@ -60,10 +72,12 @@ class sRemotoSerializers:
             "activado": fields.Boolean(default=True, description="Activación del nodo")
         })
 
-        self.nodo = api.model("Nodo", {
+        self.nodo = api.model("Nuevo Nodo", {
             "tipo": fields.String(required=True, description="Tipo de nodo"),
-            "nombre": fields.String(required=True, description="Nombre de nodo")
+            "nombre": fields.String(required=True, description="Nombre de nodo"),
+            "activado": fields.Boolean(required=False, default=True, description="Activacion Nodo")
         })
+
 
         self.nodos = api.model("Lista de tipos y nombres de nodos", {
             "nodos": fields.List(fields.Nested(self.nodo), default=[dict(tipo="Empresa", nombre="Nombre")])

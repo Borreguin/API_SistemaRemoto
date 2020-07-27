@@ -34,8 +34,8 @@ node_script = os.path.join(motor_path, 'node_scripts', 'eng_sRnode.py')
 debug = init.FLASK_DEBUG
 
 """ Import clases for MongoDB """
-from my_lib.mongo_engine_handler.sRNodeReport import *
-from my_lib.mongo_engine_handler.sRFinalReport import *
+from dto.mongo_engine_handler.sRNodeReport import *
+from dto.mongo_engine_handler.sRFinalReport import *
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"

@@ -1,6 +1,4 @@
-from my_lib.mongo_engine_handler import sRNode as DS
-from my_lib.mongo_engine_handler import sRNodeReport as nRep
-from my_lib.mongo_engine_handler import Consignment as Cons
+from dto.mongo_engine_handler import sRNodeReport as nRep, sRNode as DS, Consignment as Cons
 import random as r
 from mongoengine import *
 import datetime as dt

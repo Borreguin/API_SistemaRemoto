@@ -10,16 +10,15 @@
     Mateo 6:33
 """
 from flask_restplus import Resource
-from flask import request, send_from_directory
-import re, os
+from flask import send_from_directory
+import os
 # importando configuraciones iniciales
 from settings import initial_settings as init
 from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
-from api.services.sRemoto import parsers
 # importando clases para leer desde MongoDB
-from my_lib.mongo_engine_handler.sRNode import *
+from dto.mongo_engine_handler.sRNode import *
 from my_lib.utils import group_files
 
 # configurando logger y el servicio web

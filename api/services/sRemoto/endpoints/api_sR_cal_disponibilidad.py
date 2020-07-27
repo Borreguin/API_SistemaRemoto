@@ -10,16 +10,15 @@
     Mateo 6:33
 """
 from flask_restplus import Resource
-import json
 # importando configuraciones iniciales
-from api.services.restplus_config import api, custom_json_encoder
+from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
 from motor.master_scripts.eng_sRmaster import *
 from flask import request
 # importando clases para leer desde MongoDB
-from my_lib.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
+from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()

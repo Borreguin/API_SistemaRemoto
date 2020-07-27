@@ -1,4 +1,4 @@
-from my_lib.mongo_engine_handler.sRNode import *
+from dto.mongo_engine_handler.sRNode import *
 import hashlib
 
 
@@ -116,7 +116,7 @@ class SREntityDetails(EmbeddedDocument):
 
 class SRNodeDetails(Document):
     id_report = StringField(required=True, unique=True)
-    nodo = LazyReferenceField(SRNode, required=True, passthrough=False)
+    nodo = LazyReferenceField(SRNode, required=True, dbref=True, passthrough=False)
     nombre = StringField(required=True, default=None)
     tipo = StringField(required=True, default=None)
     periodo_evaluacion_minutos = IntField(required=True)

@@ -31,6 +31,13 @@ def check_date_yyyy_mm_dd(s):
         return False, str(e)
 
 
+def check_date_yyyy_mm_dd_hh_mm_ss(s):
+    try:
+        return True, dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        return False, str(e)
+
+
 def read_excel(file_name):
     """
     Lee un archivo excel y devuelve un diccionario de DataFrames

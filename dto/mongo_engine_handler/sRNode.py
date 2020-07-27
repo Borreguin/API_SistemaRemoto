@@ -9,8 +9,7 @@
 import hashlib
 import traceback
 
-from mongoengine import *
-from my_lib.mongo_engine_handler.Consignment import *
+from dto.mongo_engine_handler.Consignment import *
 import datetime as dt
 import pandas as pd
 
@@ -28,20 +27,25 @@ class SRTag(EmbeddedDocument):
 
 
 class SRUTR(EmbeddedDocument):
-    id_utr = StringField(required=True, sparse=True)
+    id_utr = StringField(required=True, sparse=True, default=None)
     utr_nombre = StringField(required=True)
     utr_tipo = StringField(required=True)
     tags = ListField(EmbeddedDocumentField(SRTag))
-    consignaciones = LazyReferenceField(Consignments, dbref=True, passthrough=True)
+    consignaciones = LazyReferenceField(Consignments, dbref=True, passthrough=False)
+    utr_code = StringField(required=True, default=None)
     activado = BooleanField(default=True)
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
-        # check if there are consignaciones related with id_utr
-        consignaciones = Consignments.objects(id_entidad=self.id_utr).first()
+        # check if there are consignaciones related with this element:
+        id = str(self.id_utr).lower().strip() + str(self.utr_tipo).lower().strip() + str(self.utr_nombre).strip()
+        if self.utr_code is None:
+            self.utr_code = hashlib.md5(id.encode()).hexdigest()
+        consignaciones = Consignments.objects(id_elemento=self.utr_code).first()
         if consignaciones is None:
             # if there are not consignaciones then create a new document
-            consignaciones = Consignments(id_entidad=self.id_utr).save()
+            consignaciones = Consignments(id_elemento=self.utr_code,
+                                          elemento=self.to_summary()).save()
         # relate an existing consignacion
         self.consignaciones = consignaciones
 
@@ -86,10 +90,11 @@ class SRUTR(EmbeddedDocument):
 
     def to_dict(self):
         return dict(id_utr=self.id_utr, utr_nombre=self.utr_nombre, utr_tipo=self.utr_tipo,
-                    tags=[t.to_dict() for t in self.tags], activado=self.activado)
+                    tags=[t.to_dict() for t in self.tags], activado=self.activado,
+                    utr_code=self.utr_code)
 
     def to_summary(self):
-        pass
+        return dict(id_utr=self.id_utr, utr_nombre=self.utr_nombre, utr_tipo=self.utr_tipo)
 
 
 class SREntity(EmbeddedDocument):
@@ -101,7 +106,6 @@ class SREntity(EmbeddedDocument):
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
-        # check if there are consignaciones related with id_utr
         if self.id_entidad is None:
             id = str(self.entidad_nombre).lower().strip() + str(self.entidad_tipo).lower().strip()
             self.id_entidad = hashlib.md5(id.encode()).hexdigest()
@@ -305,14 +309,21 @@ class SRNodeFromDataFrames():
                           f"Los campos necesarios son: [{str(self.tags_columns)}]"
 
         # if correct then continue with the necessary fields and rows
-        self.df_main[self.cl_activado] = [str(a).lower() for a in self.df_main[self.cl_activado]]
-        self.df_tags[self.cl_activado] = [str(a).lower() for a in self.df_tags[self.cl_activado]]
+        self.df_main[self.cl_activado] = [str(a).lower().strip() for a in self.df_main[self.cl_activado]]
+        self.df_tags[self.cl_activado] = [str(a).lower().strip() for a in self.df_tags[self.cl_activado]]
 
         # filter those who are activated
         self.df_main = self.df_main[self.main_columns]
         self.df_tags = self.df_tags[self.tags_columns]
         self.df_main = self.df_main[self.df_main[self.cl_activado] == "x"]
         self.df_tags = self.df_tags[self.df_tags[self.cl_activado] == "x"]
+
+        # if there is spaces after values
+        for c in self.main_columns:
+            self.df_main[c] = [str(a).strip() for a in self.df_main[c]]
+        for c in self.tags_columns:
+            self.df_tags[c] = [str(a).strip() for a in self.df_tags[c]]
+
         return True, f"El formato del nodo [{self.nombre}] es correcto"
 
     def create_node(self):

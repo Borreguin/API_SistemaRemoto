@@ -15,9 +15,8 @@ Colossians 3:23
 
 """
 import argparse, os, sys
-import datetime as dt
 import queue
-import traceback
+
 # import custom libraries:
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
@@ -28,7 +27,7 @@ sys.path.append(project_path)
 
 from my_lib import utils as u
 from my_lib.PI_connection import pi_connect as pi
-from my_lib.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
+from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from settings import initial_settings as init
 import logging
 import threading as th
@@ -36,7 +35,7 @@ from tqdm import tqdm
 from random import randint
 
 """ Import clases for MongoDB """
-from my_lib.mongo_engine_handler.sRNodeReport import *
+from dto.mongo_engine_handler.sRNodeReport import *
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
 if init.FLASK_DEBUG:
@@ -49,7 +48,7 @@ else:
     PiServerName = init.PISERVERS[int(idx)]
     pi_svr = pi.PIserver(PiServerName)
 
-print(f"PIServer Connection: {pi_svr}")
+print(f"PIServer Connection: {pi_svr.server}")
 report_ini_date = None
 report_end_date = None
 minutos_en_periodo = None
@@ -82,6 +81,7 @@ _10_sobrescrito = (10, "Reporte sobrescrito en base de datos")
 eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_conexion,
                _5_no_posible_entidades, _6_no_existe_entidades, _7_no_es_posible_guardar,
                _8_reporte_existente, _9_guardado, _10_sobrescrito]
+
 
 def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: dt.datetime):
 
@@ -189,8 +189,8 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
     # la UTR no tiene tags válidas para el cálculo:
     if len(utr_report.indisponibilidad_detalle) == 0:
         if q is not None:
-            q.put((False, utr_report, fault_tags, f"La UTR {utr.id_utr} no tiene tags válidas"))
-        return False, utr_report, fault_tags, f"La UTR {utr.id_utr} no tiene tags válidas"
+            q.put((False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"))
+        return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
 
     # All is OK until here:
     utr_report.calculate()
@@ -435,7 +435,7 @@ def test():
             """
                 for utr in entidad.utrs:
                     # add consignments to test with:
-                    test_consignaciones = Consignments.objects(id_entidad=utr.id_utr).first()
+                    test_consignaciones = Consignments.objects(id_elemento=utr.utr_code).first()
                     print(f"Insertando consignaciones ficticias para las pruebas")
                     for c in range(2):
                         n_days = r.uniform(1, 60)

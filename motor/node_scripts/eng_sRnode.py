@@ -384,6 +384,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
             else:
                 msg_save = (_9_guardado[0], "Reporte escrito en base de datos")
 
+            print("reporte:", report_node.to_summary())
             report_node.save(force=True)
 
     except Exception as e:

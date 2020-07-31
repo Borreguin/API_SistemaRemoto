@@ -151,6 +151,9 @@ class SRNodeDetails(Document):
                 self.disponibilidad_promedio_ponderada_porcentage = \
                     sum([e.ponderacion * e.disponibilidad_promedio_ponderada_porcentage
                          for e in self.reportes_entidades])
+                if self.disponibilidad_promedio_ponderada_porcentage > 100:
+                    self.disponibilidad_promedio_ponderada_porcentage = 100
+
         self.reportes_entidades = sorted(self.reportes_entidades, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
         for ix, entidad in enumerate(self.reportes_entidades):
             reportes_utrs = sorted(entidad.reportes_utrs, key=lambda k: k["disponibilidad_promedio_porcentage"])

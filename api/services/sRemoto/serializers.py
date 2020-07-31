@@ -33,10 +33,21 @@ class sRemotoSerializers:
         self.tagname = api.model("Configuración Tagname", {
             "tag_name": fields.String(required=True, description="Nombre de tag"),
             "filter_expression": fields.String(required=True, description="Expresión de filtro indisponibilidad"),
-            "activado": fields.Boolean(default=True, description="Activación de tag")})
+            "activado": fields.Boolean(required=False, default=True, description="Activación de tag")})
 
         self.list_tagname = api.model("Lista Tagname", {
             "tags": fields.List(fields.Nested(self.tagname))
+        })
+
+        self.edited_tagname = api.model("Editar una STR Tag", {
+            "tag_name": fields.String(required=True, description="Nombre editado de la tag, es el nuevo nombre de la tag"),
+            "filter_expression": fields.String(required=True, description="Expresión de filtro indisponibilidad"),
+            "activado": fields.Boolean(required=False, default=True, description="Activación de tag"),
+            "tag_name_original": fields.String(required=True, description="Nombre original de la tag, es el nombre de Tag a editar"),
+        })
+
+        self.list_edited_tagname = api.model("Lista de STR Tag a editar", {
+            "tags": fields.List(fields.Nested(self.edited_tagname))
         })
 
         self.tags = api.model("Lista nombre tags", {
@@ -85,5 +96,9 @@ class sRemotoSerializers:
 
         self.nodes = api.model("Lista nombre de nodos", {
             "nodos": fields.List(fields.String(), default=["nodo1", "nodo2", "etc"])
+        })
+
+        self.rtu_id = api.model("UTR id", {
+            "id_utr": fields.String(required=True, description="Identificación única. Ex: UTR TEST DNP")
         })
         return api

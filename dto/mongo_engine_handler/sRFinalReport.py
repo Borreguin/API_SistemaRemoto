@@ -82,6 +82,8 @@ class SRFinalReport(Document):
                 self.disponibilidad_promedio_ponderada_porcentage = \
                     sum([rp.disponibilidad_promedio_ponderada_porcentage * rp.procesamiento["numero_tags_total"] / n
                          for rp in self.reportes_nodos])
+                if self.disponibilidad_promedio_ponderada_porcentage > 100:
+                    self.disponibilidad_promedio_ponderada_porcentage = 100
 
         reportes_nodos = sorted(self.reportes_nodos, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
         self.procesamiento["numero_nodos_procesados"] = len(self.reportes_nodos)

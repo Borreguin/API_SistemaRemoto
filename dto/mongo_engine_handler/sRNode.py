@@ -69,14 +69,14 @@ class SRUTR(EmbeddedDocument):
         check_tags = [isinstance(t, str) for t in tag_list]
         if not all(check_tags):
             lg = [str(tag_list[i]) for i, v in enumerate(check_tags) if not v]
-            return False, [f"La siguiente lista de tags no es compatible:"] + lg
+            return False, (0, [f"La siguiente lista de tags no es compatible:"] + lg)
         n_remove = 0
         for tag in tag_list:
             new_list = [t for t in self.tags if t.tag_name != tag]
             if len(new_list) != len(self.tags):
                 n_remove += 1
             self.tags = new_list
-        return True, f"Se ha removido [{str(n_remove)}] tags"
+        return True, (n_remove, f"Se ha removido [{str(n_remove)}] tags")
 
     def get_consignments(self):
         try:
@@ -127,6 +127,28 @@ class SREntity(EmbeddedDocument):
         self.utrs = [unique[k] for k in unique.keys()]
         n_final = len(self.utrs)
         return True, f"UTRs: -remplazadas: [{n_total - n_final}] -añadidas: [{n_final - n_initial}]"
+
+    def add_or_rename_utrs(self, utr_list: list):
+        # check si todas las utrs son de tipo SRUTR
+        check = [isinstance(t, SRUTR) for t in utr_list]
+        if not all(check):
+            lg = [str(utr_list[i]) for i, v in enumerate(check) if not v]
+            return False, [f"La siguiente lista de UTRs no es compatible:"] + lg
+        n_add, n_rename = 0, 0
+        for utr in utr_list:
+            found = False
+            for ix, _utr in enumerate(self.utrs):
+                # si existe la UTR actualizar los cambios:
+                if _utr.id_utr == utr.id_utr:
+                    self.utrs[ix].utr_nombre = utr.utr_nombre
+                    self.utrs[ix].utr_tipo = utr.utr_tipo
+                    self.utrs[ix].activado = utr.activado
+                    found, n_rename = True, n_rename + 1
+                    break
+            if not found:
+                self.utrs.append(utr)
+                n_add += 1
+        return True, f"UTRs: -editadas: {n_rename}  -añadidas: {n_add}"
 
     def remove_utrs(self, id_utr_list: list):
         # check si todas las tags son de tipo str
@@ -258,6 +280,38 @@ class SRNode(Document):
 
     def __str__(self):
         return f"[({self.tipo}) {self.nombre}] entidades: {[str(e) for e in self.entidades]}"
+
+    def to_DataFrame(self):
+        cl_activado = "activado"
+        cl_utr_name = "utr_nombre"
+        cl_utr_type = "utr_tipo"
+        cl_entity_name = "entidad_nombre"
+        cl_entity_type = "entidad_tipo"
+        cl_tag_name = "tag_name"
+        cl_f_expression = "filter_expression"
+        cl_utr = "utr"
+        # main columns in DataFrame
+        main_columns = [cl_utr, cl_utr_name, cl_utr_type,
+                             cl_entity_name, cl_entity_type, cl_activado]
+        # columns in tags sheet
+        tags_columns = [cl_utr, cl_tag_name, cl_f_expression, cl_activado]
+
+        df_main = pd.DataFrame(columns=main_columns)
+        df_tags = pd.DataFrame(columns=tags_columns)
+        for entidad in self.entidades:
+            for utr in entidad.utrs:
+                active = "x" if utr.activado else ""
+                df_main = df_main.append({cl_utr: utr.id_utr, cl_utr_name: utr.utr_nombre,
+                                         cl_utr_type: utr.utr_tipo, cl_entity_name: entidad.entidad_nombre,
+                                         cl_entity_type: entidad.entidad_tipo, cl_activado: active},
+                                         ignore_index=True)
+                for tag in utr.tags:
+                    active = "x" if tag.activado else ""
+                    df_tags = df_tags.append({cl_utr:utr.id_utr, cl_tag_name: tag.tag_name,
+                                              cl_f_expression: tag.filter_expression, cl_activado: active},
+                                             ignore_index=True)
+        return df_main, df_tags
+
 
     def to_dict(self, *args, **kwargs):
         return dict(nombre=self.nombre,

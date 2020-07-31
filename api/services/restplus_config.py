@@ -27,7 +27,7 @@ api = Api(version='0.1', title='API - Cálculo de disponibilidad EMS',
           contact_email="rg.sanchez.a@gmail.com",
           contact_url="https://github.com/Borreguin",
           description='Esta API permite calcular/consultar todo lo referente a la disponibilidad del EMS',
-          ordered=True)
+          ordered=False)
 
 
 # Special JSON encoder for special cases:

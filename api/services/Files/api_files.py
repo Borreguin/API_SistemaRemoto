@@ -39,7 +39,7 @@ class FileAPI(Resource):
             nombre: nombre del repositorio
             agrupado: "agrupado", "no-agrupado"
             fitrado: archivos a filtrar
-            Repositorios disponibles: [s_remoto_excel, s_central_excel]
+            Repositorios disponibles: [s_remoto_excel, s_central_excel, output]
         """
         # Check /settings/config para añadir más repositorios
         try:

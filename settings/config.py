@@ -26,6 +26,7 @@ config["MONGO_LOG_LEVEL"] = {"value": "OFF", "options": ["ON", "OFF"]}
 config["EXCEL_REPO"] = "_db\\excel_files"
 config["SREMOTO_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_remoto_excel"
 config["SCENTRAL_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_central_excel"
+config["OUTPUT_MOTOR"] = "output"
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]
 config["DEFAULT_DATE_FORMAT"] = "%Y-%m-%d %H:%M:%S"

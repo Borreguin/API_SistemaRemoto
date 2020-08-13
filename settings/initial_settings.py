@@ -25,6 +25,7 @@ from .config import config as raw_config
 """ script path"""
 script_path = os.path.dirname(os.path.abspath(__file__))
 project_path = os.path.dirname(script_path)
+motor_path = os.path.join(project_path, "motor")
 print("Loading configurations from: " + script_path)
 """ initial configuration """
 config = raw_config
@@ -85,6 +86,9 @@ PISERVERS = config["PISERVERS"]
 EXCEL_REPO = config["EXCEL_REPO"]
 SREMOTO_REPO = config["SREMOTO_EXCEL_REPO"]
 SCENTRAL_REPO = config["SCENTRAL_EXCEL_REPO"]
+
+OUTPUT_MOTOR_REPO = config["OUTPUT_MOTOR"]
+""" LISTA DE REPOSITORIOS """
 REPOS = [EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO]
 FINAL_REPO = list()
 for repo in REPOS:
@@ -93,8 +97,11 @@ for repo in REPOS:
         os.makedirs(this_repo)
     FINAL_REPO.append(this_repo)
 
+REPOS.append(OUTPUT_MOTOR_REPO)
+OUTPUT_MOTOR_REPO = os.path.join(motor_path, OUTPUT_MOTOR_REPO)
+FINAL_REPO.append(OUTPUT_MOTOR_REPO)
 # getting the definitive path for each one in same order:
-EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO = FINAL_REPO
+EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO = FINAL_REPO
 
 class LogDefaultConfig():
     """

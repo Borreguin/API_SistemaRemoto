@@ -126,6 +126,7 @@ class SRNodeDetails(Document):
     reportes_entidades = ListField(EmbeddedDocumentField(SREntityDetails), required=True, default=list())
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=0, max_value=100)
     tiempo_calculo_segundos = FloatField(required=False)
+    tags_fallidas_detalle = DictField(default={}, required=False)
     tags_fallidas = ListField(StringField(), default=[])
     utr_fallidas = ListField(StringField(), default=[])
     entidades_fallidas = ListField(StringField(), default=[])
@@ -167,7 +168,8 @@ class SRNodeDetails(Document):
                     tiempo_calculo_segundos=self.tiempo_calculo_segundos,
                     periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
-                    tags_fallidas=self.tags_fallidas, utr_fallidas=self.utr_fallidas,
+                    tags_fallidas=self.tags_fallidas, tags_fallidas_detalle=self.tags_fallidas_detalle,
+                    utr_fallidas=self.utr_fallidas,
                     entidades_fallidas=self.entidades_fallidas,
                     ponderacion=self.ponderacion,
                     numero_tags_total=self.numero_tags_total,

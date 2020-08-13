@@ -19,12 +19,26 @@ class ConsignacionSerializers:
     def add_serializers(self):
         api = self.api
 
-        """ Serializador para formulario """
-        self.detalle_consignacion = api.model("Detalles de consignación",
+        """ Serializador para formulario reducido de consignacion """
+        self.detalle_consignacion = api.model("Detalles menores de consignación",
                                {
                                    "no_consignacion": fields.String(required=True,
                                                              description="Id de elemento"),
                                    "detalle": fields.Raw(required=False,
                                                        description="json con detalle de la consignación")
                                })
+
+        """ Serializador para formulario extendido de consignacion"""
+        self.consignacion = api.model("Detalles de consignación",
+                                              {
+                                                  "no_consignacion": fields.String(required=True,
+                                                                                   description="Id de elemento"),
+                                                  "fecha_inicio": fields.String(required=True,
+                                                                                description="formato: [yyyy-mm-dd hh:mm:ss]"),
+                                                  "fecha_final": fields.String(required=True,
+                                                                                description="formato: [yyyy-mm-dd hh:mm:ss]"),
+                                                  "detalle": fields.Raw(required=False,
+                                                                        description="json con detalle de la consignación")
+                                              })
+
         return api

@@ -132,6 +132,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
     # se debe exceptuar periodos de consignación
     consDB = Consignments.objects(id=utr.consignaciones.id).first()
     consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
+    print("\n>>>>", utr.utr_nombre, consignaciones_utr)
     time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
 
     # adjuntar consignaciones tomadas en cuenta:
@@ -148,11 +149,14 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
                 continue  # continue con la siguiente tag
             # creando la condición de indisponibilidad:
             if not "expr:" in condition:
-                # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc.
+                # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc. v1
+                #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
                 conditions = str(condition).split("#")
-                expression = f"'{tag}' = \"{conditions[0].strip()}\""
+                # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
+                expression = f"Compare(DigText('{tag}'), \"*{conditions[0].strip()}*\")"
                 for c in conditions[1:]:
-                    expression += f" OR '{tag}' = \"{c}\""
+                    # expression += f" OR '{tag}' = \"{c}\""
+                    expression += f" OR Compare(DigText('{tag}'), \"*{c.strip()}*\")"
             else:
                 expression = condition.replace("expr:", "")
 
@@ -183,7 +187,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
 
         except Exception as e:
             fault_tags.append(tag)
-            msg += f"[tag]: {str(e)} \n"
+            msg += f"[tag]: \n {str(e)} \n"
             print(msg) if verbosity else None
 
     # la UTR no tiene tags válidas para el cálculo:
@@ -301,7 +305,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         print(f"\nIniciando: [{entity.nombre}]") if verbosity else None
 
         """ Seleccionar la lista de tags a trabajar (activado: de la tag) """
-        UTRs = entity.utrs
+        UTRs = [utr for utr in entity.utrs if utr.activado]
         for utr in UTRs:
             # lista de tags a procesar y sus condiciones:
             SR_Tags = utr.tags
@@ -333,6 +337,9 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     for i in tqdm(range(n_threads), desc=desc[:n_lines], ncols=100):
         success, utr_report, fault_tags, msg = out_q.get()
         report_node.tags_fallidas += fault_tags
+        """ Detalle por UTR """
+        if len(fault_tags) > 0:
+            report_node.tags_fallidas_detalle[str(utr_report.id_utr)] = fault_tags
 
         # reportar en base de datos:
         status_node.msg = f"Procesando nodo {sR_node_name}"

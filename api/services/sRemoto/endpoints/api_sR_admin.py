@@ -633,12 +633,30 @@ class SRNodoAPI(Resource):
                 ala* => 'alambre'
         """
         try:
-            nodes = SRNode.objects
-            if len(nodes) == 0:
+            nodes = SRNode.objects().as_pymongo().exclude('id')
+            if nodes.count() == 0:
                 return dict(success=False, errors=f"No hay nodos en la base de datos"), 404
             if filter is None or len(filter) == 0:
-                to_show = [n.to_summary() for n in nodes]
-                return to_show, 200
+                # creando un resumen rápido de los nodos:
+                _nodes = list()
+                for ix, node in enumerate(nodes):
+                    n_tags = 0
+                    entidades = list()
+                    if "entidades" not in node.keys():
+                        continue
+                    for entidad in node["entidades"]:
+                        n_rtu = len(entidad["utrs"])
+                        n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
+                        n_tags += n_tag_inside
+                        entidad["utrs"] = n_rtu
+                        entidad["n_tags"] = n_tag_inside
+                        entidades.append(entidad)
+                    # creando el resumen del nodo
+                    node["actualizado"] = str(node["actualizado"])
+                    node["entidades"] = entidades
+                    _nodes.append(node)
+                # to_show = [n.to_summary() for n in nodes]
+                return _nodes, 200
             filter = str(filter).replace("*", ".*")
             regex = re.compile(filter, re.IGNORECASE)
             nodes = SRNode.objects(nombre=regex)

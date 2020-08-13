@@ -32,27 +32,29 @@ api = ser_from.add_serializers()
 
 
 @ns.route('/consignacion/<string:id_elemento>/<string:ini_date>/<string:end_date>')
-class SRNodeAPI(Resource):
+class ConsignacionAPI(Resource):
 
     def get(self, id_elemento: str = "id_elemento", ini_date: str = "yyyy-mm-dd hh:mm:ss",
             end_date: str = "yyyy-mm-dd hh:mm:ss"):
         """ Obtener las consignaciones asociadas del elemento: "id_elemento"
             <b>id_elemento</b> corresponde al elemento a consignar
+            formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
         try:
             success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
             success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, errors=msg, msg=msg), 400
 
             consignacion = Consignments.objects(id_elemento=id_elemento).first()
             if consignacion is None:
-                return dict(success=False, errors="No existen consignaciones asociadas a este elemento"), 404
+                return dict(success=False, msg="No existen consignaciones asociadas a este elemento"), 404
             consignaciones = consignacion.consignments_in_time_range(ini_date, end_date)
             if len(consignaciones) == 0:
-                return dict(success=False, msg="No existe consignaciones en el periodo especificado"), 404
-            return dict(success=True, consignaciones=consignaciones), 200
+                return dict(success=False, msg="No existen consignaciones en el periodo especificado"), 404
+            return dict(success=True, consignaciones=[c.to_dict() for c in consignaciones],
+                        msg="Se han encontrado consignaciones asociadas"), 200
 
         except Exception as e:
             return default_error_handler(e)
@@ -62,6 +64,7 @@ class SRNodeAPI(Resource):
              end_date: str = "yyyy-mm-dd hh:mm:ss"):
         """ Consignar un elemento asociadas a: "id_elemento"
             <b>id_elemento</b> corresponde al elemento a consignar
+             formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
         try:
             success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
@@ -79,14 +82,66 @@ class SRNodeAPI(Resource):
                 return dict(success=False, errors="No se pueden asignar consignaciones a este elemento. "
                                                   "El elemento no existe"), 404
             consignacion = Consignment(no_consignacion=detalle["no_consignacion"], fecha_inicio=ini_date,
-                                       fecha_final=end_date, detalle=dict())
+                                       fecha_final=end_date, detalle=detalle["detalle"])
             # ingresando consignación y guardando si es exitoso:
             success, msg = consignaciones.insert_consignments(consignacion)
             if success:
                 consignaciones.save()
                 return dict(success=success, msg=msg)
             else:
-                return dict(success=success, errors=msg)
+                return dict(success=success, errors=msg, msg=msg)
+
+        except Exception as e:
+            return default_error_handler(e)
+
+
+@ns.route('/consignacion/<string:id_elemento>/<string:id_consignacion>')
+class ConsignacionDeleteEditAPI(Resource):
+
+    def delete(self, id_elemento: str = "id_elemento", id_consignacion: str = "id_consignacion"):
+        """ Elimina la consignación asociadas del elemento: "id_elemento" cuya idenficación es "id_consignacion"
+            <b>id_elemento</b> corresponde al elemento consignado
+            <b>id_consignacion</b> corresponde a la identificación de la consignación
+        """
+        try:
+            consignaciones = Consignments.objects(id_elemento=id_elemento).first()
+            if consignaciones is None:
+                return dict(success=False, errors="No existen consignaciones para este elemento. "
+                                                  "El elemento no existe"), 404
+
+            # eliminando consignación por id
+            success, msg = consignaciones.remove_consignment_by_id(id_consignacion)
+            if success:
+                consignaciones.save()
+                return dict(success=success, msg=msg)
+            else:
+                return dict(success=success, msg=msg)
+
+        except Exception as e:
+            return default_error_handler(e)
+
+    @api.expect(ser_from.consignacion)
+    def put(self, id_elemento: str = "id_elemento", id_consignacion: str = "id_consignacion"):
+        """ Edita la consignación asociada al elemento: "id_elemento", cuya idenficación es "id_consignacion"
+            <b>id_elemento</b> corresponde al elemento consignado
+            <b>id_consignacion</b> corresponde a la identificación de la consignación
+            formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
+        """
+        try:
+            detalle = request.json
+            consignaciones = Consignments.objects(id_elemento=id_elemento).first()
+            if consignaciones is None:
+                return dict(success=False, errors="No existen consignaciones para este elemento. "
+                                                  "El elemento no existe"), 404
+
+            # eliminando consignación por id
+            consignacion = Consignment(**detalle)
+            success, msg = consignaciones.edit_consignment(id_to_edit=id_consignacion, consignment=consignacion)
+            if success:
+                consignaciones.save()
+                return dict(success=success, msg=msg), 200
+            else:
+                return dict(success=success, msg=msg), 404
 
         except Exception as e:
             return default_error_handler(e)

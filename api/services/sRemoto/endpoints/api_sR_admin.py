@@ -368,7 +368,7 @@ class SRNodeIDAPI(Resource):
         try:
             nodo = SRNode.objects(id_node=id).first()
             if nodo is None:
-                return dict(success=False, errors="No se encontró el nodo"), 404
+                return dict(success=False, msg="No se encontró el nodo"), 404
             nodo.delete()
             return nodo.to_dict(), 200
         except Exception as e:
@@ -381,10 +381,10 @@ class SRNodeIDAPI(Resource):
             id_node = request_data["id_node"]
             node = SRNode.objects(id_node=id_node).first()
             if node is None:
-                return dict(success=False, errors="No se encontró el nodo"), 404
+                return dict(success=False, msg="No se encontró el nodo"), 404
             success, msg = node.update_summary_info(request_data)
             if not success:
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             node.save()
             return node.to_summary(), 200
         except Exception as e:
@@ -396,11 +396,11 @@ class SRNodeIDAPI(Resource):
             request_data = dict(request.json)
             nodo = SRNode.objects(id_node=id).first()
             if nodo is not None:
-                return dict(success=False, errors="El nodo ya existe, no puede ser creado"), 400
+                return dict(success=False, msg="El nodo ya existe, no puede ser creado"), 400
             nodo = SRNode(nombre=request_data["nombre"], tipo=request_data["tipo"], activado=request_data["activado"])
             success, msg = nodo.update_summary_info(request_data)
             if not success:
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             try:
                 nodo.save()
             except Exception as e:
@@ -471,7 +471,7 @@ class SREntidadAPI(Resource):
                 nodo.save()
                 return nodo.to_dict(), 200
             else:
-                return dict(success=success, errors=msg), 404
+                return dict(success=success, msg=msg), 404
         except Exception as e:
             return default_error_handler(e)
 """
@@ -489,7 +489,7 @@ class SREntidadesAPI1(Resource):
             if nodo is None:
                 return nodo, 404
             success, result = nodo.search_entity(entidad)
-            return (result.to_dict(), 200) if success else (dict(success=success, errors=result), 404)
+            return (result.to_dict(), 200) if success else (dict(success=success, msg=result), 404)
         except Exception as e:
             return default_error_handler(e)
 """
@@ -522,13 +522,13 @@ class SRTagsAPI(Resource):
             tag_list = [SRTag(**t) for t in tags]
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
-                return dict(success=False, errors=f"No existe nodo [{nombre}]"), 404
+                return dict(success=False, msg=f"No existe nodo [{nombre}]"), 404
             success, msg = nodo.add_or_replace_tags_in_entity(tag_list, entidad)
             if success:
                 nodo.save()
                 correct, r = nodo.search_entity(entidad)
                 return (r.to_dict(), 200) if correct else (r, 400)
-            return dict(success=False, errors=msg), 400
+            return dict(success=False, msg=msg), 400
         except Exception as e:
             return default_error_handler(e)
 """
@@ -538,13 +538,13 @@ class SRTagsAPI(Resource):
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
-                return dict(success=False, errors=f"No existe nodo [{nombre}]"), 404
+                return dict(success=False, msg=f"No existe nodo [{nombre}]"), 404
             check = [i for i, e in enumerate(nodo.entidades) if entidad == e.nombre]
             if len(check) > 0:
                 ix = check[0]
                 tags = nodo.entidades[ix].tags
                 return [t.to_dict() for t in tags], 200
-            return dict(success=False, errors=f"No existe entidad [{entidad}] en nodo [{nombre}]"), 404
+            return dict(success=False, msg=f"No existe entidad [{entidad}] en nodo [{nombre}]"), 404
         except Exception as e:
             return default_error_handler(e)
 """
@@ -556,13 +556,13 @@ class SRTagsAPI(Resource):
             tags = dict(request.json)["tags"]
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
-                return dict(success=False, errors=f"No existe nodo [{nombre}]"), 404
+                return dict(success=False, msg=f"No existe nodo [{nombre}]"), 404
             success, msg = nodo.remove_tags_in_entity(tag_list=tags, nombre_entidad=entidad)
             if success:
                 nodo.save()
                 correct, r = nodo.search_entity(entidad)
                 return (r.to_dict(), 200) if correct else (r, 400)
-            return dict(success=False, errors=msg), 400
+            return dict(success=False, msg=msg), 400
         except Exception as e:
             return default_error_handler(e)
 """
@@ -579,7 +579,7 @@ class SRTagAPI(Resource):
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
-                return dict(success=False, errors=f"No existe nodo [{nombre}]"), 404
+                return dict(success=False, msg=f"No existe nodo [{nombre}]"), 404
             # from body content convert to SRTag object
             tag = SRTag(**request.json)
             success, msg = nodo.add_or_replace_tags_in_entity([tag], entidad)
@@ -587,7 +587,7 @@ class SRTagAPI(Resource):
                 nodo.save()
                 correct, r = nodo.search_entity(entidad)
                 return (r.to_dict(), 200) if correct else (r, 400)
-            return dict(success=False, errors=msg), 400
+            return dict(success=False, msg=msg), 400
         except Exception as e:
             return default_error_handler(e)
 """
@@ -600,13 +600,13 @@ class SRTagAPI(Resource):
         try:
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is None:
-                return dict(success=False, errors=f"No existe nodo [{nombre}]"), 404
+                return dict(success=False, msg=f"No existe nodo [{nombre}]"), 404
             # nombre a eliminar
             name_delete = dict(request.json)["eliminar_elemento"]
             # check if entity exists:
             check_entity = [i for i, e in enumerate(nodo.entidades) if entidad == e.nombre]
             if len(check_entity) == 0:
-                return dict(success=False, errors=f"No existe la entidad [{entidad}] en nodo [{nombre}]")
+                return dict(success=False, msg=f"No existe la entidad [{entidad}] en nodo [{nombre}]")
             id_e = check_entity[0]
             # if entity exists then use tags from that entity (id_e)
             new_tags = list()
@@ -635,7 +635,7 @@ class SRNodoAPI(Resource):
         try:
             nodes = SRNode.objects().as_pymongo().exclude('id')
             if nodes.count() == 0:
-                return dict(success=False, errors=f"No hay nodos en la base de datos"), 404
+                return dict(success=False, msg=f"No hay nodos en la base de datos"), 404
             if filter is None or len(filter) == 0:
                 # creando un resumen rápido de los nodos:
                 _nodes = list()
@@ -656,12 +656,12 @@ class SRNodoAPI(Resource):
                     node["entidades"] = entidades
                     _nodes.append(node)
                 # to_show = [n.to_summary() for n in nodes]
-                return _nodes, 200
+                return dict(success=True, nodos=_nodes, msg=f"Se han obtenido {len(_nodes)} nodos"), 200
             filter = str(filter).replace("*", ".*")
             regex = re.compile(filter, re.IGNORECASE)
             nodes = SRNode.objects(nombre=regex)
             to_show = [n.to_summary() for n in nodes]
-            return to_show, 200
+            return dict(success=True, nodos= to_show, msg=f"Se han obtenido {len(to_show)} nodos"), 200
         except Exception as e:
             return default_error_handler(e)
 
@@ -679,7 +679,7 @@ class SRNodeFromExcel(Resource):
             args = parsers.excel_upload.parse_args()
             nodo = SRNode.objects(nombre=nombre).first()
             if nodo is not None:
-                return dict(success=False, errors=f"El nodo {[nombre]} ya existe"), 409
+                return dict(success=False, msg=f"El nodo {[nombre]} ya existe"), 409
 
             if args['excel_file'].mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
                                               'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
@@ -701,11 +701,11 @@ class SRNodeFromExcel(Resource):
                 v_node = SRNodeFromDataFrames(nombre, tipo, df_main, df_tags)
                 success, msg = v_node.validate()
                 if not success:
-                    return dict(success=False, errors=msg), 400
+                    return dict(success=False, msg=msg), 400
                 # create a final node to save if is successful
                 success, node = v_node.create_node()
                 if not success:
-                    return dict(success=False, errors=str(node)), 400
+                    return dict(success=False, msg=str(node)), 400
                 node.actualizado = dt.datetime.now()
                 node.save()
                 # Guardar como archivo Excel con versionamiento
@@ -713,7 +713,7 @@ class SRNodeFromExcel(Resource):
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
                 return node.to_summary(), 200
             else:
-                return dict(success=False, errors="El formato del archivo no es aceptado"), 400
+                return dict(success=False, msg="El formato del archivo no es aceptado"), 400
         except Exception as e:
             return default_error_handler(e)
 
@@ -732,7 +732,7 @@ class SRNodeFromExcel(Resource):
         args = parsers.excel_upload.parse_args()
         nodo = SRNode.objects(nombre=nombre).first()
         if nodo is None:
-            return dict(success=False, errors=f"El nodo {[nombre]} no existe"), 400
+            return dict(success=False, msg=f"El nodo {[nombre]} no existe"), 400
 
         try:
             if args['excel_file'].mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
@@ -755,16 +755,16 @@ class SRNodeFromExcel(Resource):
                 v_node = SRNodeFromDataFrames(nombre, tipo, df_main, df_tags)
                 success, msg = v_node.validate()
                 if not success:
-                    return dict(success=False, errors=msg), 400
+                    return dict(success=False, msg=msg), 400
                 # create a final node to save if is successful
                 success, new_node = v_node.create_node()
                 if not success:
-                    return dict(success=False, errors=str(new_node)), 400
+                    return dict(success=False, msg=str(new_node)), 400
                 nodo.actualizado = dt.datetime.now()
                 if args['option'] is None:
                     success, msg = nodo.add_or_replace_entities(new_node.entidades)
                     if not success:
-                        return dict(success=False, errors=str(msg)), 400
+                        return dict(success=False, msg=str(msg)), 400
                     nodo.save()
                 elif str(args['option']).upper() == "REEMPLAZAR":
                     nodo.delete()
@@ -775,7 +775,7 @@ class SRNodeFromExcel(Resource):
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
                 return nodo.to_summary(), 200
             else:
-                return dict(success=False, errors="El formato del archivo no es aceptado"), 400
+                return dict(success=False, msg="El formato del archivo no es aceptado"), 400
         except Exception as e:
             return default_error_handler(e)
 
@@ -784,10 +784,13 @@ class SRNodeFromExcel(Resource):
         """ Descarga en formato excel la última versión del nodo
         """
         try:
-            nodo = SRNode.objects(nombre=nombre, tipo=tipo).first()
-            if nodo is None:
+            node = SRNode.objects(nombre=nombre, tipo=tipo).as_pymongo().exclude('id')
+            if node.count() == 0:
+                return dict(success=False, msg=f"No existe el nodo en la base de datos"), 404
+            node_as_dict = node[0]
+            success, df_main, df_tags = SRDataFramesFromDict(node_as_dict).convert_to_DataFrames()
+            if not success:
                 return None, 404
-            df_main, df_tags = nodo.to_DataFrame()
             file_name = f"{tipo}{nombre}.xlsx".replace("_", "@")
             path = os.path.join(init.TEMP_PATH, file_name)
             with pd.ExcelWriter(path) as writer:

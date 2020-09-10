@@ -325,8 +325,11 @@ class SRNode(Document):
                     tipo=self.tipo, n_tags=n_tags, entidades=entidades,
                     activado=self.activado, actualizado=str(self.actualizado))
 
-class SRNodeFromDataFrames():
 
+class SRNodeFromDataFrames():
+    """
+    Clase que permite la conversión de un dataFrame en un nodo de tipo STR
+    """
     def __init__(self, nombre, tipo, df_main: pd.DataFrame, df_tags: pd.DataFrame):
         df_main.columns = [str(x).lower() for x in df_main.columns]
         df_tags.columns = [str(x).lower() for x in df_tags.columns]
@@ -420,3 +423,49 @@ class SRNodeFromDataFrames():
         except Exception as e:
             print(traceback.format_exc())
             return False, str(e)
+
+
+class SRDataFramesFromDict():
+    """
+    Clase que pemite la creación de DataFrames a partir de un dictionary tipo STRNode
+    """
+    def __init__(self, sr_node_as_dict):
+        self.sr_node_as_dict = sr_node_as_dict
+        self.cl_activado = "activado"
+        self.cl_utr = "utr"
+        self.cl_utr_name = "utr_nombre"
+        self.cl_utr_type = "utr_tipo"
+        self.cl_entity_name = "entidad_nombre"
+        self.cl_entity_type = "entidad_tipo"
+        self.cl_tag_name = "tag_name"
+        self.cl_f_expression = "filter_expression"
+
+
+    def convert_to_DataFrames(self):
+        # main columns in DataFrame
+        main_columns = [self.cl_utr, self.cl_utr_name, self.cl_utr_type,
+                        self.cl_entity_name, self.cl_entity_type, self.cl_activado]
+        # columns in tags sheet
+        tags_columns = [self.cl_utr, self.cl_tag_name, self.cl_f_expression, self.cl_activado]
+
+        df_main = pd.DataFrame(columns=main_columns)
+        df_tags = pd.DataFrame(columns=tags_columns)
+        try:
+            for entidad in self.sr_node_as_dict["entidades"]:
+                for utr in entidad["utrs"]:
+                    active = "x" if utr["activado"] else ""
+                    df_main = df_main.append({self.cl_utr: utr["id_utr"], self.cl_utr_name: utr["utr_nombre"],
+                                              self.cl_utr_type: utr["utr_tipo"], self.cl_entity_name: entidad["entidad_nombre"],
+                                              self.cl_entity_type: entidad["entidad_tipo"], self.cl_activado: active},
+                                             ignore_index=True)
+
+                    if len(utr["tags"]) == 0:
+                        continue
+                    _df_tags = pd.DataFrame(utr["tags"])
+                    _df_tags[self.cl_utr] = utr["id_utr"]
+                    _df_tags[self.cl_activado] = ["x" for t in _df_tags[self.cl_activado] if t > 0]
+                    df_tags = df_tags.append(_df_tags)
+
+            return True, df_main, df_tags
+        except Exception as e:
+            return False, df_main, df_tags

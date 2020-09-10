@@ -45,7 +45,7 @@ class ConsignacionAPI(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg, msg=msg), 400
+                return dict(success=False, msg=msg), 400
 
             consignacion = Consignments.objects(id_elemento=id_elemento).first()
             if consignacion is None:
@@ -71,15 +71,15 @@ class ConsignacionAPI(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             if ini_date >= end_date:
                 msg = "El rango de fechas es incorrecto. Revise que la fecha inicial sea anterior a fecha final"
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
 
             detalle = request.json
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
-                return dict(success=False, errors="No se pueden asignar consignaciones a este elemento. "
+                return dict(success=False, msg="No se pueden asignar consignaciones a este elemento. "
                                                   "El elemento no existe"), 404
             consignacion = Consignment(no_consignacion=detalle["no_consignacion"], fecha_inicio=ini_date,
                                        fecha_final=end_date, detalle=detalle["detalle"])
@@ -89,7 +89,7 @@ class ConsignacionAPI(Resource):
                 consignaciones.save()
                 return dict(success=success, msg=msg)
             else:
-                return dict(success=success, errors=msg, msg=msg)
+                return dict(success=success, msg=msg)
 
         except Exception as e:
             return default_error_handler(e)
@@ -106,7 +106,7 @@ class ConsignacionDeleteEditAPI(Resource):
         try:
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
-                return dict(success=False, errors="No existen consignaciones para este elemento. "
+                return dict(success=False, msg="No existen consignaciones para este elemento. "
                                                   "El elemento no existe"), 404
 
             # eliminando consignación por id
@@ -131,7 +131,7 @@ class ConsignacionDeleteEditAPI(Resource):
             detalle = request.json
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
-                return dict(success=False, errors="No existen consignaciones para este elemento. "
+                return dict(success=False, msg="No existen consignaciones para este elemento. "
                                                   "El elemento no existe"), 404
 
             # eliminando consignación por id

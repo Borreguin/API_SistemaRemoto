@@ -132,7 +132,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
     # se debe exceptuar periodos de consignación
     consDB = Consignments.objects(id=utr.consignaciones.id).first()
     consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
-    print("\n>>>>", utr.utr_nombre, consignaciones_utr)
+    # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
     time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
 
     # adjuntar consignaciones tomadas en cuenta:
@@ -153,10 +153,10 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
                 #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
                 conditions = str(condition).split("#")
                 # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
-                expression = f"Compare(DigText('{tag}'), \"*{conditions[0].strip()}*\")"
+                expression = f'Compare(DigText(\'{tag}\'), "{conditions[0].strip()}")'
                 for c in conditions[1:]:
                     # expression += f" OR '{tag}' = \"{c}\""
-                    expression += f" OR Compare(DigText('{tag}'), \"*{c.strip()}*\")"
+                    expression += f' OR Compare(DigText(\'{tag}\'), "{c.strip()}")'
             else:
                 expression = condition.replace("expr:", "")
 

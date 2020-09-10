@@ -45,16 +45,16 @@ class Disponibilidad(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True, force=True)
             if success1:
                 success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
-                    return dict(success=False, errors=msg2), 400
+                    return dict(success=False, msg=msg2), 400
             elif not success1:
-                return dict(success=False, errors=result), 400
+                return dict(success=False, msg=result), 400
 
         except Exception as e:
             return default_error_handler(e)
@@ -72,7 +72,7 @@ class Disponibilidad(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True)
             not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
             if all(not_calculated) and len(not_calculated) > 0:
@@ -82,9 +82,9 @@ class Disponibilidad(Resource):
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
-                    return dict(success=False, errors=msg2), 400
+                    return dict(success=False, msg=msg2), 400
             elif not success1:
-                return dict(success=False, errors=result), 400
+                return dict(success=False, msg=result), 400
 
         except Exception as e:
             return default_error_handler(e)
@@ -101,11 +101,11 @@ class Disponibilidad(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
             final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
             if final_report is None:
-                return dict(success=False, errors="No existe reporte asociado"), 404
+                return dict(success=False, msg="No existe reporte asociado"), 404
             return final_report.to_dict(), 200
 
         except Exception as e:
@@ -128,7 +128,7 @@ class DisponibilidadNodo(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
 
             node_list_name = [request.json["nombre"]]
             success1, result, msg1 = run_node_list(node_list_name, ini_date, end_date, save_in_db=True, force=True)
@@ -137,9 +137,9 @@ class DisponibilidadNodo(Resource):
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
-                    return dict(success=False, errors=msg2), 409
+                    return dict(success=False, msg=msg2), 409
             elif not success1:
-                return dict(success=False, errors=result), 409
+                return dict(success=False, msg=result), 409
         except Exception as e:
             return default_error_handler(e)
 
@@ -160,7 +160,7 @@ class DisponibilidadNodos(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
 
             node_list_name = request.json["nodos"]
             success1, result, msg1 = run_node_list(node_list_name, ini_date, end_date, save_in_db=True, force=True)
@@ -169,9 +169,9 @@ class DisponibilidadNodos(Resource):
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
-                    return dict(success=False, errors=msg2), 409
+                    return dict(success=False, msg=msg2), 409
             elif not success1:
-                return dict(success=False, errors=result), 409
+                return dict(success=False, msg=result), 409
         except Exception as e:
             return default_error_handler(e)
 
@@ -188,7 +188,7 @@ class DisponibilidadNodos(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             node_list_name = request.json["nodos"]
             success1, result, msg1 = run_node_list(node_list_name, ini_date, end_date, save_in_db=True, force=False)
             not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
@@ -199,9 +199,9 @@ class DisponibilidadNodos(Resource):
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
-                    return dict(success=False, errors=msg2), 409
+                    return dict(success=False, msg=msg2), 409
             elif not success1:
-                return dict(success=False, errors=result), 409
+                return dict(success=False, msg=result), 409
 
         except Exception as e:
             return default_error_handler(e)
@@ -218,7 +218,7 @@ class DisponibilidadNodos(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             node_list_name = request.json["nodos"]
             not_found = list()
             deleted = list()
@@ -267,11 +267,11 @@ class DisponibilidadNodo(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             v_report = SRNodeDetails(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
             report = SRNodeDetails.objects(id_report=v_report.id_report).first()
             if report is None:
-                return dict(success=False, errors="No existe el cálculo para este nodo en la fecha indicada"), 404
+                return dict(success=False, msg="No existe el cálculo para este nodo en la fecha indicada"), 404
             else:
                 return report.to_dict(), 200
 
@@ -290,16 +290,16 @@ class DisponibilidadNodo(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             v_report = SRNodeDetails(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
             report = SRNodeDetails.objects(id_report=v_report.id_report).first()
             if report is None:
-                return dict(success=False, errors="No existe el cálculo para este nodo en la fecha indicada"), 404
+                return dict(success=False, msg="No existe el cálculo para este nodo en la fecha indicada"), 404
             else:
                 report.delete()
                 success, final_report, msg = run_summary(ini_date, end_date, save_in_db=True, force=True)
                 if not success:
-                    return dict(success=False, errors="No se puede calcular el reporte final"), 404
+                    return dict(success=False, msg="No se puede calcular el reporte final"), 404
                 return dict(success=True, report=final_report.to_dict(),
                             msg=f"El reporte del nodo {nombre} ha sido eliminado, "
                                 f"y el reporte final ha sido re-calculado"), 200
@@ -324,7 +324,7 @@ class DisponibilidadStatusNodo(Resource):
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, errors=msg), 400
+                return dict(success=False, msg=msg), 400
             # check the existing nodes:
             all_nodes = SRNode.objects()
             all_nodes = [n for n in all_nodes if n.activado]

@@ -94,7 +94,7 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
     time_ranges = list()        # lleva la lista de periodos válidos
     tail = None                 # inicialización
     end = end_date              # inicialización
-    if consignaciones[0].fecha_inicio < ini_date:
+    if consignaciones[0].fecha_inicio < ini_date and consignaciones[0].fecha_final < end_date:
         # [-----*++++]+++++++++++++++++++++*------
         tail = consignaciones[0].fecha_final    # lo que queda restante a analizar
         end = end_date          # por ser caso inicial se asume que se puede hacer el cálculo hasta el final del periodo
@@ -112,8 +112,8 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
         start = ini_date                        # fecha desde la que se empieza un periodo válido para calc. disponi
         end = consignaciones[0].fecha_inicio    # fecha fin del periodo válido para calc. disponi
         return [pi._time_range(start, end)]
-    elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final == end_date:
-        # ---*[+++++++]*---
+    elif consignaciones[0].fecha_inicio <= ini_date and consignaciones[0].fecha_final >= end_date:
+        # ---[*+++++++*]---
         # este caso es definitivo y no requiere continuar más alla
         # nada que procesar en este caso
         return []
@@ -149,8 +149,8 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
     # se debe exceptuar periodos de consignación
     consDB = Consignments.objects(id=utr.consignaciones.id).first()
     consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
-    # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
     time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
+    print("\n>>>>", utr.utr_nombre, consignaciones_utr, time_ranges)
 
     # adjuntar consignaciones tomadas en cuenta:
     utr_report.consignaciones_detalle = consignaciones_utr

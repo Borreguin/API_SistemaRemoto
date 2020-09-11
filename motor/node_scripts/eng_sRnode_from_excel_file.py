@@ -152,7 +152,7 @@ def processing_tags(entity, tag_list, condition_list, q: queue.Queue = None):
                 expression += " OR '{tag_name}' = \"{condition}\"".format(tag_name=tag, condition=c.strip())
 
             # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
-            # TODO: tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
+            #       tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
             #       consignación:                  [-------------------]
             #       ocurrido:           [...::.....:::::::::::::::::::..:...:::........]
             #       minutos_disp:       [...::.....]                  [.:...:::........]

@@ -111,7 +111,9 @@ class Consignments(Document):
 
     def consignments_in_time_range(self, ini_date: dt.datetime, end_time: dt.datetime):
         return [c for c in self.consignaciones if
-                ini_date <= c.fecha_inicio < end_time or ini_date < c.fecha_final <= end_time]
+                (ini_date <= c.fecha_inicio < end_time or ini_date < c.fecha_final <= end_time) or
+                # el periodo consignado cubre la totalidad del periodo a evaluar:
+                (c.fecha_inicio <= ini_date and c.fecha_final >= end_time)]
 
     def search_consignment_by_id(self, id_to_search):
         for consignment in self.consignaciones:

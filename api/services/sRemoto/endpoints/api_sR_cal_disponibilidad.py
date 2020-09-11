@@ -41,20 +41,38 @@ class Disponibilidad(Resource):
             Fecha final formato:    <b>yyyy-mm-dd</b>
         """
         try:
+            id = ini_date + "_" + end_date
             success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
+            # check if there is already a calculation:
+            path_file = os.path.join(init.TEMP_PATH, "api_sR_cal_disponibilidad.json")
+            time_delta = dt.timedelta(minutes=45)
+            # puede el cálculo estar activo más de 45 minutos?
+            active = u.is_active(path_file, id, time_delta)
+            if active:
+                return dict(success=False, msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}"), 409
+
+            # preparandose para cálculo: (permite bloquear futuras peticiones si ya existe un cálculo al momento)
+            dict_value = dict(fecha=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), activo=True)
+            u.save_in_file(path_file, id, dict_value)
+
+            # realizando el cálculo:
             success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True, force=True)
+            # desbloqueando la instancia:
+            dict_value["activo"] = False
+            u.save_in_file(path_file, id, dict_value)
+
             if success1:
                 success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
                 if success2:
-                    return dict(result=result, msg=msg1, report=report.to_dict()), 200
+                    return dict(success=True, result=result, msg=msg1, report=report.to_dict()), 200
                 else:
-                    return dict(success=False, msg=msg2), 400
-            elif not success1:
-                return dict(success=False, msg=result), 400
+                    return dict(success=False, msg=msg2), 409
+            else:
+                return dict(success=False, msg=result), 409
 
         except Exception as e:
             return default_error_handler(e)
@@ -76,7 +94,9 @@ class Disponibilidad(Resource):
             success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True)
             not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
             if all(not_calculated) and len(not_calculated) > 0:
-                return dict(success=False, msg="No ha sido calculado, ya existe en base de datos")
+                return dict(success=False, msg=dict(msg="No ha sido calculado completamente, "
+                                                        "ya existe algunos reportes en base de datos. "
+                                                        "Considere re-escribir el cálculo", detalle=msg1))
             if success1:
                 success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
                 if success2:
@@ -106,7 +126,7 @@ class Disponibilidad(Resource):
             final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
             if final_report is None:
                 return dict(success=False, msg="No existe reporte asociado"), 404
-            return final_report.to_dict(), 200
+            return dict(success=True, report=final_report.to_dict()), 200
 
         except Exception as e:
             return default_error_handler(e)

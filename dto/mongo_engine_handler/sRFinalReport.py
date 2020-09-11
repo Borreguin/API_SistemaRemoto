@@ -6,7 +6,8 @@ class SRNodeSummaryReport(EmbeddedDocument):
     id_report = StringField(required=True)
     nombre = StringField(required=True)
     tipo = StringField(required=True)
-    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=0, max_value=100)
+    # el valor -1 es aceptado en el caso de que la disponibilidad no este definida
+    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     procesamiento = DictField(required=True, default=dict())
     novedades = DictField(required=True, default=dict())
     tiempo_calculo_segundos = FloatField(required=False)
@@ -26,8 +27,9 @@ class SRFinalReport(Document):
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
     periodo_evaluacion_minutos = IntField(required=True)
-    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=0, max_value=100)
-    disponibilidad_promedio_porcentage = FloatField(required=True, min_value=0, max_value=100)
+    # el valor -1 es aceptado en el caso de que la disponibilidad no este definida
+    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
+    disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     reportes_nodos = ListField(EmbeddedDocumentField(SRNodeSummaryReport))
     tiempo_calculo_segundos = FloatField(default=0)
     procesamiento = DictField(default=dict(numero_tags_total=0, numero_utrs_procesadas=0,
@@ -74,16 +76,32 @@ class SRFinalReport(Document):
 
     def calculate(self):
         if len(self.reportes_nodos) > 0:
-            self.disponibilidad_promedio_porcentage = \
-                sum([rp.disponibilidad_promedio_ponderada_porcentage for rp in self.reportes_nodos]) / len(
-                    self.reportes_nodos)
-            n = self.procesamiento["numero_tags_total"]
-            if n > 0:
-                self.disponibilidad_promedio_ponderada_porcentage = \
-                    sum([rp.disponibilidad_promedio_ponderada_porcentage * rp.procesamiento["numero_tags_total"] / n
-                         for rp in self.reportes_nodos])
+
+            # cálculo de la disponibilidad promedio:
+            self.disponibilidad_promedio_porcentage, n_reports, n_tags = 0, 0, 0
+            for report in self.reportes_nodos:
+                if report.disponibilidad_promedio_ponderada_porcentage > 0:
+                    self.disponibilidad_promedio_porcentage += report.disponibilidad_promedio_ponderada_porcentage
+                    n_reports += 1
+                    n_tags += report.procesamiento['numero_tags_total']
+            if n_reports > 0:
+                self.disponibilidad_promedio_porcentage = self.disponibilidad_promedio_porcentage/n_reports
+            else:
+                # No se ha podido establecer la disponibilidad
+                self.disponibilidad_promedio_porcentage = -1
+
+            # cálculo de la disponibilidad promedio ponderada
+            if n_tags > 0:
+                self.disponibilidad_promedio_ponderada_porcentage = 0
+                for rp in self.reportes_nodos:
+                    if rp.disponibilidad_promedio_ponderada_porcentage > 0:
+                        self.disponibilidad_promedio_ponderada_porcentage += \
+                            rp.disponibilidad_promedio_ponderada_porcentage * rp.procesamiento["numero_tags_total"] / n_tags
                 if self.disponibilidad_promedio_ponderada_porcentage > 100:
                     self.disponibilidad_promedio_ponderada_porcentage = 100
+            else:
+                self.disponibilidad_promedio_ponderada_porcentage = -1
+                self.disponibilidad_promedio_porcentage = -1
 
         reportes_nodos = sorted(self.reportes_nodos, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
         self.procesamiento["numero_nodos_procesados"] = len(self.reportes_nodos)

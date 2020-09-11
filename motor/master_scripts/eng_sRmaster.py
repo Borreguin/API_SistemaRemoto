@@ -168,12 +168,14 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         final_report.save()
         return True, final_report, "El reporte ha sido calculado exitosamente"
     except Exception as e:
+        print(e)
         return False, final_report, "El reporte no ha sido guardado"
 
 
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()
-    # run_all_nodes(report_ini_date, report_end_date, save_in_db=True)
+    report_ini_date, report_end_date = dt.datetime(2020,8, 1), dt.datetime(2020,8, 2)
+    run_all_nodes(report_ini_date, report_end_date, save_in_db=True, force=True)
     run_summary(report_ini_date, report_end_date)
 
 

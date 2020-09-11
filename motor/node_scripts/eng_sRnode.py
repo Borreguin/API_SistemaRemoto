@@ -84,22 +84,39 @@ eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_c
 
 
 def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: dt.datetime):
-
+    # La función encuentra el periodo en el cual se puede examinar la disponibilidad:
     if len(consignaciones) == 0:
         return [pi._time_range(ini_date, end_date)]
 
     # caso inicial:
+    # * ++ tiempo de análisis ++*
+    # [ periodo de consignación ]
+    time_ranges = list()        # lleva la lista de periodos válidos
+    tail = None                 # inicialización
+    end = end_date              # inicialización
     if consignaciones[0].fecha_inicio < ini_date:
         # [-----*++++]+++++++++++++++++++++*------
-        tail = consignaciones[0].fecha_final
-        end = end_date
-        time_ranges = list()
-    else:
+        tail = consignaciones[0].fecha_final    # lo que queda restante a analizar
+        end = end_date          # por ser caso inicial se asume que se puede hacer el cálculo hasta el final del periodo
+
+    elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final < end_date:
         # --*++++[++++++]+++++++++*---------------
-        start = ini_date
-        end = consignaciones[0].fecha_inicio
-        tail = consignaciones[0].fecha_final
-        time_ranges = [pi._time_range(start, end)]
+        start = ini_date                        # fecha desde la que se empieza un periodo válido para calc. disponi
+        end = consignaciones[0].fecha_inicio    # fecha fin del periodo válido para calc. disponi
+        tail = consignaciones[0].fecha_final    # siguiente probable periodo (lo que queda restante a analizar)
+        time_ranges = [pi._time_range(start, end)]  # primer periodo válido
+
+    elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final >= end_date:
+        # --*++++[+++++++++++++++*-----]----------
+        # este caso es definitivo y no requiere continuar más alla:
+        start = ini_date                        # fecha desde la que se empieza un periodo válido para calc. disponi
+        end = consignaciones[0].fecha_inicio    # fecha fin del periodo válido para calc. disponi
+        return [pi._time_range(start, end)]
+    elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final == end_date:
+        # ---*[+++++++]*---
+        # este caso es definitivo y no requiere continuar más alla
+        # nada que procesar en este caso
+        return []
 
     # creando los demás rangos:
     for c in consignaciones[1:]:
@@ -115,7 +132,7 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
     time_ranges.append(pi._time_range(tail, end))
     return time_ranges
 
-
+# La función devuelve el reporte por UTR
 def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None):
     global report_ini_date
     global report_end_date
@@ -197,7 +214,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
         return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
 
     # All is OK until here:
-    utr_report.calculate()
+    utr_report.calculate(report_ini_date, report_end_date)
     if q is not None:
         q.put((True, utr_report, fault_tags, msg))
     return True, utr_report, fault_tags, msg
@@ -371,8 +388,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     [in_memory_reports[k].calculate() for k in in_memory_reports.keys()]
     [in_memory_reports[k].reportes_utrs.sort(key=lambda x: x.disponibilidad_promedio_porcentage)
      for k in in_memory_reports.keys()]
-    report_node.reportes_entidades = [in_memory_reports[k] for k in in_memory_reports.keys()
-                                      if in_memory_reports[k].numero_tags > 0]
+    report_node.reportes_entidades = [in_memory_reports[k] for k in in_memory_reports.keys()]
     report_node.reportes_entidades.sort(key=lambda x:x.disponibilidad_promedio_ponderada_porcentage)
     report_node.entidades_fallidas = [r.entidad_nombre for r in report_node.reportes_entidades if r.numero_tags == 0]
     report_node.calculate_all()
@@ -421,13 +437,13 @@ def test():
     global report_ini_date
     global report_end_date
 
-    mongo_config.update(dict(db="DB_DISP_EMS_TEST"))
+    # mongo_config.update(dict(db="DB_DISP_EMS_TEST"))
     connect(**mongo_config)
 
     print("WARNING: Corriendo en modo DEBUG -- Este modo es solamente de prueba")
     print(f">>> Procesando todos los nodos en DB [{mongo_config['db']}]")
     # get date for last month:
-    report_ini_date, report_end_date = u.get_dates_for_last_month()
+    # report_ini_date, report_end_date = u.get_dates_for_last_month()
 
     all_nodes = SRNode.objects()
     if len(all_nodes) == 0:
@@ -476,8 +492,10 @@ def test():
 
 if __name__ == "__main__":
 
-    # if debug:
-    #     test()
+    if debug:
+        report_ini_date = dt.datetime(2020, 8, 1)
+        report_end_date = dt.datetime(2020, 8, 2)
+        test()
 
     # Configurando para obtener parámetros exteriores:
     parser = argparse.ArgumentParser()

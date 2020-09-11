@@ -1,6 +1,8 @@
 import argparse, os
 import datetime as dt
 import hashlib
+import json
+import traceback
 
 import pandas as pd
 import pickle as pkl
@@ -154,3 +156,47 @@ def get_id(params: list):
     for p in params:
         id += str(p).lower().strip()
     return hashlib.md5(id.encode()).hexdigest()
+
+
+def retrieve_from_file(temp_file, id):
+
+    if os.path.exists(temp_file):
+        with open(temp_file) as json_file:
+            resp = json.load(json_file)
+            size = os.path.getsize(temp_file)
+            if size > 10 * 1024 * 1024:
+                os.remove(temp_file)
+            return resp.pop(id, None)
+    else:
+        return None
+
+
+def save_in_file(temp_file, id, data_dict):
+
+    if not os.path.exists(temp_file):
+        to_save = {id: data_dict}
+    else:
+        with open(temp_file) as json_file:
+            to_save = json.load(json_file)
+            to_save.update({id: data_dict})
+
+    with open(temp_file, 'w') as outfile:
+        json.dump(to_save, outfile, indent=4, sort_keys=True)
+
+
+def is_active(path_file, id: str,  time_delta: dt.timedelta):
+    try:
+        value_dict = retrieve_from_file(path_file, id)
+        if value_dict is None:
+            return False
+        else:
+            value_dict["fecha"] = dt.datetime.strptime(value_dict["fecha"], "%Y-%m-%d %H:%M:%S")
+            if value_dict["fecha"] + time_delta > dt.datetime.now():
+                return value_dict["activo"]
+            else:
+                return False
+
+    except Exception as e:
+        tb = traceback.extract_stack()
+        print(f"{str(e)} \n {tb}")
+        return True

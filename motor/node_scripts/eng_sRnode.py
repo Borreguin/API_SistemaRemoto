@@ -492,10 +492,10 @@ def test():
 
 if __name__ == "__main__":
 
-    if debug:
-        report_ini_date = dt.datetime(2020, 8, 1)
-        report_end_date = dt.datetime(2020, 8, 2)
-        test()
+    # if debug:
+    #    report_ini_date = dt.datetime(2020, 8, 1)
+    #    report_end_date = dt.datetime(2020, 8, 2)
+    #    test()
 
     # Configurando para obtener parámetros exteriores:
     parser = argparse.ArgumentParser()

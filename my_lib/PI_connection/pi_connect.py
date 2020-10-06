@@ -12,7 +12,6 @@ import numpy as np
 
 sys.path.append(r'C:\Program Files (x86)\PIPC\AF\PublicAssemblies\4.0')
 clr.AddReference('OSIsoft.AFSDK')
-
 from OSIsoft.AF import *
 from OSIsoft.AF.PI import *
 from OSIsoft.AF.Asset import *

@@ -131,8 +131,10 @@ def main():
 
     # serve the application
     if init.FLASK_DEBUG:
+        #Este comando ejecuta la aplicación web en modo Desarrollo
         app.run(debug=init.FLASK_DEBUG)
     else:
+        #Este comando ejecuta la aplicación web en modo Producción
         serve(app, host='0.0.0.0', port=7820)
 
 

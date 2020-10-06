@@ -1,10 +1,10 @@
 import os
-import subprocess as sb
-import traceback
+import subprocess as sb #Procesos en paralelo
+import traceback # Seguimiento de errores
 from settings import initial_settings as init
-script_path = os.path.dirname(os.path.abspath(__file__))
+script_path = os.path.dirname(os.path.abspath(__file__)) #obtener el path absoluto de este script
 db_path = os.path.join(script_path, "_db", "mongo_db")
-mongo_exe = 'C:\\Program Files\\MongoDB\\Server\\4.2\\bin\\mongod.exe'
+mongo_exe = 'C:\\Program Files\\MongoDB\\Server\\4.4\\bin\\mongod.exe'
 log_path = os.path.join(script_path, "logs")
 
 

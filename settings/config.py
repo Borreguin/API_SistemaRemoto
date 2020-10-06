@@ -4,8 +4,9 @@ config["name"] = "settings"
 config["version"] = "0.2"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
+#Configuración de Debbugging
 config["FLASK_DEBUG"] = True
-
+#Configuración de UI de SWAGGER
 config["RESTPLUS_SWAGGER_UI_DOC_EXPANSION"] = "list"
 config["RESTPLUS_VALIDATE"] = True
 config["RESTPLUS_MASK_SWAGGER"] = False

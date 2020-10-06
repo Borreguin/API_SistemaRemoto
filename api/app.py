@@ -92,7 +92,7 @@ def configure_mongo_engine():
 @app.route("/")
 def main_page():
     """ Adding initial page """
-    return "Hello from FastCGI via IIS! Testing an empty web Page 20"
+    return "Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad del SCADA/EMS"
 
 
 @app.after_request

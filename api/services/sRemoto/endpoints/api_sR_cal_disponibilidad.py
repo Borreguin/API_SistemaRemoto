@@ -66,7 +66,8 @@ class Disponibilidad(Resource):
             u.save_in_file(path_file, id, dict_value)
 
             if success1:
-                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
+                                                     results=result, log_msg=msg1)
                 if success2:
                     return dict(success=True, result=result, msg=msg1, report=report.to_dict()), 200
                 else:
@@ -98,7 +99,8 @@ class Disponibilidad(Resource):
                                                         "ya existe algunos reportes en base de datos. "
                                                         "Considere re-escribir el cálculo", detalle=msg1))
             if success1:
-                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
+                                                     results=result, log_msg=msg1)
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
@@ -153,7 +155,8 @@ class DisponibilidadNodo(Resource):
             node_list_name = [request.json["nombre"]]
             success1, result, msg1 = run_node_list(node_list_name, ini_date, end_date, save_in_db=True, force=True)
             if success1:
-                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
+                                                     results=result, log_msg=msg1)
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
@@ -185,7 +188,8 @@ class DisponibilidadNodos(Resource):
             node_list_name = request.json["nodos"]
             success1, result, msg1 = run_node_list(node_list_name, ini_date, end_date, save_in_db=True, force=True)
             if success1:
-                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
+                                                     results=result, log_msg=msg1)
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:
@@ -215,7 +219,8 @@ class DisponibilidadNodos(Resource):
             if all(not_calculated) and len(not_calculated) > 0:
                 return dict(success=False, msg="No ha sido calculado, ya existe en base de datos")
             if success1:
-                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True)
+                success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
+                                                     results=result, log_msg=msg1)
                 if success2:
                     return dict(result=result, msg=msg1, report=report.to_dict()), 200
                 else:

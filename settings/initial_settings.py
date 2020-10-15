@@ -52,8 +52,8 @@ MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
 MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
 MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
 
-if FLASK_DEBUG:
-    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
+# if FLASK_DEBUG:
+#    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
 print('Configuraciones de MongoDB:' + str(MONGOCLIENT_SETTINGS))
 
 """ Configuration of Mongo Engine """
@@ -87,10 +87,10 @@ PISERVERS = config["PISERVERS"]
 EXCEL_REPO = config["EXCEL_REPO"]
 SREMOTO_REPO = config["SREMOTO_EXCEL_REPO"]
 SCENTRAL_REPO = config["SCENTRAL_EXCEL_REPO"]
-
 OUTPUT_MOTOR_REPO = config["OUTPUT_MOTOR"]
+
 """ LISTA DE REPOSITORIOS """
-REPOS = [EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO]
+REPOS = [EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO]
 FINAL_REPO = list()
 for repo in REPOS:
     this_repo = os.path.join(project_path, repo)
@@ -98,9 +98,6 @@ for repo in REPOS:
         os.makedirs(this_repo)
     FINAL_REPO.append(this_repo)
 
-REPOS.append(OUTPUT_MOTOR_REPO)
-OUTPUT_MOTOR_REPO = os.path.join(motor_path, OUTPUT_MOTOR_REPO)
-FINAL_REPO.append(OUTPUT_MOTOR_REPO)
 # getting the definitive path for each one in same order:
 EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO = FINAL_REPO
 

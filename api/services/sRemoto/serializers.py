@@ -22,7 +22,7 @@ class sRemotoSerializers:
         """ serializador para nodos """
         self.nombre = api.model('Nombre', {"nombre": fields.String(required=True, description="Nombre del nodo")})
 
-        self.name_update = api.inherit("Actualizar Nombre", {
+        self.name_update = api.inherit("Permite actualizar Nombre", {
             "nuevo_nombre": fields.String(description="Renombrar elemento",
                                           required=True, default="Nuevo nombre")})
 

@@ -52,8 +52,8 @@ MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
 MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
 MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
 
-if FLASK_DEBUG:
-    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
+# if FLASK_DEBUG:
+#    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
 print('Configuraciones de MongoDB:' + str(MONGOCLIENT_SETTINGS))
 
 """ Configuration of Mongo Engine """

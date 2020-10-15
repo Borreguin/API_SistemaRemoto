@@ -18,7 +18,7 @@ class SRUTRDetails(EmbeddedDocument):
     utr_nombre = StringField(required=True)
     utr_tipo = StringField(required=True)
     indisponibilidad_acumulada_minutos = IntField(required=True)
-    indisponibilidad_detalle = ListField(EmbeddedDocumentField(SRTagDetails), required=True, default=list())
+    indisponibilidad_detalle = ListField(EmbeddedDocumentField(SRTagDetails), required=False, default=list())
     consignaciones_acumuladas_minutos = IntField(required=True, default=0)
     consignaciones_detalle = ListField(EmbeddedDocumentField(Consignment))
     numero_tags = IntField(required=True)
@@ -68,6 +68,10 @@ class SRUTRDetails(EmbeddedDocument):
             else:
                 self.disponibilidad_promedio_minutos = -1
                 self.disponibilidad_promedio_porcentage = -1
+        else:
+            # en caso de no tener tags válidas
+            self.disponibilidad_promedio_minutos = -1
+            self.disponibilidad_promedio_porcentage = -1
 
     def __str__(self):
         return f"{self.utr_nombre}: [{len(self.indisponibilidad_detalle)}] tags " \

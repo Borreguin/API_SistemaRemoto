@@ -58,9 +58,9 @@ n_lines = 40  # Para dar formato al log
 """ configuración de logger """
 verbosity = False
 debug = init.FLASK_DEBUG
-lg = init.LogDefaultConfig("Report.log").logger
+lg = init.LogDefaultConfig("eng_sRnode.log").logger
 # nivel de eventos a registrar:
-lg.setLevel(logging.WARNING)
+lg.setLevel(logging.INFO)
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"
@@ -131,6 +131,7 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
     # ultimo caso:
     time_ranges.append(pi._time_range(tail, end))
     return time_ranges
+
 
 # La función devuelve el reporte por UTR
 def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None):
@@ -209,6 +210,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
 
     # la UTR no tiene tags válidas para el cálculo:
     if len(utr_report.indisponibilidad_detalle) == 0:
+        utr_report.calculate(report_ini_date, report_end_date)
         if q is not None:
             q.put((False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"))
         return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
@@ -255,132 +257,46 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     minutos_en_periodo = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
 
     """ Creando reporte de nodo """
-    report_node = SRNodeDetails(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date, fecha_final=report_end_date)
-    status_node = TemporalProcessingStateReport(id_report=report_node.id_report, msg=f"Empezando cálculo del nodo: {sR_node_name}")
+    report_node = SRNodeDetails(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date,
+                                fecha_final=report_end_date)
+    status_node = TemporalProcessingStateReport(id_report=report_node.id_report,
+                                                msg=f"Empezando cálculo del nodo: {sR_node_name}")
     status_node.info["nombre"] = report_node.nombre
     status_node.info["tipo"] = report_node.tipo
     status_node.update_now()
 
-    if save_in_db or force:
-        """ Observar si existe el nodo en la base de datos """
-        try:
-            node_report_db = SRNodeDetails.objects(id_report=report_node.id_report).first()
-            reporte_ya_existe = (node_report_db is not None)
-            """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
-            if reporte_ya_existe and save_in_db and not force:
-                status_node.finished()
-                status_node.msg = _8_reporte_existente[1]
-                status_node.update_now()
-                return False, node_report_db, _8_reporte_existente
-            if reporte_ya_existe and force:
-                node_report_db.delete()
-
-        except Exception as e:
-            print("Problema de concistencia en la base de datos")
+    """ Examinar si existe reporte asociado al nodo en este periodo de tiempo """
+    # si el reporte va ser re-escrito, entonces se elimina el existente de base de datos
+    # caso contrario no se puede continuar al ya existir un reporte asociado a este nodo
+    success, node_report_db, msg = delete_report_if_exists(save_in_db, force, report_node, status_node)
+    if not success:
+        # ya existe un reporte asociado, por lo que no se continúa
+        return False, node_report_db, msg
 
     """ verificar si existe conexión con el servidor PI: """
-    try:
-        pi_svr.server.Connect()
-    except Exception as e:
-        msg = f"No es posible la conexión con el servidor [{pi_svr.server.Name}] " \
-              f"\n [{str(e)}] \n [{traceback.format_exc()}]"
-        status_node.failed()
-        status_node.msg = _4_no_hay_conexion[1]
-        status_node.update_now()
-        return False, None, (_4_no_hay_conexion[0], msg)
+    success, status = verify_pi_server_connection(status_node)
+    if not success:
+        # si no existe conexión con el servidor no se puede continuar:
+        return False, node_report, status
 
     """ Seleccionando las entidades a trabajar (estado: activado) """
     """ entities es una lista de SREntity """
-    try:
-        entities = sR_node.entidades
-        entities = [e for e in entities if e.activado]
-    except Exception as e:
-        status_node.failed()
-        status_node.msg = _5_no_posible_entidades[1]
-        status_node.update_now()
-        return False, None, (_5_no_posible_entidades[0],
-                             "No se ha obtenido las entidades en el nodo [{sR_node.nombre}]: \n{str(e)}")
-
-    if len(entities) == 0:
-        status_node.failed()
-        status_node.msg = _6_no_existe_entidades[1]
-        status_node.update_now()
-        return False, None, (_6_no_existe_entidades[0],
-                             f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
+    success, entities, status = get_active_entities(sR_node, status_node)
+    if not success:
+        # si no hay entidades en el nodo, no se puede continuar
+        return False, node_report, status
 
     """ Trabajando con cada entity_list, cada entity_list tiene utrs que tienen tags a calcular """
-    out_q = queue.Queue()
-    fault_entities = list()
-    fault_utrs = list()
+    # la cola que permitirá recibir los resultados de cada hilo
+    out_queue = queue.Queue()
+    # cronometrar el tiempo de cálculo
     start_time = dt.datetime.now()
-    n_threads = 0
-    desc = f"Carg. UTRs [{sR_node_name}]"
-    desc = desc.ljust(n_lines)
-    structure = dict()              # to keep in memory the report structure
-    for entity in tqdm(entities, desc=desc[:n_lines], ncols=100):
+    # Procesando cada utr dentro de un hilo:
+    structure, out_queue, n_threads = processing_each_utr_in_threads(entities, out_queue)
 
-        print(f"\nIniciando: [{entity.nombre}]") if verbosity else None
-
-        """ Seleccionar la lista de tags a trabajar (activado: de la tag) """
-        UTRs = [utr for utr in entity.utrs if utr.activado]
-        for utr in UTRs:
-            # lista de tags a procesar y sus condiciones:
-            SR_Tags = utr.tags
-            lst_tags = [t.tag_name for t in SR_Tags if t.activado]
-            lst_conditions = [t.filter_expression for t in SR_Tags if t.activado]
-
-            # si existe una lista entonces empezar hilo para procesar
-            if len(lst_tags) > 0:
-                th.Thread(name=utr.id_utr,
-                          target=processing_tags,
-                          kwargs={"utr": utr,
-                                  "tag_list": lst_tags,
-                                  "condition_list": lst_conditions,
-                                  "q": out_q}).start()
-                n_threads += 1
-                structure[utr.id_utr] = entity.entidad_nombre
-            else:
-                fault_utrs.append(utr.id_utr)
-
-    """ Recuperando los resultados de los informes """
-    desc = f"Proc. UTRs [{sR_node_name}]".ljust(n_lines)  # descripción a presentar en barra de progreso
-    # Estructura para recopilar los reportes usando la estructura en memoria
-    in_memory_reports = dict()
-    for entity in entities:
-        report_entity = SREntityDetails(entidad_nombre=entity.entidad_nombre, entidad_tipo=entity.entidad_tipo,
-                                        periodo_evaluacion_minutos=minutos_en_periodo)
-        in_memory_reports[entity.entidad_nombre] = report_entity
-
-    for i in tqdm(range(n_threads), desc=desc[:n_lines], ncols=100):
-        success, utr_report, fault_tags, msg = out_q.get()
-        report_node.tags_fallidas += fault_tags
-        """ Detalle por UTR """
-        if len(fault_tags) > 0:
-            report_node.tags_fallidas_detalle[str(utr_report.id_utr)] = fault_tags
-
-        # reportar en base de datos:
-        status_node.msg = f"Procesando nodo {sR_node_name}"
-        status_node.percentage = round(i/n_threads*100, 2)
-        status_node.update_now()
-
-        # reportar tags no encontradas en log file
-        if len(fault_tags) > 0:
-            warn = f"\n[{sR_node_name}] [{utr_report.id_utr}] Tags no encontradas: \n" + '\n'.join(fault_tags)
-            lg.warning(warn)
-
-        # verificando que los resultados sean correctos:
-        if not success or utr_report.numero_tags == 0:
-            report_node.utr_fallidas.append(utr_report.id_utr)
-            msg = f"\nNo se pudo procesar la UTR [{utr_report.id_utr}]: \n{msg}"
-            if utr_report.numero_tags == 0:
-                msg += "No se encontro tags válidas"
-            lg.error(msg)
-            continue
-
-        # este reporte utr se guarda en su reporte de entidad correspondiente
-        entity_name = structure[utr_report.id_utr]
-        in_memory_reports[entity_name].reportes_utrs.append(utr_report)
-
+    """ Recuperando los resultados de los informes provenientes de cada hilo """
+    report_node, status_node, in_memory_reports = collecting_report_from_threads(entities, out_queue, n_threads,
+                                                                                 report_node, status_node, structure)
 
     """ Calculando tiempo de ejecución """
     run_time = dt.datetime.now() - start_time
@@ -397,6 +313,8 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         status_node.failed()
         status_node.msg = _6_no_existe_entidades[1]
         status_node.update_now()
+        # guardar los resultados del nodo a pesar de no tener tags válidas
+        report_node.save(force=True)
         return False, report_node, (_6_no_existe_entidades[0],
                                     f"El nodo {sR_node_name} no contiene entidades válidas para procesar")
     msg_save = (0, str())
@@ -426,6 +344,139 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     status_node.update_now()
     return True, report_node, (msg_save[0], msg)
 
+
+def delete_report_if_exists(save_in_db, force, report_node, status_node):
+    if save_in_db or force:
+        """ Observar si existe el nodo en la base de datos """
+        try:
+            node_report_db = SRNodeDetails.objects(id_report=report_node.id_report).first()
+            reporte_ya_existe = (node_report_db is not None)
+            """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
+            if reporte_ya_existe and save_in_db and not force:
+                status_node.finished()
+                status_node.msg = _8_reporte_existente[1]
+                status_node.update_now()
+                return False, node_report_db, _8_reporte_existente
+            if reporte_ya_existe and force:
+                node_report_db.delete()
+                return True, None, "Reporte eliminado de manera correcta para reescritura"
+            return True, None, "No es necesario eliminar el reporte"
+
+        except Exception as e:
+            msg = "Problema de concistencia en la base de datos"
+            tb = traceback.extract_stack()
+            lg.error(f"{msg} {str(e)} \n {tb}")
+            return False, None, msg
+
+
+def verify_pi_server_connection(status_node):
+    try:
+        pi_svr.server.Connect()
+        return True, (0, "Conexión exitosa con el servidor PI")
+    except Exception as e:
+        msg = f"No es posible la conexión con el servidor [{pi_svr.server.Name}] " \
+              f"\n [{str(e)}] \n [{traceback.format_exc()}]"
+        status_node.failed()
+        status_node.msg = _4_no_hay_conexion[1]
+        status_node.update_now()
+        return False, (_4_no_hay_conexion[0], msg)
+
+
+def get_active_entities(sR_node, status_node):
+    try:
+        entities = sR_node.entidades
+        entities = [e for e in entities if e.activado]
+
+        if len(entities) == 0:
+            status_node.failed()
+            status_node.msg = _6_no_existe_entidades[1]
+            status_node.update_now()
+            return False, None, (_6_no_existe_entidades[0],
+                                        f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
+
+        return True, entities, (0, "Entidades activas")
+    except Exception as e:
+        status_node.failed()
+        status_node.msg = _5_no_posible_entidades[1]
+        status_node.update_now()
+        return False, None, (_5_no_posible_entidades[0],
+                             "No se ha obtenido las entidades en el nodo [{sR_node.nombre}]: \n{str(e)}")
+
+
+def processing_each_utr_in_threads(entities, out_queue):
+
+    fault_utrs = list()
+    n_threads = 0
+    desc = f"Carg. UTRs [{sR_node_name}]"
+    desc = desc.ljust(n_lines)
+    structure = dict()  # to keep in memory the report structure
+    # processing each entity
+    for entity in tqdm(entities, desc=desc[:n_lines], ncols=100):
+
+        print(f"\nIniciando: [{entity.nombre}]") if verbosity else None
+
+        """ Seleccionar la lista de utrs a trabajar (activado: de la utr) """
+        UTRs = [utr for utr in entity.utrs if utr.activado]
+        for utr in UTRs:
+            # lista de tags a procesar y sus condiciones:
+            SR_Tags = utr.tags
+            lst_tags = [t.tag_name for t in SR_Tags if t.activado]
+            lst_conditions = [t.filter_expression for t in SR_Tags if t.activado]
+
+            th.Thread(name=utr.id_utr,
+                      target=processing_tags,
+                      kwargs={"utr": utr,
+                              "tag_list": lst_tags,
+                              "condition_list": lst_conditions,
+                              "q": out_queue}).start()
+            n_threads += 1
+            structure[utr.id_utr] = entity.entidad_nombre
+            # si no existe tags a procesar en esta UTR
+            if len(lst_tags) == 0:
+                fault_utrs.append(utr.id_utr)
+
+    return structure, out_queue, n_threads
+
+
+def collecting_report_from_threads(entities, out_queue, n_threads, report_node, status_node, structure):
+    desc = f"Proc. UTRs [{sR_node_name}]".ljust(n_lines)  # descripción a presentar en barra de progreso
+    # Estructura para recopilar los reportes usando la estructura en memoria
+    in_memory_reports = dict()
+    for entity in entities:
+        report_entity = SREntityDetails(entidad_nombre=entity.entidad_nombre, entidad_tipo=entity.entidad_tipo,
+                                        periodo_evaluacion_minutos=minutos_en_periodo)
+        in_memory_reports[entity.entidad_nombre] = report_entity
+
+    for i in tqdm(range(n_threads), desc=desc[:n_lines], ncols=100):
+        success, utr_report, fault_tags, msg = out_queue.get()
+        report_node.tags_fallidas += fault_tags
+        """ Detalle por UTR """
+        if len(fault_tags) > 0:
+            report_node.tags_fallidas_detalle[str(utr_report.id_utr)] = fault_tags
+
+        # reportar en base de datos:
+        status_node.msg = f"Procesando nodo {sR_node_name}"
+        status_node.percentage = round(i / n_threads * 100, 2)
+        status_node.update_now()
+
+        # reportar tags no encontradas en log file
+        if len(fault_tags) > 0:
+            warn = f"\n[{sR_node_name}] [{utr_report.id_utr}] Tags no encontradas: \n" + '\n'.join(fault_tags)
+            lg.warning(warn)
+
+        # verificando que los resultados sean correctos:
+        if not success or utr_report.numero_tags == 0:
+            report_node.utr_fallidas.append(utr_report.id_utr)
+            msg = f"\nNo se pudo procesar la UTR [{utr_report.id_utr}]: \n{msg}"
+            if utr_report.numero_tags == 0:
+                msg += "No se encontro tags válidas"
+            lg.error(msg)
+
+        # este reporte utr se guarda en su reporte de entidad correspondiente
+        entity_name = structure[utr_report.id_utr]
+        in_memory_reports[entity_name].reportes_utrs.append(utr_report)
+
+    return report_node, status_node, in_memory_reports
 
 def test():
     """
@@ -492,10 +543,10 @@ def test():
 
 if __name__ == "__main__":
 
-    if debug:
-        report_ini_date = dt.datetime(2020, 8, 1)
-        report_end_date = dt.datetime(2020, 8, 2)
-        test()
+    # if debug:
+    #    report_ini_date = dt.datetime(2020, 8, 1)
+    #    report_end_date = dt.datetime(2020, 8, 2)
+    #    test()
 
     # Configurando para obtener parámetros exteriores:
     parser = argparse.ArgumentParser()

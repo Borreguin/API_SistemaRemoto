@@ -32,6 +32,7 @@ motor_path = os.path.dirname(script_path)
 output_path = os.path.join(motor_path, "output")
 node_script = os.path.join(motor_path, 'node_scripts', 'eng_sRnode.py')
 debug = init.FLASK_DEBUG
+log = init.LogDefaultConfig("eng_sRmaster.log").logger
 
 """ Import clases for MongoDB """
 from dto.mongo_engine_handler.sRNodeReport import *
@@ -40,7 +41,6 @@ from dto.mongo_engine_handler.sRFinalReport import *
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"
 yyyy_mm_dd_hh_mm_ss = "%Y-%m-%d %H:%M:%S"
-lg = init.LogDefaultConfig("Report.log").logger
 start_time_script = dt.datetime.now()
 
 
@@ -71,6 +71,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
     """ variables para llevar logs"""
     msg = list()
     results = dict()
+    log.info(f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Empezando el cálculo de los nodos: {node_list_name}")
 
     """ check si es una lista de strings """
     check = all(isinstance(li, str) for li in node_list_name)
@@ -80,26 +81,60 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
     try:
         child_processes = list()
         for node in node_list_name:
-
             # Procesando cada nodo individual:
-            log_path = os.path.join(output_path, f'{node}.log')
-            with io.open(log_path, mode='wb') as out:
-                to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd),
-                          report_end_date.strftime(yyyy_mm_dd)]
-                if save_in_db:
-                    to_run += ["--s"]
-                if force:
-                    to_run += ["--f"]
-                p = sb.Popen(to_run, stdout=out, stderr=out)
-            # empezando un proceso a la vez
-            child_processes.append(p)
-            to_print = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Empezando el nodo [{node}]"
-            print(to_print)
-            msg.append(to_print)
+            success, p, _msg = executing_node(node, report_ini_date, report_end_date, save_in_db, force)
+            if success:
+                log.info(_msg)
+                msg.append(_msg)
+                child_processes.append(p)
 
-        # now you can join them together
+        # now we can join them together
         # uniendo todos los procesos juntos:
-        print(f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Procesando todos los nodos:")
+        _msg = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Procesando todos los nodos:"
+        log.info(_msg)
+        msg.append(_msg)
+        # recollecting results from child processes
+        success, results, _msg = collecting_results_from(child_processes)
+        if success:
+            msg += _msg
+            return success, results, msg
+        else:
+            msg += _msg
+            return success, results, msg
+
+    except Exception as e:
+        msg = f"No se pudo procesar todos los nodos \n [{str(e)}]\n [{traceback.format_exc()}]"
+        log.error(msg)
+        return False, None, msg
+
+
+def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
+    try:
+        # Procesando cada nodo individual:
+        log_path = os.path.join(output_path, f'{node}.log')
+        with io.open(log_path, mode='wb') as out:
+            to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd),
+                      report_end_date.strftime(yyyy_mm_dd)]
+            if save_in_db:
+                to_run += ["--s"]
+            if force:
+                to_run += ["--f"]
+            # empezando un proceso a la vez
+            p = sb.Popen(to_run, stdout=out, stderr=out)
+            msg = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Ejecutando: [{node}] " \
+                  f"save_in_db={save_in_db} force={force}"
+            return True, p, msg
+    except Exception as e:
+        msg = f"Error al ejecutar el nodo: [{node}] \n {str(e)}"
+        tb = traceback.extract_stack()
+        log.error(f"{msg} \n {tb}")
+        return False, None, msg
+
+
+def collecting_results_from(child_processes):
+    try:
+        results = dict()
+        msg = list()
         fails = 0
         for cp in child_processes:
             cp.wait()
@@ -112,25 +147,26 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
             else:
                 to_print = to_print.replace("#st", "ERROR")
                 fails += 1
-            # details para identificar como finalizo el cálculo
+            # details para identificar como finalizó el cálculo
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
             results.update({str(cp.args[2]): details[0]})
-            print(to_print)
+            log.info(to_print)
             msg.append(to_print)
-        to_print = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos"
-        print(to_print)
+        to_print = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos \n"
+        log.info(to_print)
         msg.append(to_print)
         if fails == len(child_processes):
             return False, results, msg
         return True, results, msg
-
     except Exception as e:
-        msg = f"No se pudo procesar todos los nodos \n [{str(e)}]\n [{traceback.format_exc()}]"
-        lg.error(msg)
-        return False, None, msg
+        _msg = f"Error al recopilar los resultados de los nodos"
+        tb = traceback.extract_stack()
+        log.error(f"{_msg} \n {tb}")
+        return False, None, [_msg]
 
 
-def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
+def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False,
+                results=None, log_msg=None):
     # Connect if is needed
     mongo_config = init.MONGOCLIENT_SETTINGS
     try:
@@ -153,12 +189,22 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         report = SRNodeDetails.objects(id_report=report_v.id_report).first()
         if report is None:
             final_report.novedades["nodos_fallidos"] += 1
+            if not "nodos" in final_report.novedades["detalle"]:
+                final_report.novedades["detalle"]["nodos"] = list()
+            final_report.novedades["detalle"]["nodos"].append(dict(tipo=node.tipo, nombre=node.nombre))
             continue
         node_summary_report = SRNodeSummaryReport(**report.to_summary())
         final_report.append_node_summary_report(node_summary_report)
 
+    # añadiendo novedades encontradas al momento de realizar el cálculo nodo por nodo:
+    final_report.novedades["detalle"]["log"] = log_msg
+    final_report.novedades["detalle"]["results"] = results
     final_report.calculate()
     if report_exists and force:
+        if "log" in final_report_v.novedades["detalle"].keys():
+            final_report.novedades["detalle"]["log"] = final_report_v.novedades["detalle"]["log"]
+        if "results" in final_report_v.novedades["detalle"].keys():
+            final_report.novedades["detalle"]["results"] = final_report_v.novedades["detalle"]["results"]
         final_report_v.delete()
     delta_time = dt.datetime.now() - start_time_script
     final_report.actualizado = dt.datetime.now()
@@ -174,9 +220,9 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
 
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()
-    report_ini_date, report_end_date = dt.datetime(2020,8, 1), dt.datetime(2020,8, 2)
-    run_all_nodes(report_ini_date, report_end_date, save_in_db=True, force=True)
-    run_summary(report_ini_date, report_end_date)
+    report_ini_date, report_end_date = dt.datetime(2020,10, 11), dt.datetime(2020,10, 12)
+    success, results, msg = run_all_nodes(report_ini_date, report_end_date, save_in_db=True, force=True)
+    run_summary(report_ini_date, report_end_date, force=True, results=results, log_msg=msg)
 
 
 if __name__ == "__main__":

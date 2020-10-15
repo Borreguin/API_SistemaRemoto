@@ -99,10 +99,16 @@ class SRFinalReport(Document):
                             rp.disponibilidad_promedio_ponderada_porcentage * rp.procesamiento["numero_tags_total"] / n_tags
                 if self.disponibilidad_promedio_ponderada_porcentage > 100:
                     self.disponibilidad_promedio_ponderada_porcentage = 100
+
+            # en el caso que no tenga tags internas válidas a calcular
             else:
                 self.disponibilidad_promedio_ponderada_porcentage = -1
                 self.disponibilidad_promedio_porcentage = -1
 
+        # en el caso que no exista reportes de nodos:
+        else:
+            self.disponibilidad_promedio_ponderada_porcentage = -1
+            self.disponibilidad_promedio_porcentage = -1
         reportes_nodos = sorted(self.reportes_nodos, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
         self.procesamiento["numero_nodos_procesados"] = len(self.reportes_nodos)
         self.reportes_nodos = reportes_nodos

@@ -9,11 +9,20 @@ Consignación:
 •	DOCUMENTO TIPO JSON
 •	Permite indicar tiempos de consignación donde el elemento no será consgnado para el cálculo de disponibilidad
 
+CAMBIOS EN ESTA VERSION:
+1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS
+
 """
+
+
 import hashlib
+import uuid
 
 from mongoengine import *
 import datetime as dt
+import os
+from settings.config import config as config
+from settings import initial_settings as init
 
 
 class Consignment(EmbeddedDocument):
@@ -23,6 +32,7 @@ class Consignment(EmbeddedDocument):
     t_minutos = IntField(required=True)
     id_consignacion = StringField(default=None, required=True)
     detalle = DictField()
+    folder=StringField(default=None, required=False)
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -30,9 +40,18 @@ class Consignment(EmbeddedDocument):
             # print(self.no_consignacion)
             if self.no_consignacion is None:
                 return
-            id = self.no_consignacion + str(self.fecha_inicio) + str(self.fecha_final)
+            id =  str(uuid.uuid4()) + str(self.fecha_inicio) + str(self.fecha_final)
             self.id_consignacion = hashlib.md5(id.encode()).hexdigest()
         self.calculate()
+
+
+    def create_folder(self):
+        this_repo = os.path.join(init.CONS_REPO, self.id_consignacion)
+        if not os.path.exists(this_repo):
+            os.makedirs(this_repo)
+            self.folder=this_repo
+            return True
+        return False
 
     def calculate(self):
         if self.fecha_inicio is None or self.fecha_final is None:
@@ -63,7 +82,7 @@ class Consignments(Document):
     elemento = DictField(required=False)
     consignacion_reciente = EmbeddedDocumentField(Consignment)
     consignaciones = ListField(EmbeddedDocumentField(Consignment))
-    meta = {"collection": "INFO|Consignaciones"}
+    meta = {"collection": "INFO_COMP|Consignaciones"}
 
     def get_last_consignment(self):
         t, ixr = dt.datetime(1900, 1, 1), -1

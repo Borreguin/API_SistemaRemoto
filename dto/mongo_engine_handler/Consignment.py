@@ -17,6 +17,7 @@ CAMBIOS EN ESTA VERSION:
 
 import hashlib
 import uuid
+from shutil import rmtree
 
 from mongoengine import *
 import datetime as dt
@@ -82,7 +83,7 @@ class Consignments(Document):
     elemento = DictField(required=False)
     consignacion_reciente = EmbeddedDocumentField(Consignment)
     consignaciones = ListField(EmbeddedDocumentField(Consignment))
-    meta = {"collection": "INFO_COMP|Consignaciones"}
+    meta = {"collection": "INFO|Consignaciones"}
 
     def get_last_consignment(self):
         t, ixr = dt.datetime(1900, 1, 1), -1
@@ -125,6 +126,13 @@ class Consignments(Document):
         new_consignaciones = [c for c in self.consignaciones if c.no_consignacion != no_consignacion]
         if len(new_consignaciones) == len(self.consignaciones):
             return False, f"No existe la consignación [{no_consignacion}] en elemento [{self.id_elemento}]"
+        for consignment in self.consignaciones:
+            if consignment.no_consignacion==no_consignacion:
+                this_repo = os.path.join(init.CONS_REPO, consignment.id_consignacion)
+                if os.path.exists(this_repo):
+                    rmtree(this_repo)
+                else:
+                    continue
         self.consignaciones = new_consignaciones
         return True, f"Consignación [{no_consignacion}] ha sido eliminada"
 

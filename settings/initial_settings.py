@@ -1,6 +1,11 @@
 # Created by Roberto Sanchez at 3/29/2019
 # -*- coding: utf-8 -*-
 """ Set the initial settings of this application"""
+"""
+CAMBIOS EN ESTA VERSION: 
+1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
+
+"""
 import sys
 import pymongo as pm
 from logging.handlers import RotatingFileHandler
@@ -88,9 +93,9 @@ EXCEL_REPO = config["EXCEL_REPO"]
 SREMOTO_REPO = config["SREMOTO_EXCEL_REPO"]
 SCENTRAL_REPO = config["SCENTRAL_EXCEL_REPO"]
 OUTPUT_MOTOR_REPO = config["OUTPUT_MOTOR"]
-
+CONS_REPO=config["CONSIGNACIONES"]
 """ LISTA DE REPOSITORIOS """
-REPOS = [EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO]
+REPOS = [EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO,CONS_REPO]
 FINAL_REPO = list()
 for repo in REPOS:
     this_repo = os.path.join(project_path, repo)
@@ -99,7 +104,7 @@ for repo in REPOS:
     FINAL_REPO.append(this_repo)
 
 # getting the definitive path for each one in same order:
-EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO = FINAL_REPO
+EXCEL_REPO, SREMOTO_REPO, SCENTRAL_REPO, OUTPUT_MOTOR_REPO,CONS_REPO = FINAL_REPO
 
 class LogDefaultConfig():
     """

@@ -1,7 +1,14 @@
+# -*- coding: utf-8 -*-
+
+"""
+CAMBIOS EN ESTA VERSION :
+1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
+
+"""
 config = dict()
 
 config["name"] = "settings"
-config["version"] = "0.2"
+config["version"] = "0.3"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
 #Configuración de Debbugging
@@ -28,6 +35,9 @@ config["EXCEL_REPO"] = "_db\\excel_files"
 config["SREMOTO_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_remoto_excel"
 config["SCENTRAL_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_central_excel"
 config["OUTPUT_MOTOR"] = "motor\\output"
+# REPOSITORIO CONSIGNACIONES
+config["CONSIGNACIONES"] = "_db\\consignaciones"
+
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]
 config["DEFAULT_DATE_FORMAT"] = "%Y-%m-%d %H:%M:%S"

@@ -1,5 +1,6 @@
 from dto.mongo_engine_handler.sRNode import *
 import hashlib
+from my_lib import utils as u
 
 
 class SRTagDetails(EmbeddedDocument):
@@ -176,9 +177,12 @@ class SRNodeDetails(Document):
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.nombre is not None and self.tipo is not None:
-            id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() \
-             + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + self.fecha_final.strftime('%d-%m-%Y %H:%M')
-            self.id_report = hashlib.md5(id.encode()).hexdigest()
+            id = u.get_id([self.nombre, self.tipo, self.fecha_inicio.strftime('%d-%m-%Y %H:%M'),
+                           self.fecha_final.strftime('%d-%m-%Y %H:%M')])
+            self.id_report = id
+            # id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() \
+            # + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + self.fecha_final.strftime('%d-%m-%Y %H:%M')
+            # self.id_report = hashlib.md5(id.encode()).hexdigest()
             # self.calculate_all()
 
     def calculate_all(self):

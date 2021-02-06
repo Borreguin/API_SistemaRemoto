@@ -34,7 +34,7 @@ from api.services.Diagrams.endpoints.api_diagrams import ns as namespace_diagram
 """ global variables """
 app = Flask(__name__)                                                   # Flask application
 log = init.LogDefaultConfig("app_flask.log").logger                                    # Logger
-blueprint = Blueprint('api', __name__, url_prefix='/api')               # Name Space for API
+blueprint = Blueprint('api', __name__, url_prefix=init.API_PREFIX)               # Name Space for API
 
 
 @blueprint.route("/test")
@@ -129,6 +129,7 @@ def main():
         print("WARNING!! El log de la base de datos MongoDB está activado. "
               "Esto puede llenar de manera rápida el espacio en disco")
 
+    log.info(f">>>>> API running over: {init.API_PREFIX}")
     # serve the application
     if init.FLASK_DEBUG:
         #Este comando ejecuta la aplicación web en modo Desarrollo

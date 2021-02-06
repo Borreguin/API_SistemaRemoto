@@ -105,7 +105,7 @@ def saving_summary(df_details, n_times=0):
         df_summary = DataFrame(columns=[cl_period_ini, cl_period_end, cl_n_minutos, cl_configuration_archive,
                                         cl_n_tags, cl_disp_ponderada, cl_json], index=[sR_node_name])
 
-        # API_SistemaRemoto ponderada usando la ponderación y la disponibilidad promedio:
+        # Disponibilidad ponderada usando la ponderación y la disponibilidad promedio:
         df_details[cl_disp_ponderada] = df_details[cl_weight]*df_details[cl_disp_avg]
 
         # Configurando el DataFrame de resumen:
@@ -117,7 +117,7 @@ def saving_summary(df_details, n_times=0):
         # Totalizado de numero de señales a tener en cuenta:
         df_summary.loc[[sR_node_name], [cl_n_tags]] = df_details[cl_n_tags].sum()
 
-        # API_SistemaRemoto del nodo procesado:
+        # Disponibilidad del nodo procesado:
         # La sumatoria de la disponibilidad ponderada dividido para el número de minutos en el periodo evaluado:
         df_summary.loc[[sR_node_name], [cl_perc_disp]] = df_details[cl_disp_ponderada].sum() / df_details[cl_n_minutos].iloc[0]
 

@@ -9,20 +9,15 @@ lb_empresa = "Empresa"
 lb_unidad_negocio = "Unidad de Negocio"
 lb_utr = "UTR"
 lb_protocolo = "Protocolo"
-lb_disponibilidad_ponderada_empresa = "API_SistemaRemoto ponderada Empresa"
-lb_disponibilidad_ponderada_unidad = "API_SistemaRemoto ponderada Unidad de Negocio"
-lb_disponibilidad_promedio_utr = "API_SistemaRemoto promedio UTR"
+lb_disponibilidad_ponderada_empresa = "Disponibilidad ponderada Empresa"
+lb_disponibilidad_ponderada_unidad = "Disponibilidad ponderada Unidad de Negocio"
+lb_disponibilidad_promedio_utr = "Disponibilidad promedio UTR"
 lb_no_seniales = "No. señales"
 lb_falladas = "Falladas"
 lb_latitud = "Latitud"
 lb_longitud = "Longitud"
-lb_disponibilidad_ponderada = "API_SistemaRemoto ponderada (%)"
-lb_disponibilidad_ponderada_ = "API_SistemaRemoto ponderada"
-lb_disponibilidad_promedio = "API_SistemaRemoto promedio (%)"
-lb_disponibilidad_promedio_ = "API_SistemaRemoto promedio"
 details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr, lb_protocolo, lb_disponibilidad_ponderada_empresa,
            lb_disponibilidad_ponderada_unidad, lb_disponibilidad_promedio_utr, lb_no_seniales, lb_latitud, lb_longitud]
-result_columns =[lb_fecha_ini, lb_fecha_fin, lb_disponibilidad_ponderada, lb_disponibilidad_promedio, lb_falladas]
 
 
 class SRNodeSummaryReport(EmbeddedDocument):
@@ -167,7 +162,6 @@ class SRFinalReport(Document):
             for reporte in self.reportes_nodos:
                 row[lb_disponibilidad_ponderada_empresa] = reporte.disponibilidad_promedio_ponderada_porcentage/100
                 row[lb_empresa] = reporte.nombre
-                # print(reporte.nombre)
                 v_report = SRNodeDetails(tipo=reporte.tipo, nombre=reporte.nombre,
                                          fecha_inicio=self.fecha_inicio, fecha_final=self.fecha_final)
                 node_report_db = SRNodeDetails.objects(id_report=v_report.id_report).first()
@@ -177,9 +171,7 @@ class SRFinalReport(Document):
                 for reporte_entidad in node_report_db.reportes_entidades:
                     row[lb_disponibilidad_ponderada_unidad] = reporte_entidad.disponibilidad_promedio_ponderada_porcentage/100
                     row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
-                    # print(reporte_entidad.entidad_nombre)
                     for reporte_utr in reporte_entidad.reportes_utrs:
-                        # print(reporte_utr.utr_nombre)
                         row[lb_disponibilidad_promedio_utr] = reporte_utr.disponibilidad_promedio_porcentage/100
                         row[lb_utr] = reporte_utr.utr_nombre
                         row[lb_no_seniales] = reporte_utr.numero_tags

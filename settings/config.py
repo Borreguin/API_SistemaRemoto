@@ -1,3 +1,5 @@
+import os
+
 config = dict()
 
 config["name"] = "settings"
@@ -12,6 +14,8 @@ config["RESTPLUS_VALIDATE"] = True
 config["RESTPLUS_MASK_SWAGGER"] = False
 config["RESTPLUS_ERROR_404_HELP"] = False
 config["API_PREFIX"] = '/api'
+config["PORT"] = 7820
+config["DEBUG_PORT"] = 5000
 
 config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
 config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -25,10 +29,11 @@ config["MONGOCLIENT_SETTINGS"] = {"host": "localhost", "port": 2717, "db": "DB_D
 config["MONGO_LOG_LEVEL"] = {"value": "OFF", "options": ["ON", "OFF"]}
 
 # Excel repository:
-config["EXCEL_REPO"] = "_db\\excel_files"
-config["SREMOTO_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_remoto_excel"
-config["SCENTRAL_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_central_excel"
-config["OUTPUT_MOTOR"] = "motor\\output"
+config["EXCEL_REPO"] = os.path.join("_db", "excel_files")
+config["SREMOTO_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_remoto_excel")
+config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_excel")
+config["OUTPUT_MOTOR"] = os.path.join("motor", "output")
+config["CONSIGNACIONES"] = os.path.join(config["DB_REPO"], "consignaciones")
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]
 config["DEFAULT_DATE_FORMAT"] = "%Y-%m-%d %H:%M:%S"

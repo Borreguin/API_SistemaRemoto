@@ -22,11 +22,11 @@ import re
 
 api_log = LogDefaultConfig("api_services.log").logger
 
-api = Api(version='0.1', title='API - Cálculo de disponibilidad EMS',
+api = Api(version='0.1', title='API - Cálculo de disponibilidad Sistema Remoto',
           contact="Roberto Sánchez A",
           contact_email="rg.sanchez.a@gmail.com",
           contact_url="https://github.com/Borreguin",
-          description='Esta API permite calcular/consultar todo lo referente a la disponibilidad del EMS',
+          description='Esta API permite calcular/consultar todo lo referente a la disponibilidad de Sistema Remoto',
           ordered=False)
 
 

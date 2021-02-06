@@ -31,7 +31,7 @@ class SRUTR(EmbeddedDocument):
     utr_nombre = StringField(required=True)
     utr_tipo = StringField(required=True)
     tags = ListField(EmbeddedDocumentField(SRTag))
-    consignaciones = LazyReferenceField(Consignments, dbref=True, passthrough=False)
+    consignaciones = ReferenceField(Consignments, dbref=True)
     utr_code = StringField(required=True, default=None)
     activado = BooleanField(default=True)
     protocol = StringField(default="No definido", required=False)       # Nuevo atributo
@@ -44,13 +44,19 @@ class SRUTR(EmbeddedDocument):
         id = str(self.id_utr).lower().strip() + str(self.utr_tipo).lower().strip() + str(self.utr_nombre).strip()
         if self.utr_code is None:
             self.utr_code = hashlib.md5(id.encode()).hexdigest()
-        consignaciones = Consignments.objects(id_elemento=self.utr_code).first()
-        if consignaciones is None:
-            # if there are not consignaciones then create a new document
-            consignaciones = Consignments(id_elemento=self.utr_code,
-                                          elemento=self.to_summary()).save()
-        # relate an existing consignacion
-        self.consignaciones = consignaciones
+
+    def create_consignments_container(self):
+        try:
+            if self.consignments is None:
+                # if there are not consignments then create a new document
+                # relate an existing consignacion
+                consignments = Consignments(id_elemento=self.utr_code,
+                                            elemento=self.to_summary())
+                consignments.save()
+                self.consignments = consignments
+                return True
+        except Exception as e:
+            return False
 
     def add_or_replace_tags(self, tag_list: list):
         # check si todas las tags son de tipo SRTag
@@ -411,7 +417,6 @@ class SRNodeFromDataFrames():
                     utr_protocol = df_e[self.cl_protocolo].loc[idx]
                     latitud = df_e[self.cl_latitud].loc[idx]
                     longitud = df_e[self.cl_longitud].loc[idx]
-
 
                     # crear utr para agregar tags
                     utr = SRUTR(id_utr=utr_code, utr_nombre=utr_nombre, utr_tipo=utr_type,

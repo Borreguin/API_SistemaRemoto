@@ -200,9 +200,9 @@ class DisponibilidadJSON(Resource):
             if not success:
                 return dict(success=False, report=None, msg="Existe problemas al adquirir el reporte"), 409
             result_dict = dict()
-            result_dict["Resumen"] = df_summary.to_dict()
+            result_dict["Resumen"] = df_summary.to_dict(orient='records')
             result_dict["Detalles"] = df_details.to_dict(orient='records')
-            result_dict["Novedades"] = df_novedades.to_dict()
+            result_dict["Novedades"] = df_novedades.to_dict(orient='records')
             return dict(success=True, report=result_dict, msg="Reporte encontrado")
 
         except Exception as e:

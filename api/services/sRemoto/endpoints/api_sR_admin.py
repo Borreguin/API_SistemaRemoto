@@ -519,6 +519,10 @@ class SRNodeFromExcel(Resource):
                     return dict(success=False, msg=str(node)), 400
                 node.actualizado = dt.datetime.now()
                 node.save()
+                for entity in node.entidades:
+                    for utr in entity.utrs:
+                        utr.create_consignments_container()
+
                 # Guardar como archivo Excel con versionamiento
                 destination = os.path.join(init.SREMOTO_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
@@ -581,6 +585,10 @@ class SRNodeFromExcel(Resource):
                     nodo.delete()
                     new_node.save()
                     nodo = new_node
+                # crear contenedores de consignaciones si fuera necesario
+                for entity in nodo.entidades:
+                    for utr in entity.utrs:
+                        utr.create_consignments_container()
                 # Guardar como archivo Excel con versionamiento
                 destination = os.path.join(init.SREMOTO_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)

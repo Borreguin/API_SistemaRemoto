@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import os
 """
 CAMBIOS EN ESTA VERSION :
 1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
@@ -18,6 +18,9 @@ config["RESTPLUS_SWAGGER_UI_DOC_EXPANSION"] = "list"
 config["RESTPLUS_VALIDATE"] = True
 config["RESTPLUS_MASK_SWAGGER"] = False
 config["RESTPLUS_ERROR_404_HELP"] = False
+config["API_PREFIX"] = '/api'
+config["PORT"] = 7820
+config["DEBUG_PORT"] = 5000
 
 config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db.sqlite"
 config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -31,12 +34,13 @@ config["MONGOCLIENT_SETTINGS"] = {"host": "localhost", "port": 2717, "db": "DB_D
 config["MONGO_LOG_LEVEL"] = {"value": "OFF", "options": ["ON", "OFF"]}
 
 # Excel repository:
-config["EXCEL_REPO"] = "_db\\excel_files"
-config["SREMOTO_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_remoto_excel"
-config["SCENTRAL_EXCEL_REPO"] = config["EXCEL_REPO"] + "\\s_central_excel"
-config["OUTPUT_MOTOR"] = "motor\\output"
-# REPOSITORIO CONSIGNACIONES
-config["CONSIGNACIONES"] = "_db\\consignaciones"
+
+config["DB_REPO"] = "_db"
+config["EXCEL_REPO"] = os.path.join(config["DB_REPO"], "excel_files")
+config["SREMOTO_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_remoto_excel")
+config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_excel")
+config["OUTPUT_MOTOR"] = os.path.join("motor", "output")
+config["CONSIGNACIONES"] = os.path.join(config["DB_REPO"], "consignaciones")
 
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]

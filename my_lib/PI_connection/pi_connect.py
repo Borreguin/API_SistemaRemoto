@@ -6,6 +6,7 @@ Mateo633
 
 import pandas as pd
 import sys
+# verify that clr is imported from here: \lib\site-packages\clr.pyd
 import clr
 import datetime
 import numpy as np

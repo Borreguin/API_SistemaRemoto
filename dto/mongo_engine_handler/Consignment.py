@@ -15,15 +15,20 @@ CAMBIOS EN ESTA VERSION:
 """
 
 
-import hashlib
+
+import traceback
 import uuid
+import hashlib
 from shutil import rmtree
+
 
 from mongoengine import *
 import datetime as dt
 import os
-from settings.config import config as config
+
 from settings import initial_settings as init
+from settings.config import config as config
+
 
 
 class Consignment(EmbeddedDocument):
@@ -33,7 +38,9 @@ class Consignment(EmbeddedDocument):
     t_minutos = IntField(required=True)
     id_consignacion = StringField(default=None, required=True)
     detalle = DictField()
-    folder=StringField(default=None, required=False)
+    folder = StringField(default=None, required=False)
+    updated = DateTimeField(required=False, default=dt.datetime.now())
+
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -41,7 +48,7 @@ class Consignment(EmbeddedDocument):
             # print(self.no_consignacion)
             if self.no_consignacion is None:
                 return
-            id =  str(uuid.uuid4()) + str(self.fecha_inicio) + str(self.fecha_final)
+            id = str(uuid.uuid4()) + str(self.fecha_inicio) + str(self.fecha_final)
             self.id_consignacion = hashlib.md5(id.encode()).hexdigest()
         self.calculate()
 
@@ -50,7 +57,7 @@ class Consignment(EmbeddedDocument):
         this_repo = os.path.join(init.CONS_REPO, self.id_consignacion)
         if not os.path.exists(this_repo):
             os.makedirs(this_repo)
-            self.folder=this_repo
+            self.folder = this_repo
             return True
         return False
 
@@ -77,6 +84,19 @@ class Consignment(EmbeddedDocument):
                     id_consignacion=self.id_consignacion,
                     detalle=self.detalle)
 
+    def edit(self, new_consignment: dict):
+        try:
+            to_update = ["no_consignacion", "fecha_inicio", "fecha_final", "detalle"]
+            for key, value in new_consignment.items():
+                if key in to_update:
+                    setattr(self, key, value)
+            self.updated = dt.datetime.now()
+            return True, f"Consignación editada"
+        except Exception as e:
+            msg = f"Error al actualizar {self}: {str(e)}"
+            tb = traceback.format_exc()  # Registra últimos pasos antes del error
+            return False, msg
+
 
 class Consignments(Document):
     id_elemento = StringField(required=True, unique=True)
@@ -85,7 +105,7 @@ class Consignments(Document):
     consignaciones = ListField(EmbeddedDocumentField(Consignment))
     meta = {"collection": "INFO|Consignaciones"}
 
-    def get_last_consignment(self):
+    def update_last_consignment(self):
         t, ixr = dt.datetime(1900, 1, 1), -1
         for ix, c in enumerate(self.consignaciones):
             # check last date:
@@ -93,12 +113,14 @@ class Consignments(Document):
                 t, ixr = c.fecha_final, ix
         if ixr != -1:
             self.consignacion_reciente = self.consignaciones[ixr]
+        else:
+            self.consignacion_reciente = None
 
     def insert_consignments(self, consignacion: Consignment):
         # si es primera consignacion a insertar
         if len(self.consignaciones) == 0:
             self.consignaciones.append(consignacion)
-            self.get_last_consignment()
+            self.update_last_consignment()
             return True, f"Consignación insertada: {consignacion}"
         where = 0
         for ix, c in enumerate(self.consignaciones):
@@ -119,22 +141,23 @@ class Consignments(Document):
             self.consignaciones = self.consignaciones[0:where] + [consignacion] + self.consignaciones[where:]
         else:
             self.consignaciones.append(consignacion)
-        self.get_last_consignment()
+        self.update_last_consignment()
         return True, f"Consignación insertada: {consignacion}"
 
-    def delete_consignment(self, no_consignacion):
-        new_consignaciones = [c for c in self.consignaciones if c.no_consignacion != no_consignacion]
+    def delete_consignment_by_id(self, id_consignacion):
+        new_consignaciones = [c for c in self.consignaciones if c.id_consignacion != id_consignacion]
         if len(new_consignaciones) == len(self.consignaciones):
-            return False, f"No existe la consignación [{no_consignacion}] en elemento [{self.id_elemento}]"
+
+            return False, f"No existe la consignación [{id_consignacion}] en elemento [{self.id_elemento}]"
         for consignment in self.consignaciones:
-            if consignment.no_consignacion==no_consignacion:
-                this_repo = os.path.join(init.CONS_REPO, consignment.id_consignacion)
-                if os.path.exists(this_repo):
-                    rmtree(this_repo)
+            if consignment.id_consignacion == id_consignacion:
+                if consignment.folder is not None and os.path.exists(consignment.folder):
+                    rmtree(consignment.folder)
                 else:
                     continue
         self.consignaciones = new_consignaciones
-        return True, f"Consignación [{no_consignacion}] ha sido eliminada"
+        self.update_last_consignment()
+        return True, f"Consignación [{id_consignacion}] ha sido eliminada"
 
     def consignments_in_time_range(self, ini_date: dt.datetime, end_time: dt.datetime):
         return [c for c in self.consignaciones if
@@ -148,25 +171,16 @@ class Consignments(Document):
                 return True, consignment
         return False, None
 
-    def remove_consignment_by_id(self, id_to_delete):
-        for ix, consignment in enumerate(self.consignaciones):
-            if consignment.id_consignacion == id_to_delete:
-                new_consignments = self.consignaciones[0:ix] + self.consignaciones[(ix+1):]
-                self.consignaciones = new_consignments
-                return True, f"Consignación {consignment.no_consignacion} eliminada existosamente"
-        return False, f"No se encontró la consignación: {id_to_delete}"
-
-    def edit_consignment(self, id_to_edit, consignment: Consignment):
-        revert = self.consignaciones
-        success, msg = self.remove_consignment_by_id(id_to_edit)
-        if not success:
-            return False, msg
-        success, msg = self.insert_consignments(consignment)
-        if success:
-            return True, f"La consignación {consignment.no_consignacion} ha sido editada correctamente"
-        else:
-            self.consignaciones = revert
-            return False, msg
+    def edit_consignment_by_id(self, id_to_edit, consignment: Consignment):
+        found = False
+        for consignacion in self.consignaciones:
+            if consignacion.id_consignacion == id_to_edit:
+                found = True
+                consignacion.edit(consignment.to_dict())
+                break
+        return found, f"La consignación {consignment.no_consignacion} ha sido editada correctamente" if found \
+            else f"La consignación no ha sido encontrada"
 
     def __str__(self):
-        return f"{self.id_elemento}: ({self.consignacion_reciente}) [{len(self.consignaciones)}]"
+        return f"{self.id_elemento}: [last: {self.consignacion_reciente}] " \
+               f" Total: {len(self.consignaciones)}"

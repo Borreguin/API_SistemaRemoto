@@ -31,9 +31,12 @@ class SRUTR(EmbeddedDocument):
     utr_nombre = StringField(required=True)
     utr_tipo = StringField(required=True)
     tags = ListField(EmbeddedDocumentField(SRTag))
-    consignaciones = LazyReferenceField(Consignments, dbref=True, passthrough=False)
+    consignaciones = ReferenceField(Consignments, dbref=True)
     utr_code = StringField(required=True, default=None)
     activado = BooleanField(default=True)
+    protocol = StringField(default="No definido", required=False)       # Nuevo atributo
+    longitude = FloatField(required=False, default=0)                   # Nuevo atributo
+    latitude = FloatField(required=False, default=0)                    # Nuevo atributo
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -41,13 +44,19 @@ class SRUTR(EmbeddedDocument):
         id = str(self.id_utr).lower().strip() + str(self.utr_tipo).lower().strip() + str(self.utr_nombre).strip()
         if self.utr_code is None:
             self.utr_code = hashlib.md5(id.encode()).hexdigest()
-        consignaciones = Consignments.objects(id_elemento=self.utr_code).first()
-        if consignaciones is None:
-            # if there are not consignaciones then create a new document
-            consignaciones = Consignments(id_elemento=self.utr_code,
-                                          elemento=self.to_summary()).save()
-        # relate an existing consignacion
-        self.consignaciones = consignaciones
+
+    def create_consignments_container(self):
+        try:
+            if self.consignments is None:
+                # if there are not consignments then create a new document
+                # relate an existing consignacion
+                consignments = Consignments(id_elemento=self.utr_code,
+                                            elemento=self.to_summary())
+                consignments.save()
+                self.consignments = consignments
+                return True
+        except Exception as e:
+            return False
 
     def add_or_replace_tags(self, tag_list: list):
         # check si todas las tags son de tipo SRTag
@@ -91,7 +100,8 @@ class SRUTR(EmbeddedDocument):
     def to_dict(self):
         return dict(id_utr=self.id_utr, utr_nombre=self.utr_nombre, utr_tipo=self.utr_tipo,
                     tags=[t.to_dict() for t in self.tags], activado=self.activado,
-                    utr_code=self.utr_code)
+                    utr_code=self.utr_code, protocol=self.protocol, longitude=self.longitude,
+                    latitude=self.latitude)
 
     def to_summary(self):
         return dict(id_utr=self.id_utr, utr_nombre=self.utr_nombre, utr_tipo=self.utr_tipo)
@@ -343,13 +353,18 @@ class SRNodeFromDataFrames():
         self.cl_tag_name = "tag_name"
         self.cl_f_expression = "filter_expression"
         self.cl_utr = "utr"
+        self.cl_latitud = "latitud"
+        self.cl_longitud = "longitud"
+        self.cl_protocolo = "protocolo"
         self.nombre = nombre
         self.tipo = tipo
 
     def validate(self):
         # check if all columns are present in main sheet
         self.main_columns = [self.cl_utr, self.cl_utr_name, self.cl_utr_type,
-                             self.cl_entity_name, self.cl_entity_type, self.cl_activado]
+                             self.cl_entity_name, self.cl_entity_type,
+                             self.cl_latitud, self.cl_longitud, self.cl_protocolo,
+                             self.cl_activado]
         check_main = [(str(c) in self.df_main.columns) for c in self.main_columns]
         # check if all columns are, present in tags sheet
         self.tags_columns = [self.cl_utr, self.cl_tag_name, self.cl_f_expression, self.cl_activado]
@@ -399,9 +414,13 @@ class SRNodeFromDataFrames():
                     utr_code = df_e[self.cl_utr].loc[idx]
                     utr_nombre = df_e[self.cl_utr_name].loc[idx]
                     utr_type = df_e[self.cl_utr_type].loc[idx]
-                    # crear utr para agregar tags
-                    utr = SRUTR(id_utr=utr_code, utr_nombre=utr_nombre, utr_tipo=utr_type)
+                    utr_protocol = df_e[self.cl_protocolo].loc[idx]
+                    latitud = df_e[self.cl_latitud].loc[idx]
+                    longitud = df_e[self.cl_longitud].loc[idx]
 
+                    # crear utr para agregar tags
+                    utr = SRUTR(id_utr=utr_code, utr_nombre=utr_nombre, utr_tipo=utr_type,
+                                protocol=utr_protocol, latitude=latitud, longitude=longitud)
                     # filtrar y añadir tags en la utr list (utrs)
                     df_u = df_t[df_t[self.cl_utr] == utr_code].copy()
                     for ide in df_u.index:
@@ -439,12 +458,17 @@ class SRDataFramesFromDict():
         self.cl_entity_type = "entidad_tipo"
         self.cl_tag_name = "tag_name"
         self.cl_f_expression = "filter_expression"
+        self.cl_utr = "utr"
+        self.cl_latitud = "latitud"
+        self.cl_longitud = "longitud"
+        self.cl_protocolo = "protocolo"
 
 
     def convert_to_DataFrames(self):
         # main columns in DataFrame
         main_columns = [self.cl_utr, self.cl_utr_name, self.cl_utr_type,
-                        self.cl_entity_name, self.cl_entity_type, self.cl_activado]
+                        self.cl_entity_name, self.cl_entity_type,
+                        self.cl_protocolo, self.cl_longitud, self.cl_latitud, self.cl_activado]
         # columns in tags sheet
         tags_columns = [self.cl_utr, self.cl_tag_name, self.cl_f_expression, self.cl_activado]
 
@@ -455,9 +479,13 @@ class SRDataFramesFromDict():
                 for utr in entidad["utrs"]:
                     active = "x" if utr["activado"] else ""
                     df_main = df_main.append({self.cl_utr: utr["id_utr"], self.cl_utr_name: utr["utr_nombre"],
-                                              self.cl_utr_type: utr["utr_tipo"], self.cl_entity_name: entidad["entidad_nombre"],
-                                              self.cl_entity_type: entidad["entidad_tipo"], self.cl_activado: active},
-                                             ignore_index=True)
+                                              self.cl_utr_type: utr["utr_tipo"],
+                                              self.cl_entity_name: entidad["entidad_nombre"],
+                                              self.cl_entity_type: entidad["entidad_tipo"],
+                                              self.cl_protocolo: utr["protocol"] if "protocol" in utr.keys() else "",
+                                              self.cl_longitud: utr["longitude"] if "longitude" in utr.keys() else "",
+                                              self.cl_latitud : utr["latitude"] if "latitude" in utr.keys() else "",
+                                              self.cl_activado: active}, ignore_index=True)
 
                     if len(utr["tags"]) == 0:
                         continue

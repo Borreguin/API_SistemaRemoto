@@ -1,6 +1,24 @@
 from dto.mongo_engine_handler.sRNode import *
 import hashlib
 
+from dto.mongo_engine_handler.sRNodeReport import SRNodeDetails
+
+lb_fecha_ini = "Fecha inicial"
+lb_fecha_fin = "Fecha final"
+lb_empresa = "Empresa"
+lb_unidad_negocio = "Unidad de Negocio"
+lb_utr = "UTR"
+lb_protocolo = "Protocolo"
+lb_disponibilidad_ponderada_empresa = "Disponibilidad ponderada Empresa"
+lb_disponibilidad_ponderada_unidad = "Disponibilidad ponderada Unidad de Negocio"
+lb_disponibilidad_promedio_utr = "Disponibilidad promedio UTR"
+lb_no_seniales = "No. señales"
+lb_falladas = "Falladas"
+lb_latitud = "Latitud"
+lb_longitud = "Longitud"
+details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr, lb_protocolo, lb_disponibilidad_ponderada_empresa,
+           lb_disponibilidad_ponderada_unidad, lb_disponibilidad_promedio_utr, lb_no_seniales, lb_latitud, lb_longitud]
+
 
 class SRNodeSummaryReport(EmbeddedDocument):
     id_report = StringField(required=True)
@@ -122,3 +140,46 @@ class SRFinalReport(Document):
                     novedades=self.novedades, actualizado=str(self.actualizado),
                     tiempo_calculo_segundos=self.tiempo_calculo_segundos)
 
+    def to_table(self):
+        resp = dict(id_report=self.id_report, tipo=self.tipo, fecha_inicio=str(self.fecha_inicio),
+             fecha_final=str(self.fecha_final), periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
+             disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
+             disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
+             actualizado=str(self.actualizado),
+             tiempo_calculo_segundos=self.tiempo_calculo_segundos)
+        resp.update(self.procesamiento)
+        return resp
+
+    def to_dataframe(self):
+        try:
+            df_details = pd.DataFrame(columns=details_columns)
+            summary = self.to_table()
+            df_summary = pd.DataFrame(columns=list(summary.keys()))
+            df_summary = df_summary.append(summary, ignore_index=True)
+            df_novedades = pd.DataFrame(columns=list(self.novedades.keys()))
+            df_novedades = df_novedades.append(self.novedades, ignore_index=True)
+            row = {lb_fecha_ini:str(self.fecha_inicio), lb_fecha_fin: str(self.fecha_final)}
+            for reporte in self.reportes_nodos:
+                row[lb_disponibilidad_ponderada_empresa] = reporte.disponibilidad_promedio_ponderada_porcentage/100
+                row[lb_empresa] = reporte.nombre
+                v_report = SRNodeDetails(tipo=reporte.tipo, nombre=reporte.nombre,
+                                         fecha_inicio=self.fecha_inicio, fecha_final=self.fecha_final)
+                node_report_db = SRNodeDetails.objects(id_report=v_report.id_report).first()
+                if node_report_db is None:
+                    # No se encontró reporte asociado al Nodo
+                    continue
+                for reporte_entidad in node_report_db.reportes_entidades:
+                    row[lb_disponibilidad_ponderada_unidad] = reporte_entidad.disponibilidad_promedio_ponderada_porcentage/100
+                    row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
+                    for reporte_utr in reporte_entidad.reportes_utrs:
+                        row[lb_disponibilidad_promedio_utr] = reporte_utr.disponibilidad_promedio_porcentage/100
+                        row[lb_utr] = reporte_utr.utr_nombre
+                        row[lb_no_seniales] = reporte_utr.numero_tags
+                        df_details = df_details.append(row.copy(), ignore_index=True)
+            df_summary = df_summary.where(pd.notnull(df_summary), None)
+            df_details = df_details.where(pd.notnull(df_details), None)
+            df_novedades = df_novedades.where(pd.notnull(df_novedades), None)
+            return True, df_summary, df_details, df_novedades
+
+        except Exception as e:
+            return False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame()

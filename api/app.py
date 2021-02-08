@@ -29,12 +29,11 @@ from api.services.sRemoto.endpoints.api_sR_admin import ns as namespace_sR_admin
 from api.services.Consignaciones.endpoints.api_Consignaciones import ns as namespace_Consignaciones
 from api.services.sRemoto.endpoints.api_sR_cal_disponibilidad import ns as namespace_sR_cal_disponibilidad
 from api.services.Files.api_files import ns as namespace_files
-from api.services.Diagrams.endpoints.api_diagrams import ns as namespace_diagrams
 
 """ global variables """
 app = Flask(__name__)                                                   # Flask application
 log = init.LogDefaultConfig("app_flask.log").logger                                    # Logger
-blueprint = Blueprint('api', __name__, url_prefix='/api')               # Name Space for API
+blueprint = Blueprint('api', __name__, url_prefix=init.API_PREFIX)               # Name Space for API
 
 
 @blueprint.route("/test")
@@ -77,7 +76,7 @@ def configure_home_api_swagger():
     api_p.add_namespace(namespace_Consignaciones)
     api_p.add_namespace(namespace_sR_cal_disponibilidad)
     api_p.add_namespace(namespace_files)
-    api_p.add_namespace(namespace_diagrams)
+    # api_p.add_namespace(namespace_diagrams)
 
     # registrando las rutas:
     app.register_blueprint(blueprint)
@@ -92,7 +91,9 @@ def configure_mongo_engine():
 @app.route("/")
 def main_page():
     """ Adding initial page """
-    return "Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad del SCADA/EMS"
+    return f"This is home page for this API, check the prefix to see the UI: {init.API_PREFIX} " \
+           f"<br><br>Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad de Sistema Remoto " \
+
 
 
 @app.after_request
@@ -129,13 +130,14 @@ def main():
         print("WARNING!! El log de la base de datos MongoDB está activado. "
               "Esto puede llenar de manera rápida el espacio en disco")
 
+    log.info(f">>>>> API running over: {init.API_PREFIX}")
     # serve the application
     if init.FLASK_DEBUG:
         #Este comando ejecuta la aplicación web en modo Desarrollo
-        app.run(debug=init.FLASK_DEBUG)
+        app.run(debug=init.FLASK_DEBUG, port=init.DEBUG_PORT)
     else:
         #Este comando ejecuta la aplicación web en modo Producción
-        serve(app, host='0.0.0.0', port=7820)
+        serve(app, host='0.0.0.0', port=init.PORT)
 
 
 if __name__ == "__main__":

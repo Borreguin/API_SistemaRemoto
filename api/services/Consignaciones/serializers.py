@@ -22,6 +22,8 @@ class ConsignacionSerializers:
         """ Serializador para formulario reducido de consignacion """
         self.detalle_consignacion = api.model("Detalles menores de consignación",
                                {
+                                   "elemento": fields.Raw(required=False,
+                                                          description="Descripción del elemento en formato JSON"),
                                    "no_consignacion": fields.String(required=True,
                                                              description="Id de elemento"),
                                    "detalle": fields.Raw(required=False,

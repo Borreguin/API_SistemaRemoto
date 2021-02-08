@@ -133,6 +133,7 @@ class SRRTUSAPI(Resource):
             success, msg = nodo.entidades[idx].add_or_rename_utrs([rtu])
             if success:
                 nodo.save()
+                rtu.create_consignments_container()
                 return dict(success=success, msg=msg), 200
             else:
                 return dict(success=success, msg=msg), 409
@@ -522,7 +523,7 @@ class SRNodeFromExcel(Resource):
                 for entity in node.entidades:
                     for utr in entity.utrs:
                         utr.create_consignments_container()
-
+                node.save()
                 # Guardar como archivo Excel con versionamiento
                 destination = os.path.join(init.SREMOTO_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
@@ -589,6 +590,7 @@ class SRNodeFromExcel(Resource):
                 for entity in nodo.entidades:
                     for utr in entity.utrs:
                         utr.create_consignments_container()
+                nodo.save()
                 # Guardar como archivo Excel con versionamiento
                 destination = os.path.join(init.SREMOTO_REPO, filename)
                 save_excel_file_from_bytes(destination=destination, stream_excel_file=stream_excel_file)
@@ -609,7 +611,7 @@ class SRNodeFromExcel(Resource):
             node_as_dict = node[0]
             success, df_main, df_tags = SRDataFramesFromDict(node_as_dict).convert_to_DataFrames()
             if not success:
-                return None, 404
+                return dict(success=False, msg="No es posible obtener la información de este nodo"), 409
             file_name = f"{tipo}{nombre}.xlsx".replace("_", "@")
             path = os.path.join(init.TEMP_PATH, file_name)
             with pd.ExcelWriter(path) as writer:

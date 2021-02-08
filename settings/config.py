@@ -3,7 +3,7 @@ import os
 config = dict()
 
 config["name"] = "settings"
-config["version"] = "0.2"
+config["version"] = "1.8"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
 #Configuración de Debbugging
@@ -29,7 +29,8 @@ config["MONGOCLIENT_SETTINGS"] = {"host": "localhost", "port": 2717, "db": "DB_D
 config["MONGO_LOG_LEVEL"] = {"value": "OFF", "options": ["ON", "OFF"]}
 
 # Excel repository:
-config["EXCEL_REPO"] = os.path.join("_db", "excel_files")
+config["DB_REPO"] = "_db"
+config["EXCEL_REPO"] = os.path.join(config["DB_REPO"], "excel_files")
 config["SREMOTO_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_remoto_excel")
 config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_excel")
 config["OUTPUT_MOTOR"] = os.path.join("motor", "output")

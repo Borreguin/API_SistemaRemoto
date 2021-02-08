@@ -11,7 +11,7 @@ from flask import request
 import datetime as dt
 from flask_restplus import Api
 from sqlalchemy.orm.exc import NoResultFound
-from settings.initial_settings import LogDefaultConfig
+from settings.initial_settings import LogDefaultConfig, VERSION
 from settings.initial_settings import MONGOCLIENT_SETTINGS
 
 """ mongo client config"""
@@ -22,7 +22,7 @@ import re
 
 api_log = LogDefaultConfig("api_services.log").logger
 
-api = Api(version='0.1', title='API - Cálculo de disponibilidad Sistema Remoto',
+api = Api(version=VERSION, title='API - Cálculo de disponibilidad Sistema Remoto',
           contact="Roberto Sánchez A",
           contact_email="rg.sanchez.a@gmail.com",
           contact_url="https://github.com/Borreguin",

@@ -458,12 +458,17 @@ class SRDataFramesFromDict():
         self.cl_entity_type = "entidad_tipo"
         self.cl_tag_name = "tag_name"
         self.cl_f_expression = "filter_expression"
+        self.cl_utr = "utr"
+        self.cl_latitud = "latitud"
+        self.cl_longitud = "longitud"
+        self.cl_protocolo = "protocolo"
 
 
     def convert_to_DataFrames(self):
         # main columns in DataFrame
         main_columns = [self.cl_utr, self.cl_utr_name, self.cl_utr_type,
-                        self.cl_entity_name, self.cl_entity_type, self.cl_activado]
+                        self.cl_entity_name, self.cl_entity_type,
+                        self.cl_protocolo, self.cl_longitud, self.cl_latitud, self.cl_activado]
         # columns in tags sheet
         tags_columns = [self.cl_utr, self.cl_tag_name, self.cl_f_expression, self.cl_activado]
 
@@ -474,9 +479,13 @@ class SRDataFramesFromDict():
                 for utr in entidad["utrs"]:
                     active = "x" if utr["activado"] else ""
                     df_main = df_main.append({self.cl_utr: utr["id_utr"], self.cl_utr_name: utr["utr_nombre"],
-                                              self.cl_utr_type: utr["utr_tipo"], self.cl_entity_name: entidad["entidad_nombre"],
-                                              self.cl_entity_type: entidad["entidad_tipo"], self.cl_activado: active},
-                                             ignore_index=True)
+                                              self.cl_utr_type: utr["utr_tipo"],
+                                              self.cl_entity_name: entidad["entidad_nombre"],
+                                              self.cl_entity_type: entidad["entidad_tipo"],
+                                              self.cl_protocolo: utr["protocol"] if "protocol" in utr.keys() else "",
+                                              self.cl_longitud: utr["longitude"] if "longitude" in utr.keys() else "",
+                                              self.cl_latitud : utr["latitude"] if "latitude" in utr.keys() else "",
+                                              self.cl_activado: active}, ignore_index=True)
 
                     if len(utr["tags"]) == 0:
                         continue

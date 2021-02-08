@@ -92,7 +92,7 @@ class Consignments(Document):
     elemento = DictField(required=False)
     consignacion_reciente = EmbeddedDocumentField(Consignment)
     consignaciones = ListField(EmbeddedDocumentField(Consignment))
-    meta = {"collection": "INFO_COMP|Consignaciones"}
+    meta = {"collection": "INFO|Consignaciones"}
 
     def update_last_consignment(self):
         t, ixr = dt.datetime(1900, 1, 1), -1

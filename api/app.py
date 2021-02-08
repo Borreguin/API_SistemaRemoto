@@ -91,7 +91,9 @@ def configure_mongo_engine():
 @app.route("/")
 def main_page():
     """ Adding initial page """
-    return "Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad del SCADA/EMS"
+    return f"This is home page for this API, check the prefix to see the UI: {init.API_PREFIX} " \
+           f"<br><br>Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad de Sistema Remoto " \
+
 
 
 @app.after_request

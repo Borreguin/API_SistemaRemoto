@@ -1,9 +1,14 @@
+# -*- coding: utf-8 -*-
 import os
+"""
+CAMBIOS EN ESTA VERSION :
+1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
 
+"""
 config = dict()
 
 config["name"] = "settings"
-config["version"] = "1.8"
+config["version"] = "0.3"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
 #Configuración de Debbugging
@@ -29,12 +34,14 @@ config["MONGOCLIENT_SETTINGS"] = {"host": "localhost", "port": 2717, "db": "DB_D
 config["MONGO_LOG_LEVEL"] = {"value": "OFF", "options": ["ON", "OFF"]}
 
 # Excel repository:
+
 config["DB_REPO"] = "_db"
 config["EXCEL_REPO"] = os.path.join(config["DB_REPO"], "excel_files")
 config["SREMOTO_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_remoto_excel")
 config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_excel")
 config["OUTPUT_MOTOR"] = os.path.join("motor", "output")
 config["CONSIGNACIONES"] = os.path.join(config["DB_REPO"], "consignaciones")
+
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]
 config["DEFAULT_DATE_FORMAT"] = "%Y-%m-%d %H:%M:%S"

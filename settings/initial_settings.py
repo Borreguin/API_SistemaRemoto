@@ -1,6 +1,11 @@
 # Created by Roberto Sanchez at 3/29/2019
 # -*- coding: utf-8 -*-
 """ Set the initial settings of this application"""
+"""
+CAMBIOS EN ESTA VERSION: 
+1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
+
+"""
 import sys
 import pymongo as pm
 from logging.handlers import RotatingFileHandler

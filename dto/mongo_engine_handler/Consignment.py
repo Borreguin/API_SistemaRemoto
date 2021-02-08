@@ -9,17 +9,26 @@ Consignación:
 •	DOCUMENTO TIPO JSON
 •	Permite indicar tiempos de consignación donde el elemento no será consgnado para el cálculo de disponibilidad
 
+CAMBIOS EN ESTA VERSION:
+1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS
+
 """
 
-import hashlib
+
+
 import traceback
 import uuid
+import hashlib
+from shutil import rmtree
+
 
 from mongoengine import *
 import datetime as dt
 import os
+
 from settings import initial_settings as init
-from shutil import rmtree
+from settings.config import config as config
+
 
 
 class Consignment(EmbeddedDocument):
@@ -32,6 +41,7 @@ class Consignment(EmbeddedDocument):
     folder = StringField(default=None, required=False)
     updated = DateTimeField(required=False, default=dt.datetime.now())
 
+
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.id_consignacion is None:
@@ -41,6 +51,7 @@ class Consignment(EmbeddedDocument):
             id = str(uuid.uuid4()) + str(self.fecha_inicio) + str(self.fecha_final)
             self.id_consignacion = hashlib.md5(id.encode()).hexdigest()
         self.calculate()
+
 
     def create_folder(self):
         this_repo = os.path.join(init.CONS_REPO, self.id_consignacion)
@@ -136,6 +147,7 @@ class Consignments(Document):
     def delete_consignment_by_id(self, id_consignacion):
         new_consignaciones = [c for c in self.consignaciones if c.id_consignacion != id_consignacion]
         if len(new_consignaciones) == len(self.consignaciones):
+
             return False, f"No existe la consignación [{id_consignacion}] en elemento [{self.id_elemento}]"
         for consignment in self.consignaciones:
             if consignment.id_consignacion == id_consignacion:

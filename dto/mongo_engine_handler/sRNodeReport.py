@@ -180,10 +180,6 @@ class SRNodeDetails(Document):
             id = u.get_id([self.nombre, self.tipo, self.fecha_inicio.strftime('%d-%m-%Y %H:%M'),
                            self.fecha_final.strftime('%d-%m-%Y %H:%M')])
             self.id_report = id
-            # id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() \
-            # + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + self.fecha_final.strftime('%d-%m-%Y %H:%M')
-            # self.id_report = hashlib.md5(id.encode()).hexdigest()
-            # self.calculate_all()
 
     def calculate_all(self):
         # en caso que la disponibilidad de una entidad sea -1, significa que no ha sido consignado en su totalidad
@@ -217,7 +213,6 @@ class SRNodeDetails(Document):
         for ix, entidad in enumerate(self.reportes_entidades):
             reportes_utrs = sorted(entidad.reportes_utrs, key=lambda k: k["disponibilidad_promedio_porcentage"])
             self.reportes_entidades[ix].reportes_utrs = reportes_utrs
-
 
     def to_dict(self):
         return dict(id_node=str(self.nodo.id), id_report=self.id_report, tipo=self.tipo, nombre=self.nombre,

@@ -49,17 +49,19 @@ class Disponibilidad(Resource):
                 return dict(success=False, msg=msg), 400
             # check if there is already a calculation:
             path_file = os.path.join(init.TEMP_PATH, "api_sR_cal_disponibilidad.json")
-            time_delta = dt.timedelta(minutes=45)
-            # puede el cálculo estar activo más de 45 minutos?
+            time_delta = dt.timedelta(minutes=30)
+            # puede el cálculo estar activo más de 30 minutos?
             active = u.is_active(path_file, id, time_delta)
+            active = False
             if active:
-                return dict(success=False, msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}"), 409
+                return dict(success=False,
+                            msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}"), 409
 
             # preparandose para cálculo: (permite bloquear futuras peticiones si ya existe un cálculo al momento)
             dict_value = dict(fecha=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), activo=True)
             u.save_in_file(path_file, id, dict_value)
 
-            # realizando el cálculo:
+            # realizando el cálculo por cada nodo:
             success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True, force=True)
             # desbloqueando la instancia:
             dict_value["activo"] = False
@@ -134,7 +136,6 @@ class Disponibilidad(Resource):
             return default_error_handler(e)
 
 
-
 @ns.route('/disponibilidad/excel/<string:ini_date>/<string:end_date>')
 class DisponibilidadExcel(Resource):
 
@@ -194,7 +195,7 @@ class DisponibilidadJSON(Resource):
             # buscando reporte en base de datos a través del id: final_report_v.id_report
             final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
             if final_report is None:
-                return dict(success=False, report=None,  msg="No existe reporte asociado"), 404
+                return dict(success=False, report=None, msg="No existe reporte asociado"), 404
             # Creating an Excel file:
             success, df_summary, df_details, df_novedades = final_report.to_dataframe()
             if not success:
@@ -207,7 +208,6 @@ class DisponibilidadJSON(Resource):
 
         except Exception as e:
             return default_error_handler(e)
-
 
 
 @ns.route('/disponibilidad/diaria')
@@ -234,7 +234,6 @@ class DisponibilidadDiaria(Resource):
 
         except Exception as e:
             return default_error_handler(e)
-
 
 
 @api.errorhandler(Exception)
@@ -407,7 +406,8 @@ class DisponibilidadNodo(Resource):
             return default_error_handler(e)
 
     @staticmethod
-    def delete(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def delete(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd",
+               end_date: str = "yyyy-mm-dd"):
         """ Elimina el reporte de disponibilidad del nodo especificado
             Si el reporte no existe, entonces código 404
             Fecha inicial formato:  <b>yyyy-mm-dd</b>

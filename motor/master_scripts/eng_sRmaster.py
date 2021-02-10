@@ -45,6 +45,7 @@ start_time_script = dt.datetime.now()
 
 
 def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, save_in_db=False, force=False):
+    # corre todos los nodos que se encuentran activos:
     global start_time_script
     start_time_script = dt.datetime.now()
     mongo_config = init.MONGOCLIENT_SETTINGS
@@ -65,6 +66,7 @@ def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, sa
 
 def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end_date: dt.datetime,
                   save_in_db=False, force=False):
+    # cálcula disponibilidad por cada nodo
     global start_time_script
     start_time_script = dt.datetime.now()
 
@@ -82,6 +84,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
         child_processes = list()
         for node in node_list_name:
             # Procesando cada nodo individual:
+            # p es un proceso ejecutado
             success, p, _msg = executing_node(node, report_ini_date, report_end_date, save_in_db, force)
             if success:
                 log.info(_msg)
@@ -132,6 +135,7 @@ def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
 
 
 def collecting_results_from(child_processes):
+    # Por cada proceso se recoje el resultado:
     try:
         results = dict()
         msg = list()
@@ -148,7 +152,9 @@ def collecting_results_from(child_processes):
                 to_print = to_print.replace("#st", "ERROR")
                 fails += 1
             # details para identificar como finalizó el cálculo
+            # eng_results es un diccionario con los resultados posibles
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
+            # cp.args[2] es el nombre del proceso
             results.update({str(cp.args[2]): details[0]})
             log.info(to_print)
             msg.append(to_print)

@@ -49,6 +49,7 @@ class SRFinalReport(Document):
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     reportes_nodos = ListField(EmbeddedDocumentField(SRNodeSummaryReport))
+    reportes_nodos_detalle = ListField(ReferenceField(SRNodeDetails, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
     procesamiento = DictField(default=dict(numero_tags_total=0, numero_utrs_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
@@ -59,9 +60,10 @@ class SRFinalReport(Document):
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
-        id = str(self.tipo).lower().strip() + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + \
-             self.fecha_final.strftime('%d-%m-%Y %H:%M')
-        self.id_report = hashlib.md5(id.encode()).hexdigest()
+        if self.id_report is None:
+            id = str(self.tipo).lower().strip() + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + \
+                 self.fecha_final.strftime('%d-%m-%Y %H:%M')
+            self.id_report = hashlib.md5(id.encode()).hexdigest()
         t_delta = self.fecha_final - self.fecha_inicio
         self.periodo_evaluacion_minutos = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
         if self.actualizado is None:
@@ -71,8 +73,8 @@ class SRFinalReport(Document):
         self.reportes_nodos.append(node_summary_report)
         self.procesamiento["numero_tags_total"] += node_summary_report.procesamiento["numero_tags_total"]
         self.procesamiento["numero_utrs_procesadas"] += node_summary_report.procesamiento["numero_utrs_procesadas"]
-        self.procesamiento["numero_entidades_procesadas"] += node_summary_report.procesamiento[
-            "numero_entidades_procesadas"]
+        self.procesamiento["numero_entidades_procesadas"] += \
+            node_summary_report.procesamiento["numero_entidades_procesadas"]
         self.novedades["tags_fallidas"] += len(node_summary_report.novedades["tags_fallidas"])
         self.novedades["utr_fallidas"] += len(node_summary_report.novedades["utr_fallidas"])
         self.novedades["entidades_fallidas"] += len(node_summary_report.novedades["entidades_fallidas"])

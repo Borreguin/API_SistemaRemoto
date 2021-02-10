@@ -60,4 +60,4 @@ class TemporalProcessingStateReport(Document):
                 new_state.save()
         except Exception as e:
             print(e)
-            print(traceback.print_stack())
+            print(traceback.format_exc())

@@ -134,93 +134,109 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
 
 
 # La función devuelve el reporte por UTR
+# busca las consignaciones existentes (si existe)
 def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None):
     global report_ini_date
     global report_end_date
     global minutos_en_periodo
 
-    # reporte de entity_list
-    utr_report = SRUTRDetails(id_utr=utr.id_utr, utr_nombre=utr.utr_nombre, utr_tipo=utr.utr_tipo,
-                                 periodo_evaluacion_minutos=minutos_en_periodo)
+    try:
+        # reporte de entity_list
+        utr_report = SRUTRDetails(id_utr=utr.id_utr, utr_nombre=utr.utr_nombre, utr_tipo=utr.utr_tipo,
+                                     periodo_evaluacion_minutos=minutos_en_periodo)
 
-    fault_tags = list()  # tags que no fueron procesadas adecuadamente
-    print(f"Procesando [{utr.utr_nombre}] con [{len(tag_list)}] tags") if verbosity else None
+        fault_tags = list()  # tags que no fueron procesadas adecuadamente
+        print(f"Procesando [{utr.utr_nombre}] con [{len(tag_list)}] tags") if verbosity else None
 
-    # obtener consignaciones en el periodo de tiempo para generar periodos de consulta
-    # se debe exceptuar periodos de consignación
-    consDB = Consignments.objects(id=utr.consignaciones.id).first()
-    consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
-    # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
-    time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
+        # obtener consignaciones en el periodo de tiempo para generar periodos de consulta
+        # se debe exceptuar periodos de consignación
 
-    # adjuntar consignaciones tomadas en cuenta:
-    utr_report.consignaciones_detalle = consignaciones_utr
+        # verificar que exista el contenedor de consignaciones:
+        if utr.consignaciones is None:
+            print(f"La UTR [{utr.utr_nombre}] no contiene contenedor de consignaciones")
+            print("Creando un contenedor de consignaciones para esta UTR")
+            check, consDB = utr.create_consignments_container()
+            assert check
+        else:
+            consDB = utr.consignaciones
 
-    # reportar por cada tag e incluir en el reporte utr
-    msg = str()
-    for tag, condition in zip(tag_list, condition_list):
-        try:
-            # buscando la Tag en el servidor PI
-            pt = pi.PI_point(pi_svr, tag)
-            if pt.pt is None:
-                fault_tags.append(tag)  # La tag no fue encontrada en el servidor PI
-                continue  # continue con la siguiente tag
-            # creando la condición de indisponibilidad:
-            if not "expr:" in condition:
-                # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc. v1
-                #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
-                conditions = str(condition).split("#")
-                # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
-                expression = f'Compare(DigText(\'{tag}\'), "{conditions[0].strip()}")'
-                for c in conditions[1:]:
-                    # expression += f" OR '{tag}' = \"{c}\""
-                    expression += f' OR Compare(DigText(\'{tag}\'), "{c.strip()}")'
-            else:
-                expression = condition.replace("expr:", "")
+        consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
+        # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
+        time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
 
-            # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
-            #       tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
-            #       consignación:                  [-------------------]
-            #       ocurrido:           [...::.....:::::::::::::::::::..:...:::........]
-            #       minutos_disp:       [...::.....]                  [.:...:::........]
-            #       disponibilidad = #minutos_dispo/(tiempo_evaluacion - #minutos_consignados)
-            #
-            #                   UTR x: tiempo mes:               30*60*24 =  43200 minutos
-            #                          tiempo consignado:         2*24*60 =   2880 minutos
-            #                          tiempo evaluar:       43200 - 2880 =  40320 minutos
-            #                          tiempo disponible(RS):             = t1 + t2   -> (t1+t2)/40320
-            # Reporte final:
-            #                          tiempo disponible                        = 40300 minutos  (20 minutos indispo)
-            #                          tiempo evaluar                           = 40320
-            #                          tiempo consignado                        = 2880  minutos
-            #                          tiempo a evaluar (t_operacion + t_consig)= 43200 minutos
-            #
-            indisponible_minutos = 0  # indisponibilidad acumulada
-            for time_range in time_ranges:
-                value = pt.time_filter(time_range, expression, span=None, time_unit="mi")
-                # acumulando el tiempo de indisponibilidad
-                indisponible_minutos += value[tag].iloc[0]
-            tag_report = SRTagDetails(tag_name=tag, indisponible_minutos=indisponible_minutos)
-            utr_report.indisponibilidad_detalle.append(tag_report)
+        # adjuntar consignaciones tomadas en cuenta:
+        utr_report.consignaciones_detalle = consignaciones_utr
 
-        except Exception as e:
-            fault_tags.append(tag)
-            msg += f"[tag]: \n {str(e)} \n"
-            print(msg) if verbosity else None
+        # reportar por cada tag e incluir en el reporte utr
+        msg = str()
+        for tag, condition in zip(tag_list, condition_list):
+            try:
+                # buscando la Tag en el servidor PI
+                pt = pi.PI_point(pi_svr, tag)
+                if pt.pt is None:
+                    fault_tags.append(tag)  # La tag no fue encontrada en el servidor PI
+                    continue  # continue con la siguiente tag
+                # creando la condición de indisponibilidad:
+                if not "expr:" in condition:
+                    # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc. v1
+                    #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
+                    conditions = str(condition).split("#")
+                    # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
+                    expression = f'Compare(DigText(\'{tag}\'), "{conditions[0].strip()}")'
+                    for c in conditions[1:]:
+                        # expression += f" OR '{tag}' = \"{c}\""
+                        expression += f' OR Compare(DigText(\'{tag}\'), "{c.strip()}")'
+                else:
+                    expression = condition.replace("expr:", "")
 
-    # la UTR no tiene tags válidas para el cálculo:
-    if len(utr_report.indisponibilidad_detalle) == 0:
+                # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
+                #       tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
+                #       consignación:                  [-------------------]
+                #       ocurrido:           [...::.....:::::::::::::::::::..:...:::........]
+                #       minutos_disp:       [...::.....]                  [.:...:::........]
+                #       disponibilidad = #minutos_dispo/(tiempo_evaluacion - #minutos_consignados)
+                #
+                #                   UTR x: tiempo mes:               30*60*24 =  43200 minutos
+                #                          tiempo consignado:         2*24*60 =   2880 minutos
+                #                          tiempo evaluar:       43200 - 2880 =  40320 minutos
+                #                          tiempo disponible(RS):             = t1 + t2   -> (t1+t2)/40320
+                # Reporte final:
+                #                          tiempo disponible                        = 40300 minutos  (20 minutos indispo)
+                #                          tiempo evaluar                           = 40320
+                #                          tiempo consignado                        = 2880  minutos
+                #                          tiempo a evaluar (t_operacion + t_consig)= 43200 minutos
+                #
+                indisponible_minutos = 0  # indisponibilidad acumulada
+                for time_range in time_ranges:
+                    value = pt.time_filter(time_range, expression, span=None, time_unit="mi")
+                    # acumulando el tiempo de indisponibilidad
+                    indisponible_minutos += value[tag].iloc[0]
+                tag_report = SRTagDetails(tag_name=tag, indisponible_minutos=indisponible_minutos)
+                utr_report.indisponibilidad_detalle.append(tag_report)
+
+            except Exception as e:
+                fault_tags.append(tag)
+                msg += f"[tag]: \n {str(e)} \n"
+                print(msg) if verbosity else None
+
+        # la UTR no tiene tags válidas para el cálculo:
+        if len(utr_report.indisponibilidad_detalle) == 0:
+            utr_report.calculate(report_ini_date, report_end_date)
+            if q is not None:
+                q.put((False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"))
+            return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
+
+        # All is OK until here:
         utr_report.calculate(report_ini_date, report_end_date)
         if q is not None:
-            q.put((False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"))
-        return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
-
-    # All is OK until here:
-    utr_report.calculate(report_ini_date, report_end_date)
-    if q is not None:
-        q.put((True, utr_report, fault_tags, msg))
-    return True, utr_report, fault_tags, msg
-
+            q.put((True, utr_report, fault_tags, msg))
+        return True, utr_report, fault_tags, msg
+    except Exception as e:
+        tb = traceback.format_exc()
+        print(str(tb))
+        if q is not None:
+            q.put((False, None, None, f"Error al procesar las tags: \n{str(e)} \n{tb}"))
+        return False, None, None, f"Error al procesar las tags: \n{str(e)} \n{tb}"
 
 def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
     """

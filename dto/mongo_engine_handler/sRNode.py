@@ -44,19 +44,25 @@ class SRUTR(EmbeddedDocument):
         id = str(self.id_utr).lower().strip() + str(self.utr_tipo).lower().strip() + str(self.utr_nombre).strip()
         if self.utr_code is None:
             self.utr_code = hashlib.md5(id.encode()).hexdigest()
+        if self.consignaciones is None:
+            self.create_consignments_container()
 
     def create_consignments_container(self):
         try:
-            if self.consignments is None:
+            if self.consignaciones is None:
                 # if there are not consignments then create a new document
                 # relate an existing consignacion
-                consignments = Consignments(id_elemento=self.utr_code,
-                                            elemento=self.to_summary())
-                consignments.save()
-                self.consignments = consignments
-                return True
+                consignments = Consignments.objects(id_elemento=self.utr_code).first()
+                if consignments is None:
+                    consignments = Consignments(id_elemento=self.utr_code,
+                                                elemento=self.to_summary())
+                    consignments.save()
+                self.consignaciones = consignments
+                return True, consignments
+            else:
+                return True, self.consignaciones
         except Exception as e:
-            return False
+            return False, None
 
     def add_or_replace_tags(self, tag_list: list):
         # check si todas las tags son de tipo SRTag
@@ -340,7 +346,7 @@ class SRNodeFromDataFrames():
     """
     Clase que permite la conversión de un dataFrame en un nodo de tipo STR
     """
-    def __init__(self, nombre, tipo, df_main: pd.DataFrame, df_tags: pd.DataFrame):
+    def __init__(self, tipo, nombre, df_main: pd.DataFrame, df_tags: pd.DataFrame):
         df_main.columns = [str(x).lower() for x in df_main.columns]
         df_tags.columns = [str(x).lower() for x in df_tags.columns]
         self.df_main = df_main
@@ -356,8 +362,9 @@ class SRNodeFromDataFrames():
         self.cl_latitud = "latitud"
         self.cl_longitud = "longitud"
         self.cl_protocolo = "protocolo"
-        self.nombre = nombre
         self.tipo = tipo
+        self.nombre = nombre
+
 
     def validate(self):
         # check if all columns are present in main sheet
@@ -400,7 +407,7 @@ class SRNodeFromDataFrames():
 
     def create_node(self):
         try:
-            nodo = SRNode(nombre=self.nombre, tipo=self.tipo)
+            nodo = SRNode(tipo=self.tipo, nombre=self.nombre)
             df_m = self.df_main.copy().groupby([self.cl_entity_name, self.cl_entity_type])
             df_t = self.df_tags.copy()
             # crear una lista de entidades:
@@ -415,8 +422,8 @@ class SRNodeFromDataFrames():
                     utr_nombre = df_e[self.cl_utr_name].loc[idx]
                     utr_type = df_e[self.cl_utr_type].loc[idx]
                     utr_protocol = df_e[self.cl_protocolo].loc[idx]
-                    latitud = df_e[self.cl_latitud].loc[idx]
-                    longitud = df_e[self.cl_longitud].loc[idx]
+                    latitud = float(df_e[self.cl_latitud].loc[idx])
+                    longitud = float(df_e[self.cl_longitud].loc[idx])
 
                     # crear utr para agregar tags
                     utr = SRUTR(id_utr=utr_code, utr_nombre=utr_nombre, utr_tipo=utr_type,

@@ -20,6 +20,7 @@ from api.services.sRemoto import serializers as srl
 # importando clases para leer desde MongoDB
 from dto.mongo_engine_handler.sRNode import *
 from my_lib.utils import group_files
+import random
 
 # configurando logger y el servicio web
 log = init.LogDefaultConfig("ws_sFiles.log").logger
@@ -71,9 +72,10 @@ class FileAPI(Resource):
 
 
 @ns.route('/file/<string:repo>/<string:nombre>')
+@ns.route('/file/<string:repo>/<string:nombre>/<string:p>')
 class FileDownloadAPI(Resource):
 
-    def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo"):
+    def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo", p=str(random.randint(0, 100))):
         """
             Descarga un archivo de un repositorio
             repo: Nombre del repositorio [s_remoto_excel, s_central_excel]

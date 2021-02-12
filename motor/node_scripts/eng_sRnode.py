@@ -36,6 +36,7 @@ from random import randint
 
 """ Import clases for MongoDB """
 from dto.mongo_engine_handler.sRNodeReport import *
+
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
 if init.FLASK_DEBUG:
@@ -43,8 +44,8 @@ if init.FLASK_DEBUG:
     pi_svr = pi.PIserver()
 else:
     # seleccionando cualquiera disponible
-    idx = randint(0, len(init.PISERVERS)-1)
-    print(idx)
+    idx = randint(0, len(init.PISERVERS) - 1)
+    print(f"Ejemplo de servidor PI aleatorio seleccionado: {init.PISERVERS[int(idx)]}")
     PiServerName = init.PISERVERS[int(idx)]
     pi_svr = pi.PIserver(PiServerName)
 
@@ -73,14 +74,15 @@ _2_no_existe = (2, "No se encontro el nodo")
 _3_no_reconocido = (3, "Objeto nodo no reconocido")
 _4_no_hay_conexion = (4, "No es posible la conexión con el servidor PI")
 _5_no_posible_entidades = (5, "No se ha obtenido las entidades en el nodo")
-_6_no_existe_entidades = (6, "No hay entidades válidas a procesar en el nodo")
+_6_no_existe_entidades = (6, "No se pudo calcular las entidades, revise archivo Log")
 _7_no_es_posible_guardar = (7, "No se ha podido guardar el reporte del nodo")
 _8_reporte_existente = (8, "No ha sido calculado, el reporte ya existe en DB")
 _9_guardado = (9, "Reporte guardado en base de datos")
 _10_sobrescrito = (10, "Reporte sobrescrito en base de datos")
+_11_sin_consignacion_cont = (11, "Las UTR no contienen contenedor de consignaciones")
 eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_conexion,
                _5_no_posible_entidades, _6_no_existe_entidades, _7_no_es_posible_guardar,
-               _8_reporte_existente, _9_guardado, _10_sobrescrito]
+               _8_reporte_existente, _9_guardado, _10_sobrescrito, _11_sin_consignacion_cont]
 
 
 def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: dt.datetime):
@@ -91,26 +93,26 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
     # caso inicial:
     # * ++ tiempo de análisis ++*
     # [ periodo de consignación ]
-    time_ranges = list()        # lleva la lista de periodos válidos
-    tail = None                 # inicialización
-    end = end_date              # inicialización
+    time_ranges = list()  # lleva la lista de periodos válidos
+    tail = None  # inicialización
+    end = end_date  # inicialización
     if consignaciones[0].fecha_inicio < ini_date:
         # [-----*++++]+++++++++++++++++++++*------
-        tail = consignaciones[0].fecha_final    # lo que queda restante a analizar
-        end = end_date          # por ser caso inicial se asume que se puede hacer el cálculo hasta el final del periodo
+        tail = consignaciones[0].fecha_final  # lo que queda restante a analizar
+        end = end_date  # por ser caso inicial se asume que se puede hacer el cálculo hasta el final del periodo
 
     elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final < end_date:
         # --*++++[++++++]+++++++++*---------------
-        start = ini_date                        # fecha desde la que se empieza un periodo válido para calc. disponi
-        end = consignaciones[0].fecha_inicio    # fecha fin del periodo válido para calc. disponi
-        tail = consignaciones[0].fecha_final    # siguiente probable periodo (lo que queda restante a analizar)
+        start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
+        end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
+        tail = consignaciones[0].fecha_final  # siguiente probable periodo (lo que queda restante a analizar)
         time_ranges = [pi._time_range(start, end)]  # primer periodo válido
 
     elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final >= end_date:
         # --*++++[+++++++++++++++*-----]----------
         # este caso es definitivo y no requiere continuar más alla:
-        start = ini_date                        # fecha desde la que se empieza un periodo válido para calc. disponi
-        end = consignaciones[0].fecha_inicio    # fecha fin del periodo válido para calc. disponi
+        start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
+        end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
         return [pi._time_range(start, end)]
     elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final == end_date:
         # ---*[+++++++]*---
@@ -139,11 +141,11 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
     global report_ini_date
     global report_end_date
     global minutos_en_periodo
+    # reporte de entity_list
+    utr_report = SRUTRDetails(id_utr=utr.id_utr, utr_nombre=utr.utr_nombre, utr_tipo=utr.utr_tipo,
+                              periodo_evaluacion_minutos=minutos_en_periodo)
 
     try:
-        # reporte de entity_list
-        utr_report = SRUTRDetails(id_utr=utr.id_utr, utr_nombre=utr.utr_nombre, utr_tipo=utr.utr_tipo,
-                                     periodo_evaluacion_minutos=minutos_en_periodo)
 
         fault_tags = list()  # tags que no fueron procesadas adecuadamente
         print(f"Procesando [{utr.utr_nombre}] con [{len(tag_list)}] tags") if verbosity else None
@@ -152,13 +154,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
         # se debe exceptuar periodos de consignación
 
         # verificar que exista el contenedor de consignaciones:
-        if utr.consignaciones is None:
-            print(f"La UTR [{utr.utr_nombre}] no contiene contenedor de consignaciones")
-            print("Creando un contenedor de consignaciones para esta UTR")
-            check, consDB = utr.create_consignments_container()
-            assert check
-        else:
-            consDB = utr.consignaciones
+        consDB = utr.consignaciones
 
         consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
         # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
@@ -233,10 +229,18 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
         return True, utr_report, fault_tags, msg
     except Exception as e:
         tb = traceback.format_exc()
-        print(str(tb))
+        if "dereference unknown document" in str(e):
+            detalle = "El contenedor de consignaciones no ha sido aún creado, " \
+                      "vuelva a crear el elemento a través del archivo Excel"
+        else:
+            detalle = "Error no determinado"
+        msg = f"Error al momento de procesar las tags, observe detalles a continuación: \n{detalle}\n{str(e)} \n{tb}"
+
         if q is not None:
-            q.put((False, None, None, f"Error al procesar las tags: \n{str(e)} \n{tb}"))
-        return False, None, None, f"Error al procesar las tags: \n{str(e)} \n{tb}"
+            utr_report.calculate(report_ini_date, report_end_date)
+            q.put((False, utr_report, [], msg))
+        return False, utr_report, [], msg
+
 
 def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
     """
@@ -321,7 +325,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     [in_memory_reports[k].reportes_utrs.sort(key=lambda x: x.disponibilidad_promedio_porcentage)
      for k in in_memory_reports.keys()]
     report_node.reportes_entidades = [in_memory_reports[k] for k in in_memory_reports.keys()]
-    report_node.reportes_entidades.sort(key=lambda x:x.disponibilidad_promedio_ponderada_porcentage)
+    report_node.reportes_entidades.sort(key=lambda x: x.disponibilidad_promedio_ponderada_porcentage)
     report_node.entidades_fallidas = [r.entidad_nombre for r in report_node.reportes_entidades if r.numero_tags == 0]
     report_node.calculate_all()
     report_node.tiempo_calculo_segundos = run_time.total_seconds()
@@ -349,8 +353,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         status_node.msg = _7_no_es_posible_guardar[1]
         status_node.update_now()
         return False, report_node, (_7_no_es_posible_guardar[0],
-                   f"No se ha podido guardar el reporte del nodo {sR_node_name} debido a: \n {str(e)}")
-
+                                    f"No se ha podido guardar el reporte del nodo {sR_node_name} debido a: \n {str(e)}")
 
     msg = f"{msg_save[1]}\nNodo [{sR_node_name}] procesado en: \t\t{run_time} \n" \
           f"Numero de tags procesadas: \t{report_node.numero_tags_total}"
@@ -408,7 +411,7 @@ def get_active_entities(sR_node, status_node):
             status_node.msg = _6_no_existe_entidades[1]
             status_node.update_now()
             return False, None, (_6_no_existe_entidades[0],
-                                        f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
+                                 f"No hay entidades a procesar en el nodo [{sR_node.nombre}]")
 
         return True, entities, (0, "Entidades activas")
     except Exception as e:
@@ -420,7 +423,6 @@ def get_active_entities(sR_node, status_node):
 
 
 def processing_each_utr_in_threads(entities, out_queue):
-
     fault_utrs = list()
     n_threads = 0
     desc = f"Carg. UTRs [{sR_node_name}]"
@@ -493,6 +495,7 @@ def collecting_report_from_threads(entities, out_queue, n_threads, report_node, 
         in_memory_reports[entity_name].reportes_utrs.append(utr_report)
 
     return report_node, status_node, in_memory_reports
+
 
 def test():
     """
@@ -616,6 +619,6 @@ if __name__ == "__main__":
         exit(int(msg[0]))
     else:
         to_print = f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado con problemas. " \
-              f"\nRevise el archivo log en [/output] \n{msg}\n"
+                   f"\nRevise el archivo log en [/output] \n{msg}\n"
         lg.error(to_print)
         exit(int(msg[0]))

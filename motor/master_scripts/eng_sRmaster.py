@@ -200,6 +200,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
             final_report.novedades["detalle"]["nodos"].append(dict(tipo=node.tipo, nombre=node.nombre))
             continue
         node_summary_report = SRNodeSummaryReport(**report.to_summary())
+        final_report.reportes_nodos_detalle.append(report)
         final_report.append_node_summary_report(node_summary_report)
 
     # añadiendo novedades encontradas al momento de realizar el cálculo nodo por nodo:

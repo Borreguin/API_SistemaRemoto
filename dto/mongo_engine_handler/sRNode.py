@@ -41,10 +41,9 @@ class SRUTR(EmbeddedDocument):
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
         # check if there are consignaciones related with this element:
-        id = str(self.id_utr).lower().strip() + str(self.utr_tipo).lower().strip() + str(self.utr_nombre).strip()
         if self.utr_code is None:
+            id = str(self.id_utr).lower().strip()
             self.utr_code = hashlib.md5(id.encode()).hexdigest()
-        if self.consignaciones is None:
             self.create_consignments_container()
 
     def create_consignments_container(self):

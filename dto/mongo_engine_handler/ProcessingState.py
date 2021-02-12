@@ -21,7 +21,8 @@ class TemporalProcessingStateReport(Document):
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
-        self.created = dt.datetime.now()
+        if self.created is None:
+            self.created = dt.datetime.now()
 
     def to_dict(self):
         return dict(id_report=self.id_report, percentage=self.percentage,
@@ -56,6 +57,7 @@ class TemporalProcessingStateReport(Document):
                 self.save()
             else:
                 new_state = TemporalProcessingStateReport(**self.to_dict())
+                new_state.created = tmp.created
                 tmp.delete()
                 new_state.save()
         except Exception as e:

@@ -164,19 +164,29 @@ class SRFinalReport(Document):
             for reporte in self.reportes_nodos:
                 row[lb_disponibilidad_ponderada_empresa] = reporte.disponibilidad_promedio_ponderada_porcentage/100
                 row[lb_empresa] = reporte.nombre
-                v_report = SRNodeDetails(tipo=reporte.tipo, nombre=reporte.nombre,
-                                         fecha_inicio=self.fecha_inicio, fecha_final=self.fecha_final)
-                node_report_db = SRNodeDetails.objects(id_report=v_report.id_report).first()
+                node_report_db = SRNodeDetails.objects(id_report=reporte.id_report).first()
+                nodo = node_report_db.nodo.fetch()
+                entidades = nodo.entidades
+                utrs = list()
+                for entidad in entidades:
+                    utrs += entidad.utrs
                 if node_report_db is None:
                     # No se encontró reporte asociado al Nodo
                     continue
                 for reporte_entidad in node_report_db.reportes_entidades:
+                    # print(reporte_entidad.entidad_nombre)
                     row[lb_disponibilidad_ponderada_unidad] = reporte_entidad.disponibilidad_promedio_ponderada_porcentage/100
                     row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
                     for reporte_utr in reporte_entidad.reportes_utrs:
                         row[lb_disponibilidad_promedio_utr] = reporte_utr.disponibilidad_promedio_porcentage/100
                         row[lb_utr] = reporte_utr.utr_nombre
                         row[lb_no_seniales] = reporte_utr.numero_tags
+                        f_utr = [utr for utr in utrs if reporte_utr.id_utr == utr.id_utr]
+                        if len(f_utr) == 1:
+                            row[lb_protocolo] = f_utr[0].protocol
+                            row[lb_latitud] = f_utr[0].latitude
+                            row[lb_longitud] = f_utr[0].longitude
+
                         df_details = df_details.append(row.copy(), ignore_index=True)
             df_summary = df_summary.where(pd.notnull(df_summary), None)
             df_details = df_details.where(pd.notnull(df_details), None)

@@ -516,13 +516,15 @@ class SRNodoAPI(Resource):
 
 
 @ns.route('/nodo/<string:tipo>/<string:nombre>/from-excel')
+@ns.route('/nodo/<string:tipo>/<string:nombre>/from-excel/<string:r>')
 class SRNodeFromExcel(Resource):
     @api.response(200, 'El nodo ha sido ingresado de manera correcta')
     @api.expect(parsers.excel_upload)
-    def post(self, tipo, nombre):
+    def post(self, tipo, nombre, r=randint(1, 100)):
         """ Permite añadir un nodo mediante un archivo excel
             Si el nodo ha sido ingresado correctamente, entonces el código es 200
             Si el nodo ya existe entonces error 409
+            r simplemente permite la actualización de la petición, puede ser cualquier valor
         """
         try:
             args = parsers.excel_upload.parse_args()
@@ -573,7 +575,7 @@ class SRNodeFromExcel(Resource):
 
     @api.response(200, 'El nodo ha sido actualizado de manera correcta')
     @api.expect(parsers.excel_upload_w_option)
-    def put(self, tipo, nombre):
+    def put(self, tipo, nombre, r=randint(1, 100)):
         """ Permite actualizar un nodo mediante un archivo excel
             Si el nodo no existe entonces error 404
             DEFAULT:
@@ -639,7 +641,7 @@ class SRNodeFromExcel(Resource):
             return default_error_handler(e)
 
     @api.response(200, 'El nodo ha sido descargado de manera correcta')
-    def get(self, nombre, tipo):
+    def get(self, nombre, tipo, r=randint(1, 100)):
         """ Descarga en formato excel la última versión del nodo
         """
         try:

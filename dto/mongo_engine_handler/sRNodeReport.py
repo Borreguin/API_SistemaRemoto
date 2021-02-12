@@ -36,6 +36,10 @@ class SRUTRDetails(EmbeddedDocument):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def __str__(self):
+        return f"({self.utr_tipo}, {self.utr_nombre}): [tags: {self.numero_tags}, " \
+               f"disp(%):{self.disponibilidad_promedio_porcentage}, cons(min):{self.consignaciones_acumuladas_minutos}]"
+
     def calculate(self, report_ini_date, report_end_date):
         self.numero_tags = len(self.indisponibilidad_detalle)
         self.indisponibilidad_acumulada_minutos = sum([t.indisponible_minutos for t in self.indisponibilidad_detalle])
@@ -161,7 +165,7 @@ class SRNodeDetails(Document):
     periodo_evaluacion_minutos = IntField(required=True)
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
-    numero_tags_total = IntField(required=True)
+    numero_tags_total = IntField(required=True, default=0)
     reportes_entidades = ListField(EmbeddedDocumentField(SREntityDetails), required=True, default=list())
     # se acepta el caso de -1 para indicar que la disponibilidad no pudo ser establecida
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
@@ -180,6 +184,9 @@ class SRNodeDetails(Document):
             id = u.get_id([self.nombre, self.tipo, self.fecha_inicio.strftime('%d-%m-%Y %H:%M'),
                            self.fecha_final.strftime('%d-%m-%Y %H:%M')])
             self.id_report = id
+
+    def __str__(self):
+        return f"({self.tipo}, {self.nombre}):[ent:{len(self.reportes_entidades)}, tags:{self.numero_tags_total}]"
 
     def calculate_all(self):
         # en caso que la disponibilidad de una entidad sea -1, significa que no ha sido consignado en su totalidad

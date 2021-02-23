@@ -158,7 +158,7 @@ class DisponibilidadExcel(Resource):
                 return dict(success=False, msg="No existe reporte asociado"), 404
             # Creating an Excel file:
             ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
-            file_name = f"R_{ini_date_str}@{end_date_str}.xlsx"
+            file_name = f"R_{ini_date_str}.xlsx"
             path = os.path.join(init.TEMP_PATH, file_name)
             success, df_summary, df_details, df_novedades = final_report.to_dataframe()
             if not success:

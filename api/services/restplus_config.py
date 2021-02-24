@@ -37,7 +37,6 @@ def custom_json_encoder(o):
         return o.isoformat()
 
 
-
 @api.errorhandler(Exception)
 def default_error_handler(e):
     global api_log

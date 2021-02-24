@@ -48,6 +48,7 @@ class Disponibilidad(Resource):
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
             # check if there is already a calculation:
+            # sumx = 1/0
             path_file = os.path.join(init.TEMP_PATH, "api_sR_cal_disponibilidad.json")
             time_delta = dt.timedelta(minutes=30)
             # puede el cálculo estar activo más de 30 minutos?
@@ -131,106 +132,6 @@ class Disponibilidad(Resource):
             if final_report is None:
                 return dict(success=False, msg="No existe reporte asociado"), 404
             return dict(success=True, report=final_report.to_dict()), 200
-
-        except Exception as e:
-            return default_error_handler(e)
-
-
-@ns.route('/disponibilidad/excel/<string:ini_date>/<string:end_date>')
-class DisponibilidadExcel(Resource):
-
-    @staticmethod
-    def get(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
-        """ Entrega el cálculo en formato Excel realizado por acciones POST/PUT
-            Si el cálculo no existe entonces <b>código 404</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
-        """
-        try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
-            if not success1 or not success2:
-                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, msg=msg), 400
-            final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
-            final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
-            if final_report is None:
-                return dict(success=False, msg="No existe reporte asociado"), 404
-            # Creating an Excel file:
-            ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
-            file_name = f"R_{ini_date_str}.xlsx"
-            path = os.path.join(init.TEMP_PATH, file_name)
-            success, df_summary, df_details, df_novedades = final_report.to_dataframe()
-            if not success:
-                return dict(success=False, msg="Existe problemas al convertir en excel el reporte"), 409
-            with pd.ExcelWriter(path) as writer:
-                df_summary.to_excel(writer, sheet_name="Resumen")
-                df_details.to_excel(writer, sheet_name="Detalles")
-                df_novedades.to_excel(writer, sheet_name="Novedades")
-            if os.path.exists(path):
-                return send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
-
-        except Exception as e:
-            return default_error_handler(e)
-
-
-@ns.route('/disponibilidad/json/<string:ini_date>/<string:end_date>')
-class DisponibilidadJSON(Resource):
-
-    @staticmethod
-    def get(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
-        """ Entrega el cálculo en formato JSON realizado por acciones POST/PUT
-            Si el cálculo no existe entonces <b>código 404</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
-        """
-        try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
-            if not success1 or not success2:
-                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, report=None, msg=msg), 400
-            # generando reporte virtual para obtener el id:
-            final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
-            # buscando reporte en base de datos a través del id: final_report_v.id_report
-            final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
-            if final_report is None:
-                return dict(success=False, report=None, msg="No existe reporte asociado"), 404
-            # Creating an Excel file:
-            success, df_summary, df_details, df_novedades = final_report.to_dataframe()
-            if not success:
-                return dict(success=False, report=None, msg="Existe problemas al adquirir el reporte"), 409
-            result_dict = dict()
-            result_dict["Resumen"] = df_summary.to_dict(orient='records')
-            result_dict["Detalles"] = df_details.to_dict(orient='records')
-            result_dict["Novedades"] = df_novedades.to_dict(orient='records')
-            return dict(success=True, report=result_dict, msg="Reporte encontrado")
-
-        except Exception as e:
-            return default_error_handler(e)
-
-
-@ns.route('/disponibilidad/diaria')
-class DisponibilidadDiaria(Resource):
-
-    @staticmethod
-    def get():
-        """ Entrega el cálculo de disponibilidad del último día en formato JSON
-            Si el cálculo no existe entonces <b>código 404</b>
-        """
-        try:
-            now = dt.datetime.now()
-            now = dt.datetime(2020, 7, 2)
-            end_date = dt.datetime(now.year, now.month, now.day)
-            ini_date = end_date - dt.timedelta(days=1)
-            final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
-            final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
-            if final_report is None:
-                return dict(success=False, report=None, msg="No existe reporte asociado"), 404
-            success, df_summary, df_details, df_novedades = final_report.to_dataframe()
-            if not success:
-                return dict(success=False, msg="Existe problemas al convertir en excel el reporte"), 409
-            return dict(success=True)
 
         except Exception as e:
             return default_error_handler(e)

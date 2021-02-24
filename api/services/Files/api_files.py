@@ -72,10 +72,10 @@ class FileAPI(Resource):
 
 
 @ns.route('/file/<string:repo>/<string:nombre>')
-@ns.route('/file/<string:repo>/<string:nombre>/<string:p>')
+@ns.route('/file/<string:repo>/<string:nombre>/<string:rand_key>')
 class FileDownloadAPI(Resource):
 
-    def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo", p=str(random.randint(0, 100))):
+    def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo", rand_key=str(random.randint(0, 100))):
         """
             Descarga un archivo de un repositorio
             repo: Nombre del repositorio [s_remoto_excel, s_central_excel]

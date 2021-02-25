@@ -185,7 +185,7 @@ class SREntity(EmbeddedDocument):
         n_tags = sum([len(u.tags) for u in self.utrs])
         return f"({self.entidad_tipo}) {self.entidad_nombre}: [{str(len(self.utrs))} utrs, {str(n_tags)} tags]"
 
-    def to_dict(self, *args, **kwargs):
+    def to_dict(self):
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
                     utrs=[u.to_dict() for u in self.utrs], activado=self.activado)
 
@@ -329,7 +329,7 @@ class SRNode(Document):
                                              ignore_index=True)
         return df_main, df_tags
 
-    def to_dict(self, *args, **kwargs):
+    def to_dict(self):
         return dict(nombre=self.nombre,
                     tipo=self.tipo, entidades=[e.to_dict() for e in self.entidades], actualizado=str(self.actualizado),
                     activado=self.activado)

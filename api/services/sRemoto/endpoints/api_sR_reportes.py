@@ -163,13 +163,14 @@ class IndisponibilidadTAGSs(Resource):
 
             if formato == "excel":
                 # nombre del archivo
-                file_name = f"IndisponibilidadTags.xlsx"
+                file_name = f"IndispTags{ini_date.day}-{ini_date.month}" \
+                            f"@{end_date.day}-{end_date.month}-{end_date.year}.xlsx"
                 path = os.path.join(init.TEMP_PATH, file_name)
                 # crear en el directorio temporal para envío del archivo
                 with pd.ExcelWriter(path) as writer:
                     df_tag.to_excel(writer, sheet_name="Detalles")
                 if os.path.exists(path):
-                    return send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
+                    return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
 
         except Exception as e:
             return default_error_handler(e)

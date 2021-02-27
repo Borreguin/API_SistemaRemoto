@@ -155,7 +155,9 @@ def collecting_results_from(child_processes):
             # eng_results es un diccionario con los resultados posibles
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
             # cp.args[2] es el nombre del proceso
-            results.update({str(cp.args[2]): details[0]})
+            nombre_proceso = str(cp.args[2]).replace(".", "_")
+            nombre_proceso = nombre_proceso.replace("$", "_")
+            results.update({nombre_proceso: details[0]})
             log.info(to_print)
             msg.append(to_print)
         to_print = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos \n"
@@ -179,12 +181,14 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         connect(**mongo_config)
     except Exception as e:
         print(e)
-
+    log.info("Empezando el cálculo del reporte final")
     final_report = SRFinalReport(fecha_inicio=report_ini_date, fecha_final=report_end_date)
     final_report_v = SRFinalReport.objects(id_report=final_report.id_report).first()
     report_exists = final_report_v is not None
     if save_in_db and not force and report_exists:
-        return False, final_report_v, "El reporte ya existe en base de datos"
+        msg = "El reporte ya existe en base de datos"
+        log.info(msg)
+        return False, final_report_v, msg
 
     """ Buscando los nodos con los que se va a trabajar """
     all_nodes = SRNode.objects()
@@ -216,12 +220,17 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     delta_time = dt.datetime.now() - start_time_script
     final_report.actualizado = dt.datetime.now()
     final_report.tiempo_calculo_segundos = delta_time.total_seconds()
+    log.info("Guardando reporte final en base de datos...")
+    log.info(final_report.to_dict())
     # Save in database
     try:
         final_report.save()
-        return True, final_report, "El reporte ha sido calculado exitosamente"
+        msg = "El reporte ha sido calculado exitosamente"
+        log.info(msg)
+        return True, final_report, msg
     except Exception as e:
-        print(e)
+        msg = f"Problemas al guardar el reporte \n{str(e)}"
+        log.info(msg)
         return False, final_report, "El reporte no ha sido guardado"
 
 

@@ -61,6 +61,12 @@ class SRFinalReport(Document):
     actualizado = DateTimeField(default=dt.datetime.now())
     meta = {"collection": "REPORT|FinalReports"}
 
+    def to_dict(self):
+        return dict(id_report=self.id_report, tipo=self.tipo, fecha_inicio=self.fecha_inicio,
+                    fecha_final=self.fecha_final, periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
+                    reportes_nodos=[r.to_dict for r in self.reportes_nodos], novedades=self.novedades
+                    )
+
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.id_report is None:

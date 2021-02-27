@@ -138,6 +138,9 @@ class IndisponibilidadTAGSs(Resource):
             # Obtener el reporte final con los detalles de cada reporte por nodo
             final_report_virtual = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
             final_report_db = SRFinalReport.objects(id_report=final_report_virtual.id_report).first()
+            if final_report_db is None:
+                return dict(success=False, msg="El reporte para esta fecha no existe. "
+                                               "Considere realizar el cálculo primero"), 404
 
             # variable para guardar el listado de tags con su respectiva indisponibilidad
             df_tag = pd.DataFrame(columns=[lb_empresa, lb_unidad_negocio, lb_utr_id, lb_utr,
@@ -145,17 +148,22 @@ class IndisponibilidadTAGSs(Resource):
 
             for reporte_nodo_resumen in final_report_db.reportes_nodos:
                 reporte_nodo_db = SRNodeDetails.objects(id_report=reporte_nodo_resumen.id_report).first()
-                row = {lb_empresa: reporte_nodo_db.nombre}
+                empresa = reporte_nodo_db.nombre
                 for reporte_entidad in reporte_nodo_db.reportes_entidades:
-                    row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
+                    unidad_negocio = reporte_entidad.entidad_nombre
                     for reporte_utr in reporte_entidad.reportes_utrs:
-                        row[lb_utr_id] = reporte_utr.id_utr
-                        row[lb_utr] = reporte_utr.utr_nombre
-                        indisponibilidad_detalle = [tag for tag in reporte_utr.indisponibilidad_detalle
-                                                    if tag.indisponible_minutos >= umbral]
-                        for tag in indisponibilidad_detalle:
-                            row.update(tag.to_dict())
-                            df_tag = df_tag.append(row, ignore_index=True)
+                        utr_id = reporte_utr.id_utr
+                        utr_nombre = reporte_utr.utr_nombre
+                        if len(reporte_utr.indisponibilidad_detalle) > 0:
+                            df_tag_aux = pd.DataFrame([t.to_dict() for t in reporte_utr.indisponibilidad_detalle])
+                            df_tag_aux[lb_empresa] = empresa
+                            df_tag_aux[lb_unidad_negocio] = unidad_negocio
+                            df_tag_aux[lb_utr_id] = utr_id
+                            df_tag_aux[lb_utr] = utr_nombre
+                            if umbral > 0:
+                                mask = df_tag_aux[lb_indisponible_minutos] >= umbral
+                                df_tag_aux = df_tag_aux[mask]
+                            df_tag = df_tag.append(df_tag_aux, ignore_index=True)
 
             if formato == "json":
                 resp = df_tag.to_dict(orient="records")

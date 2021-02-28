@@ -452,24 +452,6 @@ class SRNodeIDAPI(Resource):
             return default_error_handler(e)
 
 
-# TODO: Remove if is needed
-"""
-@ns.route('/nodo')
-class PostSRNodeAPI(Resource):
-    @api.expect(ser_from.node)
-    @api.response(409, 'No es posible crear este nodo')
-    def post(self):
-        #Crear un SRNode 
-        try:
-            request_data = dict(request.json)
-            nodo = SRNode(**request_data)
-            nodo.save()
-            return nodo.to_dict(), 200
-        except Exception as e:
-            return default_error_handler(e)
-"""
-
-
 @ns.route('/nodos/')
 @ns.route('/nodos/<string:filter>')
 class SRNodoAPI(Resource):
@@ -494,10 +476,21 @@ class SRNodoAPI(Resource):
                     if "entidades" not in node.keys():
                         continue
                     for entidad in node["entidades"]:
-                        n_rtu = len(entidad["utrs"])
-                        n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
-                        n_tags += n_tag_inside
-                        entidad["utrs"] = n_rtu
+                        if "utrs" in entidad.keys():
+                            n_rtu = len(entidad["utrs"])
+                            n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
+                            n_tags += n_tag_inside
+                            for utr in entidad["utrs"]:
+                                utr.pop("consignaciones")
+                                utr.pop("tags")
+                                utr['longitude'] = utr['longitude'] \
+                                    if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
+                                utr['latitude'] = utr['latitude'] \
+                                    if 'latitude' in utr.keys() and not math.isnan(utr['latitude']) else 0
+                        else:
+                            n_rtu = 0
+                            n_tag_inside = 0
+                        entidad["n_utrs"] = n_rtu
                         entidad["n_tags"] = n_tag_inside
                         entidades.append(entidad)
                     # creando el resumen del nodo

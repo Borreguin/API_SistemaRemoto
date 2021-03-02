@@ -58,12 +58,18 @@ class sRemotoSerializers:
                                  {
                                      "id_utr": fields.String(required=True,
                                                              description="Identificación única de la RTU. Ex: TBOX TEST DNP3"),
-                                     "tipo": fields.String(required=True,
+                                     "utr_tipo": fields.String(required=True,
                                                                      description="Tipo de RTU: Subestación, Central, etc"),
-                                     "nombre": fields.String(required=True,
+                                     "utr_nombre": fields.String(required=True,
                                                                    description="Nombre de la RTU "),
                                      "activado": fields.Boolean(default=True,
-                                                                description="Activación de la entity_list")
+                                                                description="Activación de la entity_list"),
+                                     "protocol": fields.String(default="No definido", required=True,
+                                                                description="Definición de protocolo de la UTR"),
+                                     "latitude": fields.Float(default=0, required=True,
+                                                               description="Georeferencia Latitud de la UTR"),
+                                     "longitude": fields.Float(default=0, required=True,
+                                                              description="Georeferencia Longitud de la UTR"),
                                  })
 
         self.entidad = api.model("Configurar Entidad",

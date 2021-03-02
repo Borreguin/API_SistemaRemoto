@@ -129,19 +129,26 @@ class SRRTUSAPI(Resource):
         """
 
         try:
-            nodo = SRNode.objects(id_node=id_nodo).first()
+            nodo = SRNode.objects(id_node=id_nodo).as_pymongo().first()
             if nodo is None:
                 return dict(success=False, msg="No se encuentra el nodo"), 404
             idx = None
-            for ix, _entidad in enumerate(nodo.entidades):
-                if _entidad.id_entidad == id_entidad:
+            for ix, _entidad in enumerate(nodo["entidades"]):
+                if _entidad["id_entidad"] == id_entidad:
                     idx = ix
                     break
             if idx is None:
                 return dict(success=False, msg="No se encuentra la entidad"), 404
 
-            utrs = nodo.entidades[idx].utrs
-            return dict(success=True, utrs=[u.to_dict() for u in utrs]), 200
+            utrs_dict = nodo["entidades"][idx]["utrs"]
+            for utr in utrs_dict:
+                utr.pop('consignaciones')
+                utr.pop("tags")
+                utr['longitude'] = utr['longitude'] \
+                    if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
+                utr['latitude'] = utr['latitude'] \
+                    if 'latitude' in utr.keys() and not math.isnan(utr['latitude']) else 0
+            return dict(success=True, utrs=utrs_dict), 200
         except Exception as e:
             return default_error_handler(e)
 
@@ -165,15 +172,15 @@ class SRRTUSAPI(Resource):
                     break
             if idx is None:
                 return dict(success=False, msg="No se encuentra la entidad"), 404
-            rtu = SRUTR(id_utr=request_data["id_utr"], utr_tipo=request_data["tipo"], utr_nombre=request_data["nombre"],
-                        activado=request_data["activado"])
+            rtu = SRUTR(**request_data)
             success, msg = nodo.entidades[idx].add_or_rename_utrs([rtu])
+            utrs = nodo.entidades[idx].utrs
             if success:
                 rtu.create_consignments_container()
                 nodo.save()
-                return dict(success=success, msg=msg), 200
+                return dict(success=success, utrs=[u.to_dict() for u in utrs],  msg=msg), 200
             else:
-                return dict(success=success, msg=msg), 409
+                return dict(success=success, utrs=[u.to_dict() for u in utrs], msg=msg), 409
         except Exception as e:
             return default_error_handler(e)
 

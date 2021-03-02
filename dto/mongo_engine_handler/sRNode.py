@@ -160,6 +160,9 @@ class SREntity(EmbeddedDocument):
                     self.utrs[ix].utr_nombre = utr.utr_nombre
                     self.utrs[ix].utr_tipo = utr.utr_tipo
                     self.utrs[ix].activado = utr.activado
+                    self.utrs[ix].protocol = utr.protocol
+                    self.utrs[ix].latitude = utr.latitude
+                    self.utrs[ix].longitude = utr.longitude
                     found, n_rename = True, n_rename + 1
                     break
             if not found:

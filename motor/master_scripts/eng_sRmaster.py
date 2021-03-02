@@ -221,7 +221,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     final_report.actualizado = dt.datetime.now()
     final_report.tiempo_calculo_segundos = delta_time.total_seconds()
     log.info("Guardando reporte final en base de datos...")
-    log.info(final_report.to_dict())
+    # log.info(final_report.to_dict())
     # Save in database
     try:
         final_report.save()

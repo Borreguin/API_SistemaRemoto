@@ -48,15 +48,15 @@ class Disponibilidad(Resource):
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
             # check if there is already a calculation:
-            # sumx = 1/0
             path_file = os.path.join(init.TEMP_PATH, "api_sR_cal_disponibilidad.json")
-            time_delta = dt.timedelta(minutes=30)
-            # puede el cálculo estar activo más de 30 minutos?
+            time_delta = dt.timedelta(minutes=20)
+            # puede el cálculo estar activo más de 20 minutos?
             active = u.is_active(path_file, id, time_delta)
-            active = False
             if active:
                 return dict(success=False,
-                            msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}"), 409
+                            msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}. "
+                                f"Tiempo restante: {int(time_delta.total_seconds() / 60)} min "
+                                f"{time_delta.total_seconds() % 60} seg"), 409
 
             # preparandose para cálculo: (permite bloquear futuras peticiones si ya existe un cálculo al momento)
             dict_value = dict(fecha=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), activo=True)

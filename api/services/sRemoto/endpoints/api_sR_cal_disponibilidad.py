@@ -9,6 +9,8 @@
     "My work is well done to honor God at any time" R Sanchez A.
     Mateo 6:33
 """
+import time
+
 from flask_restplus import Resource
 # importando configuraciones iniciales
 from api.services.restplus_config import api
@@ -368,7 +370,12 @@ class DisponibilidadStatusNodo(Resource):
                                          fecha_inicio=ini_date, fecha_final=end_date)
                 tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
                 if tmp_report is None:
-                    continue
+                    for i in range(10):
+                        tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
+                        if tmp_report is not None:
+                            break
+                        else:
+                            time.sleep(2)
                 to_send.append(tmp_report.to_summary())
             return dict(success=True, status=to_send), 200
 

@@ -213,9 +213,9 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     final_report.calculate()
     if report_exists and force:
         if "log" in final_report_v.novedades["detalle"].keys():
-            final_report.novedades["detalle"]["log"] = final_report_v.novedades["detalle"]["log"]
+            final_report.novedades["detalle"]["log_previo"] = final_report_v.novedades["detalle"]["log"]
         if "results" in final_report_v.novedades["detalle"].keys():
-            final_report.novedades["detalle"]["results"] = final_report_v.novedades["detalle"]["results"]
+            final_report.novedades["detalle"]["resultado_previo"] = final_report_v.novedades["detalle"]["results"]
         final_report_v.delete()
     delta_time = dt.datetime.now() - start_time_script
     final_report.actualizado = dt.datetime.now()

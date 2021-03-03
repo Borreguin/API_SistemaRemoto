@@ -45,7 +45,7 @@ if init.FLASK_DEBUG:
 else:
     # seleccionando cualquiera disponible
     idx = randint(0, len(init.PISERVERS) - 1)
-    print(f"Ejemplo de servidor PI aleatorio seleccionado: {init.PISERVERS[int(idx)]}")
+    print(f"PI aleatorio seleccionado: {init.PISERVERS[int(idx)]}")
     PiServerName = init.PISERVERS[int(idx)]
     pi_svr = pi.PIserver(PiServerName)
 

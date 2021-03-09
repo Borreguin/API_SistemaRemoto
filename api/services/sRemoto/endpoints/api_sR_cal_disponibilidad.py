@@ -17,6 +17,7 @@ from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
+from dto.mongo_engine_handler.SRFinalReportTemporal import SRFinalReportTemporal
 from motor.master_scripts.eng_sRmaster import *
 from flask import request, send_from_directory
 # importando clases para leer desde MongoDB
@@ -130,7 +131,10 @@ class Disponibilidad(Resource):
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
             final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
-            final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
+            if u.isTemporal(ini_date, end_date):
+                final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+            else:
+                final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
             if final_report is None:
                 return dict(success=False, msg="No existe reporte asociado"), 404
             return dict(success=True, report=final_report.to_dict()), 200

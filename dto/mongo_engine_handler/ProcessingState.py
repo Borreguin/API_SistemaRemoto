@@ -14,6 +14,7 @@ class TemporalProcessingStateReport(Document):
     finish = BooleanField(default=False)
     info = DictField()
     msg = StringField()
+    # Esta configuración permite crear documentos JSON con expiración de tiempo
     meta = {"collection": "STATUS|temporal", 'indexes': [{
         'fields': ['created'],
         'expireAfterSeconds': 360000

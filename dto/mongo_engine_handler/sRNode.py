@@ -7,6 +7,7 @@
 
 """
 import hashlib
+import math
 import traceback
 
 from dto.mongo_engine_handler.Consignment import *
@@ -34,9 +35,9 @@ class SRUTR(EmbeddedDocument):
     consignaciones = ReferenceField(Consignments, dbref=True)
     utr_code = StringField(required=True, default=None)
     activado = BooleanField(default=True)
-    protocol = StringField(default="No definido", required=False)       # Nuevo atributo
-    longitude = FloatField(required=False, default=0)                   # Nuevo atributo
-    latitude = FloatField(required=False, default=0)                    # Nuevo atributo
+    protocol = StringField(default="No definido", required=False)  # Nuevo atributo
+    longitude = FloatField(required=False, default=0)  # Nuevo atributo
+    latitude = FloatField(required=False, default=0)  # Nuevo atributo
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -105,8 +106,9 @@ class SRUTR(EmbeddedDocument):
     def to_dict(self):
         return dict(id_utr=self.id_utr, utr_nombre=self.utr_nombre, utr_tipo=self.utr_tipo,
                     tags=[t.to_dict() for t in self.tags], activado=self.activado,
-                    utr_code=self.utr_code, protocol=self.protocol, longitude=self.longitude,
-                    latitude=self.latitude)
+                    utr_code=self.utr_code, protocol=self.protocol,
+                    longitude=0 if math.isnan(self.longitude) else self.longitude,
+                    latitude=0 if math.isnan(self.latitude) else self.latitude)
 
     def to_summary(self):
         return dict(id_utr=self.id_utr, utr_nombre=self.utr_nombre, utr_tipo=self.utr_tipo)
@@ -158,6 +160,9 @@ class SREntity(EmbeddedDocument):
                     self.utrs[ix].utr_nombre = utr.utr_nombre
                     self.utrs[ix].utr_tipo = utr.utr_tipo
                     self.utrs[ix].activado = utr.activado
+                    self.utrs[ix].protocol = utr.protocol
+                    self.utrs[ix].latitude = utr.latitude
+                    self.utrs[ix].longitude = utr.longitude
                     found, n_rename = True, n_rename + 1
                     break
             if not found:
@@ -183,14 +188,14 @@ class SREntity(EmbeddedDocument):
         n_tags = sum([len(u.tags) for u in self.utrs])
         return f"({self.entidad_tipo}) {self.entidad_nombre}: [{str(len(self.utrs))} utrs, {str(n_tags)} tags]"
 
-    def to_dict(self, *args, **kwargs):
+    def to_dict(self):
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
                     utrs=[u.to_dict() for u in self.utrs], activado=self.activado)
 
     def to_summary(self):
         n_tags = sum([len(u.tags) for u in self.utrs])
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
-                    utrs=len(self.utrs), n_tags=n_tags,  activado=self.activado)
+                    utrs=len(self.utrs), n_tags=n_tags, activado=self.activado)
 
 
 class SRNode(Document):
@@ -307,7 +312,7 @@ class SRNode(Document):
         cl_utr = "utr"
         # main columns in DataFrame
         main_columns = [cl_utr, cl_utr_name, cl_utr_type,
-                             cl_entity_name, cl_entity_type, cl_activado]
+                        cl_entity_name, cl_entity_type, cl_activado]
         # columns in tags sheet
         tags_columns = [cl_utr, cl_tag_name, cl_f_expression, cl_activado]
 
@@ -317,18 +322,17 @@ class SRNode(Document):
             for utr in entidad.utrs:
                 active = "x" if utr.activado else ""
                 df_main = df_main.append({cl_utr: utr.id_utr, cl_utr_name: utr.utr_nombre,
-                                         cl_utr_type: utr.utr_tipo, cl_entity_name: entidad.entidad_nombre,
-                                         cl_entity_type: entidad.entidad_tipo, cl_activado: active},
+                                          cl_utr_type: utr.utr_tipo, cl_entity_name: entidad.entidad_nombre,
+                                          cl_entity_type: entidad.entidad_tipo, cl_activado: active},
                                          ignore_index=True)
                 for tag in utr.tags:
                     active = "x" if tag.activado else ""
-                    df_tags = df_tags.append({cl_utr:utr.id_utr, cl_tag_name: tag.tag_name,
+                    df_tags = df_tags.append({cl_utr: utr.id_utr, cl_tag_name: tag.tag_name,
                                               cl_f_expression: tag.filter_expression, cl_activado: active},
                                              ignore_index=True)
         return df_main, df_tags
 
-
-    def to_dict(self, *args, **kwargs):
+    def to_dict(self):
         return dict(nombre=self.nombre,
                     tipo=self.tipo, entidades=[e.to_dict() for e in self.entidades], actualizado=str(self.actualizado),
                     activado=self.activado)
@@ -345,6 +349,7 @@ class SRNodeFromDataFrames():
     """
     Clase que permite la conversión de un dataFrame en un nodo de tipo STR
     """
+
     def __init__(self, tipo, nombre, df_main: pd.DataFrame, df_tags: pd.DataFrame):
         df_main.columns = [str(x).lower() for x in df_main.columns]
         df_tags.columns = [str(x).lower() for x in df_tags.columns]
@@ -363,7 +368,6 @@ class SRNodeFromDataFrames():
         self.cl_protocolo = "protocolo"
         self.tipo = tipo
         self.nombre = nombre
-
 
     def validate(self):
         # check if all columns are present in main sheet
@@ -454,6 +458,7 @@ class SRDataFramesFromDict():
     """
     Clase que pemite la creación de DataFrames a partir de un dictionary tipo STRNode
     """
+
     def __init__(self, sr_node_as_dict):
         self.sr_node_as_dict = sr_node_as_dict
         self.cl_activado = "activado"
@@ -468,7 +473,6 @@ class SRDataFramesFromDict():
         self.cl_latitud = "latitud"
         self.cl_longitud = "longitud"
         self.cl_protocolo = "protocolo"
-
 
     def convert_to_DataFrames(self):
         # main columns in DataFrame
@@ -490,7 +494,7 @@ class SRDataFramesFromDict():
                                               self.cl_entity_type: entidad["entidad_tipo"],
                                               self.cl_protocolo: utr["protocol"] if "protocol" in utr.keys() else "",
                                               self.cl_longitud: utr["longitude"] if "longitude" in utr.keys() else "",
-                                              self.cl_latitud : utr["latitude"] if "latitude" in utr.keys() else "",
+                                              self.cl_latitud: utr["latitude"] if "latitude" in utr.keys() else "",
                                               self.cl_activado: active}, ignore_index=True)
 
                     if len(utr["tags"]) == 0:

@@ -124,7 +124,7 @@ def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
                 to_run += ["--f"]
             # empezando un proceso a la vez
             p = sb.Popen(to_run, stdout=out, stderr=out)
-            msg = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Ejecutando: [{node}] " \
+            msg = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Ejecutando: [{valid_name(node)}] " \
                   f"save_in_db={save_in_db} force={force}"
             return True, p, msg
     except Exception as e:
@@ -143,7 +143,7 @@ def collecting_results_from(child_processes):
         for cp in child_processes:
             cp.wait()
             # para dar seguimiento a los resultados:
-            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{cp.args[2]}]"
+            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{valid_name(cp.args[2])}]"
             if cp.returncode in [0, 9, 10]:
                 to_print = to_print.replace("#st", "OK   ")
             elif cp.returncode in [8]:
@@ -155,7 +155,8 @@ def collecting_results_from(child_processes):
             # eng_results es un diccionario con los resultados posibles
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
             # cp.args[2] es el nombre del proceso
-            results.update({str(cp.args[2]): details[0]})
+            nombre_proceso = valid_name(str(cp.args[2]))
+            results.update({nombre_proceso: details[0]})
             log.info(to_print)
             msg.append(to_print)
         to_print = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Finalizando todos los nodos \n"
@@ -179,12 +180,14 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         connect(**mongo_config)
     except Exception as e:
         print(e)
-
+    log.info("Empezando el cálculo del reporte final")
     final_report = SRFinalReport(fecha_inicio=report_ini_date, fecha_final=report_end_date)
     final_report_v = SRFinalReport.objects(id_report=final_report.id_report).first()
     report_exists = final_report_v is not None
     if save_in_db and not force and report_exists:
-        return False, final_report_v, "El reporte ya existe en base de datos"
+        msg = "El reporte ya existe en base de datos"
+        log.info(msg)
+        return False, final_report_v, msg
 
     """ Buscando los nodos con los que se va a trabajar """
     all_nodes = SRNode.objects()
@@ -209,21 +212,31 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     final_report.calculate()
     if report_exists and force:
         if "log" in final_report_v.novedades["detalle"].keys():
-            final_report.novedades["detalle"]["log"] = final_report_v.novedades["detalle"]["log"]
+            final_report.novedades["detalle"]["log_previo"] = final_report_v.novedades["detalle"]["log"]
         if "results" in final_report_v.novedades["detalle"].keys():
-            final_report.novedades["detalle"]["results"] = final_report_v.novedades["detalle"]["results"]
+            final_report.novedades["detalle"]["resultado_previo"] = final_report_v.novedades["detalle"]["results"]
         final_report_v.delete()
     delta_time = dt.datetime.now() - start_time_script
     final_report.actualizado = dt.datetime.now()
     final_report.tiempo_calculo_segundos = delta_time.total_seconds()
+    log.info("Guardando reporte final en base de datos...")
+    # log.info(final_report.to_dict())
     # Save in database
     try:
         final_report.save()
-        return True, final_report, "El reporte ha sido calculado exitosamente"
+        msg = "El reporte ha sido calculado exitosamente"
+        log.info(msg)
+        return True, final_report, msg
     except Exception as e:
-        print(e)
+        msg = f"Problemas al guardar el reporte \n{str(e)}"
+        log.info(msg)
         return False, final_report, "El reporte no ha sido guardado"
 
+
+def valid_name(name):
+    valid_name = str(name).replace(".", "_")
+    valid_name = valid_name.replace("$", "_")
+    return valid_name
 
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()

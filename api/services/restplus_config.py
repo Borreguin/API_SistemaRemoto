@@ -37,7 +37,6 @@ def custom_json_encoder(o):
         return o.isoformat()
 
 
-
 @api.errorhandler(Exception)
 def default_error_handler(e):
     global api_log
@@ -74,7 +73,7 @@ def default_error_handler(e):
         return dict(success=False, errors=f"Elemento duplicado en "
                                           f"conflicto con: {basic_info}",
                     details=to_send), 409
-    return dict(success=False, errors=str(e)), 500
+    return dict(success=False, errors=str(e), msg=str(e)), 500
 
     # if not FLASK_DEBUG:
     #    return {'message': message}, 500

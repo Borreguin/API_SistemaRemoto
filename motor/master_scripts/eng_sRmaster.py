@@ -124,7 +124,7 @@ def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
                 to_run += ["--f"]
             # empezando un proceso a la vez
             p = sb.Popen(to_run, stdout=out, stderr=out)
-            msg = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Ejecutando: [{node}] " \
+            msg = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Ejecutando: [{valid_name(node)}] " \
                   f"save_in_db={save_in_db} force={force}"
             return True, p, msg
     except Exception as e:
@@ -143,7 +143,7 @@ def collecting_results_from(child_processes):
         for cp in child_processes:
             cp.wait()
             # para dar seguimiento a los resultados:
-            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{cp.args[2]}]"
+            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{valid_name(cp.args[2])}]"
             if cp.returncode in [0, 9, 10]:
                 to_print = to_print.replace("#st", "OK   ")
             elif cp.returncode in [8]:
@@ -155,8 +155,7 @@ def collecting_results_from(child_processes):
             # eng_results es un diccionario con los resultados posibles
             details = [d[1] for d in eng_results if d[0] == cp.returncode]
             # cp.args[2] es el nombre del proceso
-            nombre_proceso = str(cp.args[2]).replace(".", "_")
-            nombre_proceso = nombre_proceso.replace("$", "_")
+            nombre_proceso = valid_name(str(cp.args[2]))
             results.update({nombre_proceso: details[0]})
             log.info(to_print)
             msg.append(to_print)
@@ -233,6 +232,11 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         log.info(msg)
         return False, final_report, "El reporte no ha sido guardado"
 
+
+def valid_name(name):
+    valid_name = str(name).replace(".", "_")
+    valid_name = valid_name.replace("$", "_")
+    return valid_name
 
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()

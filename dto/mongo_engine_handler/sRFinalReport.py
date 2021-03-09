@@ -72,6 +72,30 @@ class SRFinalReport(Document):
         if self.actualizado is None:
             self.actualizado = dt.datetime.now()
 
+    def novedades_as_dict(self):
+        print(self.novedades)
+        detalle = self.novedades.pop("detalle", None)
+        ind_dict = self.novedades
+        detalle["todos los nodos"] = ind_dict
+        lst_final = []
+        if isinstance(detalle, dict):
+            results = detalle.pop("results", {})
+            logs = detalle.pop("log", {})
+            for key in detalle:
+                ind_dict = detalle[key]
+                if ind_dict is None:
+                    continue
+                ind_dict["item"] = key
+                if key in results.keys():
+                    ind_dict["result"] = results[key]
+                log_lst = list()
+                for log in logs:
+                    if key in log:
+                        log_lst.append(log)
+                ind_dict["log"] = log_lst
+                lst_final.append(ind_dict)
+        return lst_final
+
     def append_node_summary_report(self, node_summary_report: SRNodeSummaryReport):
         self.reportes_nodos.append(node_summary_report)
         self.procesamiento["numero_tags_total"] += node_summary_report.procesamiento["numero_tags_total"]
@@ -161,8 +185,9 @@ class SRFinalReport(Document):
             summary = self.to_table()
             df_summary = pd.DataFrame(columns=list(summary.keys()))
             df_summary = df_summary.append(summary, ignore_index=True)
-            df_novedades = pd.DataFrame(columns=list(self.novedades.keys()))
-            df_novedades = df_novedades.append(self.novedades, ignore_index=True)
+            df_novedades = pd.DataFrame(columns=["item", "tags_fallidas", "utr_fallidas", "entidades_fallidas",
+                                                 "nodos_fallidos", "result",	"log"], data=self.novedades_as_dict())
+            df_novedades.set_index("item", inplace=True)
             row = {lb_fecha_ini:str(self.fecha_inicio), lb_fecha_fin: str(self.fecha_final)}
             for reporte in self.reportes_nodos:
                 row[lb_disponibilidad_ponderada_empresa] = reporte.disponibilidad_promedio_ponderada_porcentage/100

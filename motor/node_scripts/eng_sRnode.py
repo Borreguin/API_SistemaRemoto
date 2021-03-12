@@ -18,6 +18,9 @@ import argparse, os, sys
 import queue
 
 # import custom libraries:
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
 project_path = os.path.dirname(motor_path)
@@ -35,7 +38,8 @@ from tqdm import tqdm
 from random import randint
 
 """ Import clases for MongoDB """
-from dto.mongo_engine_handler.sRNodeReport import *
+from dto.mongo_engine_handler.sRNode import *
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import *
 
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
@@ -277,7 +281,12 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     minutos_en_periodo = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
 
     """ Creando reporte de nodo """
-    report_node = SRNodeDetails(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date,
+    if u.isTemporal(ini_date,end_date):
+        report_node = SRNodeDetailsTemporal(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
+                                              fecha_inicio=report_ini_date,
+                                              fecha_final=report_end_date)
+    else:
+        report_node = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date,
                                 fecha_final=report_end_date)
     status_node = TemporalProcessingStateReport(id_report=report_node.id_report,
                                                 msg=f"Empezando cálculo del nodo: {sR_node_name}")
@@ -368,7 +377,10 @@ def delete_report_if_exists(save_in_db, force, report_node, status_node):
     if save_in_db or force:
         """ Observar si existe el nodo en la base de datos """
         try:
-            node_report_db = SRNodeDetails.objects(id_report=report_node.id_report).first()
+            if u.isTemporal(report_node.fecha_inicio,report_node.fecha_final):
+                node_report_db = SRNodeDetailsTemporal.objects(id_report=report_node.id_report).first()
+            else:
+                node_report_db = SRNodeDetailsPermanente.objects(id_report=report_node.id_report).first()
             reporte_ya_existe = (node_report_db is not None)
             """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
             if reporte_ya_existe and save_in_db and not force:

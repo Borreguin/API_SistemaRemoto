@@ -18,14 +18,14 @@ Colossians 3:23
 •	Guarda en base de datos los resultados, la base de datos se encuentra en “/output/disponibilidad.db”
 
 """
-
-from my_lib import utils as u
+from dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 import io, os
 import subprocess as sb
-import datetime as dt
-import traceback
+
+from dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import SRNodeSummaryReport
 from settings import initial_settings as init
 from motor.node_scripts.eng_sRnode import eng_results
+from my_lib import utils as u
 # general variables
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
@@ -35,8 +35,7 @@ debug = init.FLASK_DEBUG
 log = init.LogDefaultConfig("eng_sRmaster.log").logger
 
 """ Import clases for MongoDB """
-from dto.mongo_engine_handler.sRNodeReport import *
-from dto.mongo_engine_handler.sRFinalReport import *
+from dto.mongo_engine_handler.SRFinalReport.sRFinalReportPermanente import *
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"
@@ -181,8 +180,15 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     except Exception as e:
         print(e)
     log.info("Empezando el cálculo del reporte final")
-    final_report = SRFinalReport(fecha_inicio=report_ini_date, fecha_final=report_end_date)
-    final_report_v = SRFinalReport.objects(id_report=final_report.id_report).first()
+    # Verificando si debe usar el reporte temporal o definitivo:
+    if u.isTemporal(report_ini_date, report_end_date):
+        final_report_v = SRFinalReportTemporal(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+        final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+    else:
+        final_report_v = SRFinalReportPermanente(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+        final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
+
+
     report_exists = final_report_v is not None
     if save_in_db and not force and report_exists:
         msg = "El reporte ya existe en base de datos"
@@ -193,9 +199,9 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     all_nodes = SRNode.objects()
     all_nodes = [n for n in all_nodes if n.activado]
     for node in all_nodes:
-        report_v = SRNodeDetails(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
-                                 fecha_final=report_end_date)
-        report = SRNodeDetails.objects(id_report=report_v.id_report).first()
+        report_v = SRNodeDetailsPermanente(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
+                                           fecha_final=report_end_date)
+        report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
         if report is None:
             final_report.novedades["nodos_fallidos"] += 1
             if not "nodos" in final_report.novedades["detalle"]:

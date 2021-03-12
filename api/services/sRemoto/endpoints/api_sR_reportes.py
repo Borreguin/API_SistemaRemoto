@@ -15,8 +15,10 @@ from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
+from dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import *
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from motor.master_scripts.eng_sRmaster import *
-from flask import request, send_from_directory
+from flask import send_from_directory
 
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()
@@ -45,8 +47,13 @@ class DisponibilidadExcel(Resource):
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
-            final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
-            final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
+                # Verificando si debe usar el reporte temporal o definitivo:
+            if u.isTemporal(ini_date, end_date):
+                final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
+                final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+            else:
+                final_report_v = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
+                final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
             if final_report is None:
                 return dict(success=False, msg="No existe reporte asociado"), 404
 
@@ -116,10 +123,16 @@ class IndisponibilidadTAGSs(Resource):
             if not formato in ["excel", "json"]:
                 msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
                 return dict(success=False, msg=msg), 400
+            # Verificando si debe usar el reporte temporal o definitivo:
+            if u.isTemporal(ini_date, end_date):
+                # Obtener el reporte final con los detalles de cada reporte por nodo
+                final_report_virtual = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
+                final_report_db = SRFinalReportTemporal.objects(id_report=final_report_virtual.id_report).first()
+            else:
+                # Obtener el reporte final con los detalles de cada reporte por nodo
+                final_report_virtual = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
+                final_report_db = SRFinalReportPermanente.objects(id_report=final_report_virtual.id_report).first()
 
-            # Obtener el reporte final con los detalles de cada reporte por nodo
-            final_report_virtual = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
-            final_report_db = SRFinalReport.objects(id_report=final_report_virtual.id_report).first()
             if final_report_db is None:
                 return dict(success=False, msg="El reporte para esta fecha no existe. "
                                                "Considere realizar el cálculo primero"), 404
@@ -129,7 +142,10 @@ class IndisponibilidadTAGSs(Resource):
                                            lb_tag_name, lb_indisponible_minutos])
 
             for reporte_nodo_resumen in final_report_db.reportes_nodos:
-                reporte_nodo_db = SRNodeDetails.objects(id_report=reporte_nodo_resumen.id_report).first()
+                if u.isTemporal(ini_date, end_date):
+                    reporte_nodo_db = SRNodeDetailsTemporal.objects(id_report=reporte_nodo_resumen.id_report).first()
+                else:
+                    reporte_nodo_db = SRNodeDetailsPermanente.objects(id_report=reporte_nodo_resumen.id_report).first()
                 empresa = reporte_nodo_db.nombre
                 for reporte_entidad in reporte_nodo_db.reportes_entidades:
                     unidad_negocio = reporte_entidad.entidad_nombre

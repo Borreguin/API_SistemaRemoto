@@ -1,8 +1,14 @@
-from dto.mongo_engine_handler import sRNodeReport as nRep, sRNode as DS, Consignment as Cons
+from dto.mongo_engine_handler import sRNode as DS, Consignment as Cons
+from dto.mongo_engine_handler.SRNodeReport import sRNodeReportPermanente as nRep
 import random as r
 from mongoengine import *
 import datetime as dt
+
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SREntityDetails, SRUTRDetails, SRTagDetails
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from settings import initial_settings as init
+from my_lib.utils import isTemporal
 DEBUG = True
 
 d_n = dt.datetime.now()
@@ -45,18 +51,20 @@ def inserting_a_SRNodeReport(node_name):
     nodo = DS.SRNode.objects(nombre=node_name).first()
     if nodo is None:
         return False
-
-    nodeReport = nRep.SRNodeDetails(fecha_inicio=ini_date, fecha_final=end_date, nodo=nodo)
+    if isTemporal(ini_date, end_date):
+        nodeReport = SRNodeDetailsTemporal(fecha_inicio=ini_date, fecha_final=end_date, nodo=nodo)
+    else:
+        nodeReport = SRNodeDetailsPermanente(fecha_inicio=ini_date, fecha_final=end_date, nodo=nodo)
     # nodeReport.
     entities_report = list()
     for e in nodo.entidades:
         # Reporte por entidad
-        entity_report = nRep.SREntityDetails(entidad_nombre=e.entidad_nombre, entidad_tipo=e.entidad_tipo)
+        entity_report = SREntityDetails(entidad_nombre=e.entidad_nombre, entidad_tipo=e.entidad_tipo)
         for u in e.utrs:
-            utr_report = nRep.SRUTRDetails(id_utr=u.id_utr, utr_nombre=u.utr_nombre, utr_tipo=u.utr_tipo)
+            utr_report = SRUTRDetails(id_utr=u.id_utr, utr_nombre=u.utr_nombre, utr_tipo=u.utr_tipo)
             # Simulating the calculation of unavailable time
             for t in u.tags:
-                tag_report = nRep.SRTagDetails(tag_name=t.tag_name,
+                tag_report = SRTagDetails(tag_name=t.tag_name,
                                                indisponible_minutos=r.randint(0, int(n_minutos_evaluate*0.005)))
                 utr_report.indisponibilidad_detalle.append(tag_report)
 

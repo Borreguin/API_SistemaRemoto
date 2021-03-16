@@ -17,9 +17,6 @@ from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
-from dto.mongo_engine_handler.ProcessingStateNuevo import Nuevo
-from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from motor.master_scripts.eng_sRmaster import *
 from flask import request
 # importando clases para leer desde MongoDB
@@ -132,15 +129,6 @@ class Disponibilidad(Resource):
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
-            #Test = Nuevo(id_report="test me")
-            # Test.save()
-            # sr = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
-            # sr.disponibilidad_promedio_porcentage = 0
-            # sr.disponibilidad_promedio_ponderada_porcentage = 0
-            # sr.validate()
-            # sr.save()
-            #DetailReport=SRNodeDetailsTemporal.objects(id_report='test')
-            # Verificando si debe usar el reporte temporal o definitivo:
             if u.isTemporal(ini_date, end_date):
                 final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
                 final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()

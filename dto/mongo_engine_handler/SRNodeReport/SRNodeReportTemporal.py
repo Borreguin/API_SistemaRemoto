@@ -9,7 +9,7 @@ class SRNodeDetailsTemporal(SRNodeDetailsBase):
     meta = {"collection": "TEMPORAL|Nodos", 'indexes': [{
         'cls': False,
         'fields': ['created'],
-        'expireAfterSeconds': 300
+        'expireAfterSeconds': 15552000
     }]}
 # tiempo de vida 6 meses 60*60*24*6*30 = 15552000
 #'expireAfterSeconds': 60 * 60 * 24 * 6 * 30

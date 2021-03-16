@@ -2,9 +2,17 @@ import os
 import subprocess as sb #Procesos en paralelo
 import traceback # Seguimiento de errores
 from settings import initial_settings as init
-script_path = os.path.dirname(os.path.abspath(__file__)) #obtener el path absoluto de este script
+script_path = os.path.dirname(os.path.abspath(__file__)) # obtener el path absoluto de este script
 db_path = os.path.join(script_path, "_db", "mongo_db")
-mongo_exe = 'C:\\Program Files\\MongoDB\\Server\\4.2\\bin\\mongod.exe'
+path_v4_2='C:\\Program Files\\MongoDB\\Server\\4.2\\bin\\mongod.exe'
+path_v4_4='C:\\Program Files\\MongoDB\\Server\\4.4\\bin\\mongod.exe'
+if os.path.exists(path_v4_2):
+    mongo_exe = path_v4_2
+elif os.path.exists(path_v4_4):
+    mongo_exe = path_v4_4
+else:
+    print("No se encontro el path para levantar mongodb")
+
 log_path = os.path.join(script_path, "logs")
 
 

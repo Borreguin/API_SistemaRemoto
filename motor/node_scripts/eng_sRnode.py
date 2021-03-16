@@ -395,7 +395,7 @@ def delete_report_if_exists(save_in_db, force, report_node, status_node):
 
         except Exception as e:
             msg = "Problema de concistencia en la base de datos"
-            tb = traceback.extract_stack()
+            tb = traceback.format_exc()
             lg.error(f"{msg} {str(e)} \n {tb}")
             return False, None, msg
 

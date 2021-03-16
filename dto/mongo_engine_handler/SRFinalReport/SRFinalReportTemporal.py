@@ -5,10 +5,11 @@ from mongoengine import *
 
 class SRFinalReportTemporal(SRFinalReportBase):
     # Esta configuración permite crear documentos JSON con expiración de tiempo
-    created = DateTimeField(default=dt.datetime.now())
+    created = DateTimeField(default=dt.datetime.utcnow())
     meta = {"collection": "TEMPORAL|FinalReports", 'indexes': [{
+        'cls': False,
         'fields': ['created'],
-        'expireAfterSeconds': 60
+        'expireAfterSeconds': 300
     }]}
 
-# tiempo de vida 6 meses 60*60*24*6*30
+# tiempo de vida 6 meses 60*60*24*6*30 x 100= 15552000 00

@@ -23,6 +23,8 @@ import io, os
 import subprocess as sb
 
 from dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import SRNodeSummaryReport
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from settings import initial_settings as init
 from motor.node_scripts.eng_sRnode import eng_results
 from my_lib import utils as u
@@ -181,12 +183,13 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         print(e)
     log.info("Empezando el cálculo del reporte final")
     # Verificando si debe usar el reporte temporal o definitivo:
-    if u.isTemporal(report_ini_date, report_end_date):
-        final_report_v = SRFinalReportTemporal(fecha_inicio=report_ini_date, fecha_final=report_end_date)
-        final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+    isTemporalReport = u.isTemporal(report_ini_date, report_end_date)
+    if isTemporalReport:
+        final_report = SRFinalReportTemporal(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+        final_report_v = SRFinalReportTemporal.objects(id_report=final_report.id_report).first()
     else:
-        final_report_v = SRFinalReportPermanente(fecha_inicio=report_ini_date, fecha_final=report_end_date)
-        final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
+        final_report = SRFinalReportPermanente(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+        final_report_v = SRFinalReportPermanente.objects(id_report=final_report.id_report).first()
 
 
     report_exists = final_report_v is not None
@@ -199,9 +202,14 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     all_nodes = SRNode.objects()
     all_nodes = [n for n in all_nodes if n.activado]
     for node in all_nodes:
-        report_v = SRNodeDetailsPermanente(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
+        if isTemporalReport:
+            report_v = SRNodeDetailsTemporal(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
+                                               fecha_final=report_end_date)
+            report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
+        else:
+            report_v = SRNodeDetailsPermanente(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
                                            fecha_final=report_end_date)
-        report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
+            report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
         if report is None:
             final_report.novedades["nodos_fallidos"] += 1
             if not "nodos" in final_report.novedades["detalle"]:
@@ -209,7 +217,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
             final_report.novedades["detalle"]["nodos"].append(dict(tipo=node.tipo, nombre=node.nombre))
             continue
         node_summary_report = SRNodeSummaryReport(**report.to_summary())
-        final_report.reportes_nodos_detalle.append(report)
+        # final_report.reportes_nodos_detalle.append(report)
         final_report.append_node_summary_report(node_summary_report)
 
     # añadiendo novedades encontradas al momento de realizar el cálculo nodo por nodo:

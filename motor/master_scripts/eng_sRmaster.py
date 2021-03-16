@@ -18,12 +18,14 @@ Colossians 3:23
 •	Guarda en base de datos los resultados, la base de datos se encuentra en “/output/disponibilidad.db”
 
 """
+from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 import io, os
 import subprocess as sb
 
 from dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import SRNodeSummaryReport
 from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
 from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from settings import initial_settings as init
 from motor.node_scripts.eng_sRnode import eng_results
@@ -62,6 +64,14 @@ def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, sa
         msg = f"No hay nodos a procesar en db:[{mongo_config['db']}]"
         return False, [], msg
     name_list = [n.nombre for n in all_nodes]
+    for sR_node in all_nodes:
+        report_node = SRNodeDetailsBase(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
+                                          fecha_inicio=report_ini_date,
+                                          fecha_final=report_end_date)
+        status_node = TemporalProcessingStateReport.objects(id_report=report_node.id_report).first()
+        if status_node is not None:
+            status_node.delete()
+
     return run_node_list(name_list, report_ini_date, report_end_date, save_in_db, force)
 
 
@@ -84,6 +94,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
     try:
         child_processes = list()
         for node in node_list_name:
+
             # Procesando cada nodo individual:
             # p es un proceso ejecutado
             success, p, _msg = executing_node(node, report_ini_date, report_end_date, save_in_db, force)
@@ -190,7 +201,6 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     else:
         final_report = SRFinalReportPermanente(fecha_inicio=report_ini_date, fecha_final=report_end_date)
         final_report_v = SRFinalReportPermanente.objects(id_report=final_report.id_report).first()
-
 
     report_exists = final_report_v is not None
     if save_in_db and not force and report_exists:

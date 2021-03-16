@@ -515,8 +515,8 @@ class SRNodoAPI(Resource):
             return default_error_handler(e)
 
 
+# se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/nodo/<string:tipo>/<string:nombre>/from-excel')
-@ns.route('/nodo/<string:tipo>/<string:nombre>/from-excel/<string:r>')
 class SRNodeFromExcel(Resource):
     @api.response(200, 'El nodo ha sido ingresado de manera correcta')
     @api.expect(parsers.excel_upload)

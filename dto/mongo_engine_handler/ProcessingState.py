@@ -57,10 +57,7 @@ class TemporalProcessingStateReport(Document):
             if tmp is None:
                 self.save()
             else:
-                new_state = TemporalProcessingStateReport(**self.to_dict())
-                new_state.created = tmp.created
-                tmp.delete()
-                new_state.save()
+                tmp.update(**self.to_dict())
         except Exception as e:
             print(e)
             print(traceback.format_exc())

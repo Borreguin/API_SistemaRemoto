@@ -70,12 +70,11 @@ class FileAPI(Resource):
             return default_error_handler(e)
 
 
-
+# se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/file/<string:repo>/<string:nombre>')
-@ns.route('/file/<string:repo>/<string:nombre>/<string:rand_key>')
 class FileDownloadAPI(Resource):
 
-    def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo", rand_key=str(random.randint(0, 100))):
+    def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo"):
         """
             Descarga un archivo de un repositorio
             repo: Nombre del repositorio [s_remoto_excel, s_central_excel]

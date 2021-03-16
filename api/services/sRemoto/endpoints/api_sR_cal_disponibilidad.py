@@ -17,6 +17,7 @@ from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
 from motor.master_scripts.eng_sRmaster import *
 from flask import request
 # importando clases para leer desde MongoDB
@@ -261,13 +262,15 @@ class DisponibilidadNodos(Resource):
                 if sR_node is None:
                     not_found.append(node)
                     continue
+                report_v = SRNodeDetailsBase(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
+                                                 fecha_inicio=ini_date, fecha_final=end_date)
+                # delete status report if exists
+                status_report = TemporalProcessingStateReport.objects(id_report=report_v.id_report).first()
+                if status_report is not None:
+                    status_report.delete()
                 if u.isTemporal(ini_date, end_date):
-                    # delete details report fo this node
-                    report_v = SRNodeDetailsTemporal(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
-                                             fecha_inicio=ini_date, fecha_final=end_date)
                     report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
                 else:
-                    # delete details report fo this node
                     report_v = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
                                                        fecha_inicio=ini_date, fecha_final=end_date)
                     report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
@@ -276,10 +279,6 @@ class DisponibilidadNodos(Resource):
                     continue
                 report.delete()
                 deleted.append(node)
-                # delete status report if exists
-                status_report = TemporalProcessingStateReport.objects(id_report=report_v.id_report).first()
-                if status_report is not None:
-                    status_report.delete()
 
             if len(deleted) == 0:
                 return dict(success=False, deleted=deleted, not_found=not_found), 404
@@ -393,14 +392,17 @@ class DisponibilidadStatusNodo(Resource):
                 tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
 
                 if tmp_report is None:
-                    for i in range(10):
+                    for i in range(20):
                         tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
                         if tmp_report is not None:
                             break
                         else:
                             time.sleep(2)
                 to_send.append(tmp_report.to_summary())
-            return dict(success=True, status=to_send), 200
+            if len(all_nodes) == len(to_send):
+                return dict(success=True, status=to_send), 200
+            else:
+                return dict(success=False, status=None), 409
 
         except Exception as e:
             return default_error_handler(e)

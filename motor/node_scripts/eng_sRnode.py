@@ -289,7 +289,8 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
         report_node = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date,
                                 fecha_final=report_end_date)
     status_node = TemporalProcessingStateReport(id_report=report_node.id_report,
-                                                msg=f"Empezando cálculo del nodo: {sR_node_name}")
+                                                msg=f"Empezando cálculo del nodo: {sR_node_name}",
+                                                finish=False, percentage=0)
     status_node.info["nombre"] = report_node.nombre
     status_node.info["tipo"] = report_node.tipo
     status_node.update_now()

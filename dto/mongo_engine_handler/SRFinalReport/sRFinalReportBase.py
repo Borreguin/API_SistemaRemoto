@@ -76,7 +76,6 @@ class SRFinalReportBase(Document):
             self.actualizado = dt.datetime.now()
 
     def novedades_as_dict(self):
-        print(self.novedades)
         detalle = self.novedades.pop("detalle", None)
         ind_dict = self.novedades
         detalle["todos los nodos"] = ind_dict
@@ -86,7 +85,7 @@ class SRFinalReportBase(Document):
             logs = detalle.pop("log", {})
             for key in detalle:
                 ind_dict = detalle[key]
-                if ind_dict is None:
+                if ind_dict is None or isinstance(ind_dict, list):
                     continue
                 ind_dict["item"] = key
                 if key in results.keys():
@@ -225,7 +224,7 @@ class SRFinalReportBase(Document):
             df_summary = df_summary.where(pd.notnull(df_summary), None)
             df_details = df_details.where(pd.notnull(df_details), None)
             df_novedades = df_novedades.where(pd.notnull(df_novedades), None)
-            return True, df_summary, df_details, df_novedades
+            return True, df_summary, df_details, df_novedades, "Información correcta"
 
         except Exception as e:
-            return False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+            return False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), f"Problemas al procesar la información \n {e}"

@@ -28,12 +28,12 @@ log = init.LogDefaultConfig("ws_sRemoto.log").logger
 ns = api.namespace('sRemoto', description='Relativas a reportes personalizados de Sistema Remoto')
 
 
+# se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/disponibilidad/<string:formato>/<string:ini_date>/<string:end_date>')
-@ns.route('/disponibilidad/<string:formato>/<string:ini_date>/<string:end_date>/<string:rand_key>')
 class DisponibilidadExcel(Resource):
 
     @staticmethod
-    def get(formato, ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd", rand_key=None):
+    def get(formato, ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
         """ Entrega el cálculo en formato Excel/JSON realizado por acciones POST/PUT
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
@@ -63,9 +63,9 @@ class DisponibilidadExcel(Resource):
                 msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
                 return dict(success=False, msg=msg), 400
 
-            success, df_summary, df_details, df_novedades = final_report.to_dataframe()
+            success, df_summary, df_details, df_novedades, msg = final_report.to_dataframe()
             if not success:
-                return dict(success=False, report=None, msg="Existe problemas al adquirir el reporte"), 409
+                return dict(success=False, report=None, msg=msg), 409
 
             # Creating an Excel file:
             if formato == "excel":
@@ -90,10 +90,9 @@ class DisponibilidadExcel(Resource):
             return default_error_handler(e)
 
 
+# se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>')
 @ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>/<string:umbral>')
-@ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>/<string:umbral>/<string'
-          ':rand_key>')
 class IndisponibilidadTAGSs(Resource):
 
     @staticmethod

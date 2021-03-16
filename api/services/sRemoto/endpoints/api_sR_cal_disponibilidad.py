@@ -17,9 +17,11 @@ from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
-from dto.mongo_engine_handler.SRFinalReportTemporal import SRFinalReportTemporal
+from dto.mongo_engine_handler.ProcessingStateNuevo import Nuevo
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from motor.master_scripts.eng_sRmaster import *
-from flask import request, send_from_directory
+from flask import request
 # importando clases para leer desde MongoDB
 from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 
@@ -130,12 +132,21 @@ class Disponibilidad(Resource):
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
-            final_report_v = SRFinalReport(fecha_inicio=ini_date, fecha_final=end_date)
+            #Test = Nuevo(id_report="test me")
+            # Test.save()
+            # sr = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
+            # sr.disponibilidad_promedio_porcentage = 0
+            # sr.disponibilidad_promedio_ponderada_porcentage = 0
+            # sr.validate()
+            # sr.save()
+            #DetailReport=SRNodeDetailsTemporal.objects(id_report='test')
             # Verificando si debe usar el reporte temporal o definitivo:
             if u.isTemporal(ini_date, end_date):
+                final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
                 final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
             else:
-                final_report = SRFinalReport.objects(id_report=final_report_v.id_report).first()
+                final_report_v = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
+                final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
             if final_report is None:
                 return dict(success=False, msg="No existe reporte asociado"), 404
             return dict(success=True, report=final_report.to_dict()), 200
@@ -262,10 +273,16 @@ class DisponibilidadNodos(Resource):
                 if sR_node is None:
                     not_found.append(node)
                     continue
-                # delete details report fo this node
-                report_v = SRNodeDetails(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
-                                         fecha_inicio=ini_date, fecha_final=end_date)
-                report = SRNodeDetails.objects(id_report=report_v.id_report).first()
+                if u.isTemporal(ini_date, end_date):
+                    # delete details report fo this node
+                    report_v = SRNodeDetailsTemporal(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
+                                             fecha_inicio=ini_date, fecha_final=end_date)
+                    report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
+                else:
+                    # delete details report fo this node
+                    report_v = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
+                                                       fecha_inicio=ini_date, fecha_final=end_date)
+                    report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
                 if report is None:
                     not_found.append(node)
                     continue
@@ -303,8 +320,12 @@ class DisponibilidadNodo(Resource):
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
-            v_report = SRNodeDetails(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
-            report = SRNodeDetails.objects(id_report=v_report.id_report).first()
+            if u.isTemporal(ini_date, end_date):
+                v_report = SRNodeDetailsTemporal(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
+                report = SRNodeDetailsTemporal.objects(id_report=v_report.id_report).first()
+            else:
+                v_report = SRNodeDetailsPermanente(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
+                report = SRNodeDetailsPermanente.objects(id_report=v_report.id_report).first()
             if report is None:
                 return dict(success=False, msg="No existe el cálculo para este nodo en la fecha indicada"), 404
             else:
@@ -327,8 +348,12 @@ class DisponibilidadNodo(Resource):
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
-            v_report = SRNodeDetails(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
-            report = SRNodeDetails.objects(id_report=v_report.id_report).first()
+            if u.isTemporal(ini_date, end_date):
+                v_report = SRNodeDetailsTemporal(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
+                report = SRNodeDetailsTemporal.objects(id_report=v_report.id_report).first()
+            else:
+                v_report = SRNodeDetailsPermanente(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
+                report = SRNodeDetailsPermanente.objects(id_report=v_report.id_report).first()
             if report is None:
                 return dict(success=False, msg="No existe el cálculo para este nodo en la fecha indicada"), 404
             else:
@@ -371,9 +396,14 @@ class DisponibilidadStatusNodo(Resource):
             # scan reports within this date range:
             to_send = list()
             for node in all_nodes:
-                v_report = SRNodeDetails(nodo=node, nombre=node.nombre, tipo=node.tipo,
-                                         fecha_inicio=ini_date, fecha_final=end_date)
+                if u.isTemporal(ini_date, end_date):
+                    v_report = SRNodeDetailsTemporal(nodo=node, nombre=node.nombre, tipo=node.tipo,
+                                             fecha_inicio=ini_date, fecha_final=end_date)
+                else:
+                    v_report = SRNodeDetailsPermanente(nodo=node, nombre=node.nombre, tipo=node.tipo,
+                                                       fecha_inicio=ini_date, fecha_final=end_date)
                 tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
+
                 if tmp_report is None:
                     for i in range(10):
                         tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()

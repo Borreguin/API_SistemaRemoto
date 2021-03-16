@@ -37,8 +37,11 @@ class SRUTRDetails(EmbeddedDocument):
         super().__init__(*args, **kwargs)
 
     def __str__(self):
-        return f"({self.utr_tipo}, {self.utr_nombre}): [tags: {self.numero_tags}, " \
-               f"disp(%):{self.disponibilidad_promedio_porcentage}, cons(min):{self.consignaciones_acumuladas_minutos}]"
+        return f"{self.utr_nombre}: [{len(self.indisponibilidad_detalle)}] tags " \
+               f"[{len(self.consignaciones_detalle)}] consig. " \
+               f"(eval:{self.periodo_evaluacion_minutos} - cnsg:{self.consignaciones_acumuladas_minutos} = " \
+               f" eftv:{self.periodo_efectivo_minutos} => disp_avg:{round(self.disponibilidad_promedio_minutos, 1)} " \
+               f" %disp: {round(self.disponibilidad_promedio_porcentage, 2)})"
 
     def calculate(self, report_ini_date, report_end_date):
         self.numero_tags = len(self.indisponibilidad_detalle)
@@ -78,12 +81,6 @@ class SRUTRDetails(EmbeddedDocument):
             self.disponibilidad_promedio_minutos = -1
             self.disponibilidad_promedio_porcentage = -1
 
-    def __str__(self):
-        return f"{self.utr_nombre}: [{len(self.indisponibilidad_detalle)}] tags " \
-               f"[{len(self.consignaciones_detalle)}] consig. " \
-               f"(eval:{self.periodo_evaluacion_minutos} - cnsg:{self.consignaciones_acumuladas_minutos} = " \
-               f" eftv:{self.periodo_efectivo_minutos} => disp_avg:{round(self.disponibilidad_promedio_minutos, 1)} " \
-               f" %disp: {round(self.disponibilidad_promedio_porcentage, 2)})"
 
     def to_dict(self):
         return dict(id_utr=self.id_utr, nombre=self.utr_nombre, tipo=self.utr_tipo,
@@ -157,7 +154,7 @@ class SREntityDetails(EmbeddedDocument):
                     ponderacion=self.ponderacion)
 
 
-class SRNodeDetails(Document):
+class SRNodeDetailsBase(Document):
     id_report = StringField(required=True, unique=True)
     nodo = LazyReferenceField(SRNode, required=True, dbref=True, passthrough=False)
     nombre = StringField(required=True, default=None)
@@ -176,7 +173,7 @@ class SRNodeDetails(Document):
     entidades_fallidas = ListField(StringField(), default=[])
     actualizado = DateTimeField(default=dt.datetime.now())
     ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
-    meta = {"collection": "REPORT|Nodos"}
+    meta = {'allow_inheritance': True,'abstract':True}
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)

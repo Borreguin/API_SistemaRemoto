@@ -1,7 +1,9 @@
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
 from dto.mongo_engine_handler.sRNode import *
 import hashlib
-
-from dto.mongo_engine_handler.sRNodeReport import SRNodeDetails
+from my_lib import utils as u
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 
 lb_fecha_ini = "Fecha inicial"
 lb_fecha_fin = "Fecha final"
@@ -42,7 +44,7 @@ class SRNodeSummaryReport(EmbeddedDocument):
                     actualizado=str(self.actualizado))
 
 
-class SRFinalReport(Document):
+class SRFinalReportBase(Document):
     id_report = StringField(required=True, unique=True)
     tipo = StringField(required=True, default="Reporte Sistema Remoto")
     fecha_inicio = DateTimeField(required=True)
@@ -52,14 +54,15 @@ class SRFinalReport(Document):
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     reportes_nodos = ListField(EmbeddedDocumentField(SRNodeSummaryReport))
-    reportes_nodos_detalle = ListField(ReferenceField(SRNodeDetails, dbref=True), required=False)
+    #TODO: Revisar posible problema de referencia SRNodeDetalilsBase
+    reportes_nodos_detalle = ListField(ReferenceField(SRNodeDetailsBase, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
     procesamiento = DictField(default=dict(numero_tags_total=0, numero_utrs_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
     novedades = DictField(default=dict(tags_fallidas=0, utr_fallidas=0,
                                        entidades_fallidas=0, nodos_fallidos=0, detalle={}))
     actualizado = DateTimeField(default=dt.datetime.now())
-    meta = {"collection": "REPORT|FinalReports"}
+    meta = {'allow_inheritance': True,'abstract':True}
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -192,7 +195,10 @@ class SRFinalReport(Document):
             for reporte in self.reportes_nodos:
                 row[lb_disponibilidad_ponderada_empresa] = reporte.disponibilidad_promedio_ponderada_porcentage/100
                 row[lb_empresa] = reporte.nombre
-                node_report_db = SRNodeDetails.objects(id_report=reporte.id_report).first()
+                if u.isTemporal(self.fecha_inicio,self.fecha_final):
+                    node_report_db = SRNodeDetailsTemporal.objects(id_report=reporte.id_report).first()
+                else:
+                    node_report_db = SRNodeDetailsPermanente.objects(id_report=reporte.id_report).first()
                 nodo = node_report_db.nodo.fetch()
                 entidades = nodo.entidades
                 utrs = list()

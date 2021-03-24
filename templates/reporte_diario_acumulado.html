@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html><head>
+  <style>
+
+	#tbl_remoto {
+	  border-collapse: collapse;
+	  width: 100%;
+	}
+
+	td, th {
+	  border: 1px solid black;
+	  padding: 4px;
+	}
+
+	#tbl_remoto tr:nth-child(even){background-color: #f2f2f2;}
+
+	#tbl_remoto tr:hover {background-color: #c3d5d5;}
+
+	#tbl_remoto th {
+	  padding-top: 5px;
+	  padding-bottom: 5px;
+	  text-align: left;
+	  background-color: #d1e0e0;
+	  color: black;
+	}
+    td.prioridad_1{
+		vertical-align: top; text-align: center; background-color: rgb(255, 0, 0); font-weight: bold
+	}
+	#prioridad_2{
+		vertical-align: top; text-align: center; background-color: rgb(255, 203, 0); font-weight: bold
+	}
+	td.prioridad_3{
+		vertical-align: top; text-align: center; background-color: rgb(255, 255, 102); font-weight: bold
+	}
+
+  .meter {
+	height: 18px;  /* Can be anything */
+	position: relative;
+	-webkit-border-radius: 2px;
+	border-radius: 2px;
+	padding: 1px;
+  }
+
+  .meter > span {
+    display: block;
+    height: 100%;
+    float: left;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+    background-color: rgb(43,194,83);
+    box-shadow:
+      inset 0 2px 9px  rgba(255,255,255,0.3),
+      inset 0 -2px 6px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+  }
+</style>
+  <meta charset="utf-8">
+  <title>REPORTE DE SUPERVISIÓN </title>
+  	
+</head><body>
+<p style="text-align: left;">
+<p> <font size="+1"><strong><span >
+<span style="text-decoration: underline;">REPORTE DE SUPERVISIÓN ACUMULADO (DETALLE POR TAG)</span></span></strong></font>
+</p>
+
+<p>Desde: (#ini_dd/mm/yyyy) hasta (#end_dd/mm/yyyy)</p>
+
+<hr><strong>RESUMEN</strong>
+
+<hr><u>UTRs con tags con alta indisponibilidad</u>
+<p>De un total de (#no_UTR) UTRs, se encuentran (#no_UTR_indisponible) UTRs con una disponibilidad menor a (#_disponibilidad):</p>
+
+<p>Las siguientes UTRs tienen tags con baja disponibilidad (inferior al #disponibilidad_tag):</p>
+
+<table id="tbl_remoto" style="border: 1px solid black">
+
+  <tbody>
+    <tr style="background-color: #d1e0e0;">
+      <th scope="col" width="150">UTR</th>
+      <th scope="col" width="100">PROTOCOLO</th>
+      <th scope="col" width="100">TIEMPO INDISPONIBLE ACUMULADO</th>
+      <th scope="col" width="200">No. TAGS A. INDIS.</th>
+    </tr>
+<!--Inicio: UTR_STATE-->
+  </tbody>
+</table>
+
+<br>
+<br>
+<hr><strong>TENDENCIA DE DISPONIBILIDAD:</strong>
+
+<!--Tendencia: DISPONIBILIDAD ACUMULADA -->
+
+<hr style="width: 100%">
+<p>&nbsp;Atentamente,</p>
+<p>Sistema Remoto</p>
+</body></html>

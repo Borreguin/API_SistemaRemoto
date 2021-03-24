@@ -36,17 +36,17 @@ ns = api.namespace('disp-sRemoto', description='Relativas a Sistema Remoto')
 class Disponibilidad(Resource):
 
     @staticmethod
-    def put(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def put(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Calcula/sobre-escribe la disponibilidad de los nodos que se encuentren activos en base de datos
             Si ya existe reportes asociados a los nodos, estos son <b>recalculados</b>
             Este proceso puede tomar para su ejecución al menos <b>20 minutos</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
             id = ini_date + "_" + end_date
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -85,16 +85,16 @@ class Disponibilidad(Resource):
             return default_error_handler(e)
 
     @staticmethod
-    def post(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def post(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Calcula si no existe la disponibilidad de los nodos que se encuentren activos en base de datos
             Si ya existe reportes asociados a los nodos, estos <b>no son recalculados</b>
             Este proceso puede tomar para su ejecución al menos <b>20 minutos</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -118,15 +118,15 @@ class Disponibilidad(Resource):
             return default_error_handler(e)
 
     @staticmethod
-    def get(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def get(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Entrega el cálculo realizado por acciones POST/PUT
             Si el cálculo no existe entonces <b>código 404</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -149,15 +149,15 @@ class Disponibilidad(Resource):
 class DisponibilidadNodo(Resource):
     @staticmethod
     @api.expect(ser_from.nodo)
-    def put(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def put(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Calcula/sobre-escribe la disponibilidad de un nodo especificado por tipo y nombre
             Si ya existe reporte asociados al nodo, este es <b>recalculado</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -182,15 +182,15 @@ class DisponibilidadNodo(Resource):
 class DisponibilidadNodos(Resource):
     @staticmethod
     @api.expect(ser_from.nodes)
-    def put(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def put(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Calcula/sobre-escribe la disponibilidad de los nodos especificados en la lista
             Si ya existe reportes asociados a los nodos, estos son <b>recalculados</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -211,15 +211,15 @@ class DisponibilidadNodos(Resource):
 
     @staticmethod
     @api.expect(ser_from.nodes)
-    def post(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def post(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Calcula si no existe la disponibilidad de los nodos especificados en la lista
             Si ya existe reportes asociados a los nodos, estos <b>no son recalculados</b>
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -243,14 +243,14 @@ class DisponibilidadNodos(Resource):
 
     @staticmethod
     @api.expect(ser_from.nodes)
-    def delete(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def delete(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Elimina si existe la disponibilidad de los nodos especificados en la lista
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -295,15 +295,16 @@ class DisponibilidadNodos(Resource):
 @ns.route('/disponibilidad/<string:tipo>/<string:nombre>/<string:ini_date>/<string:end_date>')
 class DisponibilidadNodo(Resource):
     @staticmethod
-    def get(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def get(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd H:M:S",
+            end_date: str = "yyyy-mm-dd H:M:S"):
         """ Obtiene el reporte de disponibilidad de los nodos especificados en la lista
             Si el reporte no existe, entonces su valor será 404
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -322,16 +323,16 @@ class DisponibilidadNodo(Resource):
             return default_error_handler(e)
 
     @staticmethod
-    def delete(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd",
-               end_date: str = "yyyy-mm-dd"):
+    def delete(tipo="tipo de nodo", nombre="nombre del nodo", ini_date: str = "yyyy-mm-dd H:M:S",
+               end_date: str = "yyyy-mm-dd H:M:S"):
         """ Elimina el reporte de disponibilidad del nodo especificado
             Si el reporte no existe, entonces código 404
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -360,16 +361,16 @@ class DisponibilidadNodo(Resource):
 @ns.route('/estado/disponibilidad/<string:ini_date>/<string:end_date>')
 class DisponibilidadStatusNodo(Resource):
     @staticmethod
-    def get(ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def get(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Obtiene el estado del cálculo de los reportes de disponibilidad existentes en el periodo especificado
             Nota: Este servicio es válido solamente al momento de consultar el estado de un cálculo en proceso
             en otro contexto, este servicio no garantiza un comportamiento correcto
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -377,7 +378,7 @@ class DisponibilidadStatusNodo(Resource):
             all_nodes = SRNode.objects()
             all_nodes = [n for n in all_nodes if n.activado]
             if len(all_nodes) == 0:
-                msg = f"No se ecnuentran nodos que procesar"
+                msg = f"No se encuentran nodos que procesar"
                 return dict(success=False, msg=msg), 404
 
             # scan reports within this date range:

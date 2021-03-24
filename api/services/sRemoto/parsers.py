@@ -83,7 +83,7 @@ tag_list_w_time_format = tag_list.copy()
 tag_list_w_time_format.add_argument("format_time", type=str, required=False, default="%Y-%m-%d %H:%M:%S",
                         help="Format: " + str(fmt_time_list))
 
-""" arguments for id_utr_list, time_range and time_format """
+""" arguments for id_utr_list, date_range and time_format """
 tag_list_time_range_w_time_format = tag_list_w_time_format.copy()
 tag_list_time_range_w_time_format.add_argument("start_time", type=str, required=False,
                         default=start_time.strftime(fmt_time_default),

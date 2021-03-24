@@ -36,10 +36,11 @@ config["MONGO_LOG_LEVEL"] = {"value": "OFF", "options": ["ON", "OFF"]}
 # Excel repository:
 
 config["DB_REPO"] = "_db"
+config["LOGS_REPO"] = "logs"
 config["EXCEL_REPO"] = os.path.join(config["DB_REPO"], "excel_files")
 config["SREMOTO_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_remoto_excel")
 config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_excel")
-config["OUTPUT_MOTOR"] = os.path.join("motor", "output")
+config["OUTPUT_MOTOR"] = os.path.join(config["LOGS_REPO"], "output")
 config["CONSIGNACIONES"] = os.path.join(config["DB_REPO"], "consignaciones")
 
 

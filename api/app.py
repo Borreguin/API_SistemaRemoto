@@ -30,6 +30,7 @@ from api.services.Consignaciones.endpoints.api_Consignaciones import ns as names
 from api.services.sRemoto.endpoints.api_sR_cal_disponibilidad import ns as namespace_sR_cal_disponibilidad
 from api.services.sRemoto.endpoints.api_sR_reportes import ns as namespace_sR_reportes
 from api.services.Files.api_files import ns as namespace_files
+from api.services.Reports.endpoints.api_report import ns as namespace_reports_config
 
 """ global variables """
 app = Flask(__name__)                                                   # Flask application
@@ -78,6 +79,7 @@ def configure_home_api_swagger():
     api_p.add_namespace(namespace_sR_cal_disponibilidad)
     api_p.add_namespace(namespace_files)
     api_p.add_namespace(namespace_sR_reportes)
+    api_p.add_namespace(namespace_reports_config)
     # api_p.add_namespace(namespace_diagrams)
 
     # registrando las rutas:

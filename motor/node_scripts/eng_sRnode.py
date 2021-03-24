@@ -20,6 +20,7 @@ import queue
 # import custom libraries:
 from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from motor import log_node
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
@@ -63,9 +64,9 @@ n_lines = 40  # Para dar formato al log
 """ configuración de logger """
 verbosity = False
 debug = init.FLASK_DEBUG
-lg = init.LogDefaultConfig("eng_sRnode.log").logger
+log = log_node
 # nivel de eventos a registrar:
-lg.setLevel(logging.INFO)
+log.setLevel(logging.INFO)
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"
@@ -281,13 +282,14 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
     minutos_en_periodo = t_delta.days * (60 * 24) + t_delta.seconds // 60 + t_delta.seconds % 60
 
     """ Creando reporte de nodo """
-    if u.isTemporal(ini_date,end_date):
+    if u.isTemporal(ini_date, end_date):
         report_node = SRNodeDetailsTemporal(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
+                                            fecha_inicio=report_ini_date,
+                                            fecha_final=report_end_date)
+    else:
+        report_node = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
                                               fecha_inicio=report_ini_date,
                                               fecha_final=report_end_date)
-    else:
-        report_node = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo, fecha_inicio=report_ini_date,
-                                fecha_final=report_end_date)
     status_node = TemporalProcessingStateReport(id_report=report_node.id_report,
                                                 msg=f"Empezando cálculo del nodo: {sR_node_name}",
                                                 finish=False, percentage=0)
@@ -378,7 +380,7 @@ def delete_report_if_exists(save_in_db, force, report_node, status_node):
     if save_in_db or force:
         """ Observar si existe el nodo en la base de datos """
         try:
-            if u.isTemporal(report_node.fecha_inicio,report_node.fecha_final):
+            if u.isTemporal(report_node.fecha_inicio, report_node.fecha_final):
                 node_report_db = SRNodeDetailsTemporal.objects(id_report=report_node.id_report).first()
             else:
                 node_report_db = SRNodeDetailsPermanente.objects(id_report=report_node.id_report).first()
@@ -397,7 +399,7 @@ def delete_report_if_exists(save_in_db, force, report_node, status_node):
         except Exception as e:
             msg = "Problema de concistencia en la base de datos"
             tb = traceback.format_exc()
-            lg.error(f"{msg} {str(e)} \n {tb}")
+            log.error(f"{msg} {str(e)} \n {tb}")
             return False, None, msg
 
 
@@ -493,7 +495,7 @@ def collecting_report_from_threads(entities, out_queue, n_threads, report_node, 
         # reportar tags no encontradas en log file
         if len(fault_tags) > 0:
             warn = f"\n[{sR_node_name}] [{utr_report.id_utr}] Tags no encontradas: \n" + '\n'.join(fault_tags)
-            lg.warning(warn)
+            log.warning(warn)
 
         # verificando que los resultados sean correctos:
         if not success or utr_report.numero_tags == 0:
@@ -501,7 +503,7 @@ def collecting_report_from_threads(entities, out_queue, n_threads, report_node, 
             msg = f"\nNo se pudo procesar la UTR [{utr_report.id_utr}]: \n{msg}"
             if utr_report.numero_tags == 0:
                 msg += "No se encontro tags válidas"
-            lg.error(msg)
+            log.error(msg)
 
         # este reporte utr se guarda en su reporte de entidad correspondiente
         entity_name = structure[utr_report.id_utr]
@@ -560,13 +562,13 @@ def test():
             print(f"\nProcesando el nodo: {node.nombre}")
             success, NodeReport, msg = processing_node(node, report_ini_date, report_end_date, force=True)
             if not success:
-                lg.error(msg)
+                log.error(msg)
             else:
                 print(msg)
 
         except Exception as e:
             msg = f"No se pudo procesar el nodo [{sR_node_name}] \n [{str(e)}]\n [{traceback.format_exc()}]"
-            lg.error(msg)
+            log.error(msg)
             print(msg)
             continue
     print("WARNING: Corriendo en modo DEBUG -- Este modo es solamente de prueba")
@@ -619,7 +621,7 @@ if __name__ == "__main__":
         success, node_report, msg = processing_node(args.nombre, args.fecha_ini, args.fecha_fin, args.save, args.force)
     except Exception as e:
         tb = traceback.format_exc()
-        lg.error(f"El nodo [{args.nombre}] no ha sido procesado de manera exitosa: \n {str(e)} \n{tb}")
+        log.error(f"El nodo [{args.nombre}] no ha sido procesado de manera exitosa: \n {str(e)} \n{tb}")
         exit(1)
 
     if success:
@@ -633,5 +635,5 @@ if __name__ == "__main__":
     else:
         to_print = f"\n[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] \t Proceso finalizado con problemas. " \
                    f"\nRevise el archivo log en [/output] \n{msg}\n"
-        lg.error(to_print)
+        log.error(to_print)
         exit(int(msg[0]))

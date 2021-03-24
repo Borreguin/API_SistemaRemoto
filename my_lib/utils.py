@@ -205,4 +205,4 @@ def is_active(path_file, id: str,  time_delta: dt.timedelta):
 # determina si debe usar el reporte temporal o el reporte definitivo:
 def isTemporal(ini_date: dt.datetime, end_date: dt.datetime):
     delta = end_date - ini_date
-    return delta.days < 7
+    return delta.days < 27 and delta.days != 7

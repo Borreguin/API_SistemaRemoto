@@ -27,16 +27,18 @@ from dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import SRNodeSumma
 from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
 from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from motor import log_master
 from settings import initial_settings as init
 from motor.node_scripts.eng_sRnode import eng_results
 from my_lib import utils as u
+
 # general variables
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
-output_path = os.path.join(motor_path, "output")
+output_path = init.OUTPUT_MOTOR_REPO
 node_script = os.path.join(motor_path, 'node_scripts', 'eng_sRnode.py')
 debug = init.FLASK_DEBUG
-log = init.LogDefaultConfig("eng_sRmaster.log").logger
+log = log_master
 
 """ Import clases for MongoDB """
 from dto.mongo_engine_handler.SRFinalReport.sRFinalReportPermanente import *
@@ -66,8 +68,8 @@ def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, sa
     name_list = [n.nombre for n in all_nodes]
     for sR_node in all_nodes:
         report_node = SRNodeDetailsBase(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
-                                          fecha_inicio=report_ini_date,
-                                          fecha_final=report_end_date)
+                                        fecha_inicio=report_ini_date,
+                                        fecha_final=report_end_date)
         status_node = TemporalProcessingStateReport.objects(id_report=report_node.id_report).first()
         if status_node is not None:
             status_node.delete()
@@ -155,7 +157,7 @@ def collecting_results_from(child_processes):
         for cp in child_processes:
             cp.wait()
             # para dar seguimiento a los resultados:
-            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{valid_name(cp.args[2])}]"
+            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{valid_name(cp.args[2])}] "
             if cp.returncode in [0, 9, 10]:
                 to_print = to_print.replace("#st", "OK   ")
             elif cp.returncode in [8]:
@@ -214,11 +216,11 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     for node in all_nodes:
         if isTemporalReport:
             report_v = SRNodeDetailsTemporal(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
-                                               fecha_final=report_end_date)
+                                             fecha_final=report_end_date)
             report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
         else:
             report_v = SRNodeDetailsPermanente(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
-                                           fecha_final=report_end_date)
+                                               fecha_final=report_end_date)
             report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
         if report is None:
             final_report.novedades["nodos_fallidos"] += 1
@@ -262,9 +264,10 @@ def valid_name(name):
     valid_name = valid_name.replace("$", "_")
     return valid_name
 
+
 def test():
     report_ini_date, report_end_date = u.get_dates_for_last_month()
-    report_ini_date, report_end_date = dt.datetime(2020,10, 11), dt.datetime(2020,10, 12)
+    report_ini_date, report_end_date = dt.datetime(2020, 10, 11), dt.datetime(2020, 10, 12)
     success, results, msg = run_all_nodes(report_ini_date, report_end_date, save_in_db=True, force=True)
     run_summary(report_ini_date, report_end_date, force=True, results=results, log_msg=msg)
 

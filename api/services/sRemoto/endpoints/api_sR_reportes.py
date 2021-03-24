@@ -33,17 +33,17 @@ ns = api.namespace('sRemoto', description='Relativas a reportes personalizados d
 class DisponibilidadExcel(Resource):
 
     @staticmethod
-    def get(formato, ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def get(formato, ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
         """ Entrega el cálculo en formato Excel/JSON realizado por acciones POST/PUT
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
             Rand_key:               <b>cualquier valor, permite actualizar el reporte</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date(ini_date)
+            success2, end_date = u.check_date(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400
@@ -96,18 +96,18 @@ class DisponibilidadExcel(Resource):
 class IndisponibilidadTAGSs(Resource):
 
     @staticmethod
-    def get(formato, ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd", umbral=None, rand_key=None):
+    def get(formato, ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S", umbral=None, rand_key=None):
         """ Entrega el listado de tags cuya indisponibilidad sea mayor igual al umbral (por defecto 0)
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
-            Fecha inicial formato:  <b>yyyy-mm-dd</b>
-            Fecha final formato:    <b>yyyy-mm-dd</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
             Umbral:                 <b>float</b>
             Rand_key:               <b>cualquier valor, permite actualizar el reporte</b>
         """
         try:
-            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            success1, ini_date = u.check_date(ini_date)
+            success2, end_date = u.check_date(end_date)
             if not success1 or not success2:
                 msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
                 return dict(success=False, msg=msg), 400

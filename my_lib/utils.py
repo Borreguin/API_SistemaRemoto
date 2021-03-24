@@ -19,11 +19,28 @@ def valid_date(s):
         raise argparse.ArgumentTypeError(msg)
 
 
+def valid_date_h_m_s(s):
+    try:
+        return dt.datetime.strptime(s, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        msg = "El parámetro: '{0}' no es una fecha válida, (formato YYYY-MM-DD).".format(s)
+        raise argparse.ArgumentTypeError(msg)
+
+
 def get_dates_for_last_month():
     d_n = dt.datetime.now()
     date_ini = dt.datetime(year=d_n.year, month=d_n.month - 1, day=1)
     date_end = dt.datetime(year=d_n.year, month=d_n.month, day=d_n.day) - dt.timedelta(days=d_n.day)
     return date_ini, date_end
+
+
+def check_date(s):
+    success, date = check_date_yyyy_mm_dd(s)
+    if success:
+        return success, date
+    success, date = check_date_yyyy_mm_dd_hh_mm_ss(s)
+    if success:
+        return success, date
 
 
 def check_date_yyyy_mm_dd(s):

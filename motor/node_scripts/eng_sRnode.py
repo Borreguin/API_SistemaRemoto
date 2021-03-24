@@ -590,12 +590,12 @@ if __name__ == "__main__":
                         type=str)
 
     # Parámetro fecha especifica la fecha de inicio
-    parser.add_argument("fecha_ini", help="fecha inicio, formato: YYYY-MM-DD",
-                        type=u.valid_date)
+    parser.add_argument("fecha_ini", help="fecha inicio, formato: YYYY-MM-DD H:M:S",
+                        type=u.valid_date_h_m_s)
 
     # Parámetro fecha especifica la fecha de fin
-    parser.add_argument("fecha_fin", help="fecha fin, formato: YYYY-MM-DD",
-                        type=u.valid_date)
+    parser.add_argument("fecha_fin", help="fecha fin, formato: YYYY-MM-DD H:M:S",
+                        type=u.valid_date_h_m_s)
 
     # modo verbose para detección de errores
     parser.add_argument("-v", "--verbosity", help="activar modo verbose",

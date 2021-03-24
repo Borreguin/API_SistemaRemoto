@@ -130,8 +130,8 @@ def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
         # Procesando cada nodo individual:
         log_path = os.path.join(output_path, f'{node}.log')
         with io.open(log_path, mode='wb') as out:
-            to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd),
-                      report_end_date.strftime(yyyy_mm_dd)]
+            to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd_hh_mm_ss),
+                      report_end_date.strftime(yyyy_mm_dd_hh_mm_ss)]
             if save_in_db:
                 to_run += ["--s"]
             if force:

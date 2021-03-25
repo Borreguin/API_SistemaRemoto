@@ -198,65 +198,64 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     # Verificando si debe usar el reporte temporal o definitivo:
     isTemporalReport = u.isTemporal(report_ini_date, report_end_date)
     if isTemporalReport:
-        final_report = SRFinalReportTemporal(fecha_inicio=report_ini_date, fecha_final=report_end_date)
-        final_report_v = SRFinalReportTemporal.objects(id_report=final_report.id_report).first()
+        final_report_v = SRFinalReportTemporal(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+        final_report_db = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
     else:
-        final_report = SRFinalReportPermanente(fecha_inicio=report_ini_date, fecha_final=report_end_date)
-        final_report_v = SRFinalReportPermanente.objects(id_report=final_report.id_report).first()
+        final_report_v = SRFinalReportPermanente(fecha_inicio=report_ini_date, fecha_final=report_end_date)
+        final_report_db = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
 
-    report_exists = final_report_v is not None
+    report_exists = final_report_db is not None
     if save_in_db and not force and report_exists:
         msg = "El reporte ya existe en base de datos"
         log.info(msg)
-        return False, final_report_v, msg
+        return False, final_report_db, msg
 
     """ Buscando los nodos con los que se va a trabajar """
     all_nodes = SRNode.objects()
     all_nodes = [n for n in all_nodes if n.activado]
     for node in all_nodes:
+        report_v = SRNodeDetailsBase(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
+                                         fecha_final=report_end_date)
         if isTemporalReport:
-            report_v = SRNodeDetailsTemporal(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
-                                             fecha_final=report_end_date)
             report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
         else:
-            report_v = SRNodeDetailsPermanente(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
-                                               fecha_final=report_end_date)
             report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
+
         if report is None:
-            final_report.novedades["nodos_fallidos"] += 1
-            if not "nodos" in final_report.novedades["detalle"]:
-                final_report.novedades["detalle"]["nodos"] = list()
-            final_report.novedades["detalle"]["nodos"].append(dict(tipo=node.tipo, nombre=node.nombre))
+            final_report_v.novedades["nodos_fallidos"] += 1
+            if not "nodos" in final_report_v.novedades["detalle"]:
+                final_report_v.novedades["detalle"]["nodos"] = list()
+            final_report_v.novedades["detalle"]["nodos"].append(dict(tipo=node.tipo, nombre=node.nombre))
             continue
         node_summary_report = SRNodeSummaryReport(**report.to_summary())
         # final_report.reportes_nodos_detalle.append(report)
-        final_report.append_node_summary_report(node_summary_report)
+        final_report_v.append_node_summary_report(node_summary_report)
 
     # añadiendo novedades encontradas al momento de realizar el cálculo nodo por nodo:
-    final_report.novedades["detalle"]["log"] = log_msg
-    final_report.novedades["detalle"]["results"] = results
-    final_report.calculate()
+    final_report_v.novedades["detalle"]["log"] = log_msg
+    final_report_v.novedades["detalle"]["results"] = results
+    final_report_v.calculate()
     if report_exists and force:
-        if "log" in final_report_v.novedades["detalle"].keys():
-            final_report.novedades["detalle"]["log_previo"] = final_report_v.novedades["detalle"]["log"]
-        if "results" in final_report_v.novedades["detalle"].keys():
-            final_report.novedades["detalle"]["resultado_previo"] = final_report_v.novedades["detalle"]["results"]
-        final_report_v.delete()
+        if "log" in final_report_db.novedades["detalle"].keys():
+            final_report_v.novedades["detalle"]["log_previo"] = final_report_db.novedades["detalle"]["log"]
+        if "results" in final_report_db.novedades["detalle"].keys():
+            final_report_v.novedades["detalle"]["resultado_previo"] = final_report_db.novedades["detalle"]["results"]
+        final_report_db.delete()
     delta_time = dt.datetime.now() - start_time_script
-    final_report.actualizado = dt.datetime.now()
-    final_report.tiempo_calculo_segundos = delta_time.total_seconds()
+    final_report_v.actualizado = dt.datetime.now()
+    final_report_v.tiempo_calculo_segundos = delta_time.total_seconds()
     log.info("Guardando reporte final en base de datos...")
     # log.info(final_report.to_dict())
     # Save in database
     try:
-        final_report.save()
+        final_report_v.save()
         msg = "El reporte ha sido calculado exitosamente"
         log.info(msg)
-        return True, final_report, msg
+        return True, final_report_v, msg
     except Exception as e:
         msg = f"Problemas al guardar el reporte \n{str(e)}"
         log.info(msg)
-        return False, final_report, "El reporte no ha sido guardado"
+        return False, final_report_v, "El reporte no ha sido guardado"
 
 
 def valid_name(name):

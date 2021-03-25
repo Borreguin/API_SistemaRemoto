@@ -46,11 +46,10 @@ class DisponibilidadExcel(Resource):
             msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
             return dict(success=False, msg=msg), 400
             # Verificando si debe usar el reporte temporal o definitivo:
+        final_report_v = SRFinalReportBase(fecha_inicio=ini_date, fecha_final=end_date)
         if u.isTemporal(ini_date, end_date):
-            final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
             final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
         else:
-            final_report_v = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
             final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
         if final_report is None:
             return dict(success=False, msg="No existe reporte asociado"), 404
@@ -75,7 +74,7 @@ class DisponibilidadExcel(Resource):
                 df_details.to_excel(writer, sheet_name="Detalles")
                 df_novedades.to_excel(writer, sheet_name="Novedades")
             if os.path.exists(path):
-                return send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
+                return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
 
         if formato == "json":
             result_dict = dict()
@@ -117,13 +116,12 @@ class IndisponibilidadTAGSs(Resource):
             msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
             return dict(success=False, msg=msg), 400
         # Verificando si debe usar el reporte temporal o definitivo:
+        final_report_virtual = SRFinalReportBase(fecha_inicio=ini_date, fecha_final=end_date)
         if u.isTemporal(ini_date, end_date):
             # Obtener el reporte final con los detalles de cada reporte por nodo
-            final_report_virtual = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
             final_report_db = SRFinalReportTemporal.objects(id_report=final_report_virtual.id_report).first()
         else:
             # Obtener el reporte final con los detalles de cada reporte por nodo
-            final_report_virtual = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
             final_report_db = SRFinalReportPermanente.objects(id_report=final_report_virtual.id_report).first()
 
         if final_report_db is None:
@@ -172,6 +170,64 @@ class IndisponibilidadTAGSs(Resource):
                 return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
 
 
+# se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
+@ns.route('/disponibilidad/diaria/<string:formato>/<string:ini_date>/<string:end_date>')
+class DisponibilidadDiariaExcel(Resource):
+
+    @staticmethod
+    def get(formato, ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
+        """ Entrega el cálculo en formato Excel/JSON realizado de manera diaria a las 00:00
+            Si el cálculo no existe entonces <b>código 404</b>
+            Formato:                excel, json
+            Fecha inicial formato:  <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Rand_key:               <b>cualquier valor, permite actualizar el reporte</b>
+        """
+        success1, ini_date = u.check_date(ini_date)
+        success2, end_date = u.check_date(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
+        ini_date = ini_date.replace(hour=0, minute=0, second=0)
+        end_date = end_date.replace(hour=0, minute=0, second=0)
+        date_range = pd.date_range(ini_date, end_date, freq=dt.timedelta(days=1))
+        if len(date_range) == 0:
+            return dict(success=False, report=None, msg="Las fechas de inicio y fin no son correctas.")
+        df_summary, df_details, df_novedades = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        for ini, end in zip(date_range, date_range[1:]):
+            final_report_v = SRFinalReportTemporal(fecha_inicio=ini, fecha_final=end)
+            final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+            if final_report is not None:
+                success, _df_summary, _df_details, _df_novedades, msg = final_report.to_dataframe()
+                if success:
+                    df_summary = pd.DataFrame.append(df_summary, _df_summary, ignore_index=True)
+                    df_details = pd.DataFrame.append(df_details, _df_details, ignore_index=True)
+                    df_novedades = pd.DataFrame.append(df_novedades, _df_novedades, ignore_index=True)
+
+        # formato permitido:
+        permitido = ["excel", "json"]
+        if not formato in ["excel", "json"]:
+            msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
+            return dict(success=False, msg=msg), 400
+
+        # Creating an Excel file:
+        if formato == "excel":
+            ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+            file_name = f"R_{ini_date_str}@{end_date_str}.xlsx"
+            path = os.path.join(init.TEMP_PATH, file_name)
+            with pd.ExcelWriter(path) as writer:
+                df_summary.to_excel(writer, sheet_name="Resumen")
+                df_details.to_excel(writer, sheet_name="Detalles")
+                df_novedades.to_excel(writer, sheet_name="Novedades")
+            if os.path.exists(path):
+                return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+
+        if formato == "json":
+            result_dict = dict()
+            result_dict["Resumen"] = df_summary.to_dict(orient='records')
+            result_dict["Detalles"] = df_details.to_dict(orient='records')
+            result_dict["Novedades"] = df_novedades.to_dict(orient='records')
+            return dict(success=True, report=result_dict, msg="Reporte encontrado")
 
 
 

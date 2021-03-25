@@ -334,6 +334,33 @@ class DisponibilidadNodoByID(Resource):
         return dict(success=True, report=report.to_dict(), msg="Reporte encontrado")
 
 
+@ns.route('/disponibilidad/detalles/<string:id_report>')
+class DisponibilidadDetailsByID(Resource):
+    @staticmethod
+    def get(id_report="Id del reporte de detalle"):
+        """ Obtiene el reporte de disponibilidad del nodo de acuerdo al id del reporte
+            Si el reporte no existe, entonces su valor será 404
+        """
+        general_report = SRFinalReportPermanente.objects(id_report=id_report).first()
+        if general_report is None:
+            general_report = SRFinalReportTemporal.objects(id_report=id_report).first()
+        if general_report is None:
+            return dict(success=False, report=None, msg="El reporte no ha sido encontrado"), 404
+        isTemporal = u.isTemporal(general_report.fecha_inicio, general_report.fecha_final)
+        detail_report_list = list()
+        for node_report in general_report.reportes_nodos:
+            if isTemporal:
+                detail_report = SRNodeDetailsTemporal.objects(id_report=node_report.id_report).first()
+            else:
+                detail_report = SRNodeDetailsPermanente.objects(id_report=node_report.id_report).first()
+            if detail_report is None:
+                continue
+            detail_report_list.append(detail_report.to_dict())
+        dict_to_send = general_report.to_dict()
+        dict_to_send["reportes_nodos_detalles"] = detail_report_list
+        return dict(success=True, report=dict_to_send, msg="El reporte ha sido obtenido de manera correcta")
+
+
 @ns.route('/estado/disponibilidad/<string:ini_date>/<string:end_date>')
 class DisponibilidadStatusNodo(Resource):
     @staticmethod

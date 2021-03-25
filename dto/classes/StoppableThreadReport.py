@@ -11,7 +11,8 @@ import pandas as pd
 import requests
 
 host = "localhost"
-url = f"http://{host}:{init.PORT}/api/disp-sRemoto/disponibilidad/ini_date/end_date"
+url_disponibilidad = f"http://{host}:{init.PORT}/api/disp-sRemoto/disponibilidad/ini_date/end_date"
+url_detail_report = f"http://{host}:{init.PORT}/api/disp-sRemoto/disponibilidad/detalles/id_report"
 log = init.LogDefaultConfig("StoppableThreadReport.log").logger
 
 
@@ -108,12 +109,14 @@ class ReportGenerator:
         self.send_mail = self.today + self.trigger_mail
         self.date_range = pd.date_range(start=self.ini_date, end=self.end_date, freq=self.span)
 
-    def get_reports(self):
+    def check_reports(self):
         reports = list()
         failed_reports = list()
         for ini, end in zip(self.date_range, self.date_range[1:]):
-            url_to_send = url.replace("ini_date", ini.strftime('%Y-%m-%d %H:%M:%S'))
+            url_to_send = url_disponibilidad.replace("ini_date", ini.strftime('%Y-%m-%d %H:%M:%S'))
             url_to_send = url_to_send.replace("end_date", end.strftime('%Y-%m-%d %H:%M:%S'))
+            ts = dt.datetime.now().strftime('[%Y-%b-%d %H:%M:%S.%f]')
+            log.info(f"{ts}: {url_to_send}")
             try:
                 response = requests.get(url_to_send)
                 if response.status_code == 404:
@@ -135,8 +138,13 @@ class ReportGenerator:
             else f"No fue posible recuperar los siguientes reportes: \n{failed_reports}"
         return is_ok, reports, msg
 
-    def get_details(self, general_report:dict):
-        print(general_report)
+    def get_details(self, general_report: dict):
+        url_to_send = url_detail_report.replace("id_report", general_report["id_report"])
+        response = requests.get(url_to_send)
+        if response.status_code != 200:
+            return False, None, "No se pudo obtener el reporte"
+        json_data = response.json()
+        return True, json_data["report"], json_data["msg"]
 
 
 def test():
@@ -148,8 +156,14 @@ def test():
     report_generator = ReportGenerator(span, trigger, trigger_mail)
     report_generator.update_time_parameters(today=today)
     log.info(f"Empezando recopilación de reportes: {report_generator}")
-    success, general_reports, msg = report_generator.get_reports()
-    details_report = report_generator.get_details(general_reports[-1])
+    success, general_reports, msg = report_generator.check_reports()
+    log.info(msg)
+    success, details_report, msg = report_generator.get_details(general_reports[-1])
+    # Processing each node in general reports
+    disponibilidad = dict()
+    for general_report in general_reports:
+        for node_report in general_report['reportes_nodos']:
+            disponibilidad
     log.info(msg)
 
     print(success, msg)

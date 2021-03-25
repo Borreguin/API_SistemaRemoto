@@ -501,9 +501,9 @@ class SRDataFramesFromDict():
                         continue
                     _df_tags = pd.DataFrame(utr["tags"])
                     _df_tags[self.cl_utr] = utr["id_utr"]
-                    _df_tags[self.cl_activado] = ["x" for t in _df_tags[self.cl_activado] if t > 0]
+                    _df_tags[self.cl_activado] = ["x" if t > 0 else "" for t in _df_tags[self.cl_activado]]
                     df_tags = df_tags.append(_df_tags)
 
-            return True, df_main, df_tags
+            return True, df_main, df_tags, "DataFrame correcto"
         except Exception as e:
-            return False, df_main, df_tags
+            return False, df_main, df_tags, f"No se pudo convertir a DataFrame. Detalle: {str(e)}"

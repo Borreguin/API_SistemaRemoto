@@ -40,9 +40,11 @@ FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
 production_path = os.path.join(project_path, "Production_server.txt")
 print(production_path, os.path.exists(production_path))
 if os.path.exists(production_path):
-    FLASK_DEBUG = False
+    DEBUG = False
+    SECRET_KEY = "Change_me"
 else:
-    FLASK_DEBUG = config["FLASK_DEBUG"]
+    DEBUG = config["DEBUG"]
+    SECRET_KEY = "Th1$1$a$6creTK6y"
 
 """ Log file settings: """
 sR_node_name = config["ROTATING_FILE_HANDLER"]["filename"]
@@ -57,7 +59,7 @@ MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
 MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
 MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
 
-# if FLASK_DEBUG:
+# if DEBUG:
 #    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
 print('Configuraciones de MongoDB:' + str(MONGOCLIENT_SETTINGS))
 
@@ -77,7 +79,7 @@ RESTPLUS_VALIDATE = config["RESTPLUS_VALIDATE"]
 RESTPLUS_MASK_SWAGGER = config["RESTPLUS_MASK_SWAGGER"]
 RESTPLUS_ERROR_404_HELP = config["RESTPLUS_ERROR_404_HELP"]
 API_PREFIX = config["API_PREFIX"]
-PORT = config["PORT"] if not FLASK_DEBUG else config["DEBUG_PORT"]
+PORT = config["PORT"] if not DEBUG else config["DEBUG_PORT"]
 DEBUG_PORT = config["DEBUG_PORT"]
 VERSION = config["version"]
 

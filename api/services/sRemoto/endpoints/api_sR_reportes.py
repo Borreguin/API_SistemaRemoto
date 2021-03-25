@@ -24,7 +24,6 @@ ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()
 
 # configurando logger y el servicio web
-log = init.LogDefaultConfig("ws_sRemoto.log").logger
 ns = api.namespace('sRemoto', description='Relativas a reportes personalizados de Sistema Remoto')
 
 
@@ -41,53 +40,49 @@ class DisponibilidadExcel(Resource):
             Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
             Rand_key:               <b>cualquier valor, permite actualizar el reporte</b>
         """
-        try:
-            success1, ini_date = u.check_date(ini_date)
-            success2, end_date = u.check_date(end_date)
-            if not success1 or not success2:
-                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, msg=msg), 400
-                # Verificando si debe usar el reporte temporal o definitivo:
-            if u.isTemporal(ini_date, end_date):
-                final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
-                final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
-            else:
-                final_report_v = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
-                final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
-            if final_report is None:
-                return dict(success=False, msg="No existe reporte asociado"), 404
+        success1, ini_date = u.check_date(ini_date)
+        success2, end_date = u.check_date(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
+            # Verificando si debe usar el reporte temporal o definitivo:
+        if u.isTemporal(ini_date, end_date):
+            final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
+            final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+        else:
+            final_report_v = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
+            final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
+        if final_report is None:
+            return dict(success=False, msg="No existe reporte asociado"), 404
 
-            # formato permitido:
-            permitido = ["excel", "json"]
-            if not formato in ["excel", "json"]:
-                msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
-                return dict(success=False, msg=msg), 400
+        # formato permitido:
+        permitido = ["excel", "json"]
+        if not formato in ["excel", "json"]:
+            msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
+            return dict(success=False, msg=msg), 400
 
-            success, df_summary, df_details, df_novedades, msg = final_report.to_dataframe()
-            if not success:
-                return dict(success=False, report=None, msg=msg), 409
+        success, df_summary, df_details, df_novedades, msg = final_report.to_dataframe()
+        if not success:
+            return dict(success=False, report=None, msg=msg), 409
 
-            # Creating an Excel file:
-            if formato == "excel":
-                ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
-                file_name = f"R_{ini_date_str}@{end_date_str}.xlsx"
-                path = os.path.join(init.TEMP_PATH, file_name)
-                with pd.ExcelWriter(path) as writer:
-                    df_summary.to_excel(writer, sheet_name="Resumen")
-                    df_details.to_excel(writer, sheet_name="Detalles")
-                    df_novedades.to_excel(writer, sheet_name="Novedades")
-                if os.path.exists(path):
-                    return send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
+        # Creating an Excel file:
+        if formato == "excel":
+            ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+            file_name = f"R_{ini_date_str}@{end_date_str}.xlsx"
+            path = os.path.join(init.TEMP_PATH, file_name)
+            with pd.ExcelWriter(path) as writer:
+                df_summary.to_excel(writer, sheet_name="Resumen")
+                df_details.to_excel(writer, sheet_name="Detalles")
+                df_novedades.to_excel(writer, sheet_name="Novedades")
+            if os.path.exists(path):
+                return send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
 
-            if formato == "json":
-                result_dict = dict()
-                result_dict["Resumen"] = df_summary.to_dict(orient='records')
-                result_dict["Detalles"] = df_details.to_dict(orient='records')
-                result_dict["Novedades"] = df_novedades.to_dict(orient='records')
-                return dict(success=True, report=result_dict, msg="Reporte encontrado")
-
-        except Exception as e:
-            return default_error_handler(e)
+        if formato == "json":
+            result_dict = dict()
+            result_dict["Resumen"] = df_summary.to_dict(orient='records')
+            result_dict["Detalles"] = df_details.to_dict(orient='records')
+            result_dict["Novedades"] = df_novedades.to_dict(orient='records')
+            return dict(success=True, report=result_dict, msg="Reporte encontrado")
 
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
@@ -105,80 +100,76 @@ class IndisponibilidadTAGSs(Resource):
             Umbral:                 <b>float</b>
             Rand_key:               <b>cualquier valor, permite actualizar el reporte</b>
         """
-        try:
-            success1, ini_date = u.check_date(ini_date)
-            success2, end_date = u.check_date(end_date)
-            if not success1 or not success2:
-                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-                return dict(success=False, msg=msg), 400
-            # definición del umbral
-            if umbral is None:
-                umbral = 0
-            else:
-                umbral = float(umbral)
+        success1, ini_date = u.check_date(ini_date)
+        success2, end_date = u.check_date(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
+        # definición del umbral
+        if umbral is None:
+            umbral = 0
+        else:
+            umbral = float(umbral)
 
-            # formato permitido:
-            permitido = ["excel", "json"]
-            if not formato in ["excel", "json"]:
-                msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
-                return dict(success=False, msg=msg), 400
-            # Verificando si debe usar el reporte temporal o definitivo:
+        # formato permitido:
+        permitido = ["excel", "json"]
+        if not formato in ["excel", "json"]:
+            msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
+            return dict(success=False, msg=msg), 400
+        # Verificando si debe usar el reporte temporal o definitivo:
+        if u.isTemporal(ini_date, end_date):
+            # Obtener el reporte final con los detalles de cada reporte por nodo
+            final_report_virtual = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
+            final_report_db = SRFinalReportTemporal.objects(id_report=final_report_virtual.id_report).first()
+        else:
+            # Obtener el reporte final con los detalles de cada reporte por nodo
+            final_report_virtual = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
+            final_report_db = SRFinalReportPermanente.objects(id_report=final_report_virtual.id_report).first()
+
+        if final_report_db is None:
+            return dict(success=False, msg="El reporte para esta fecha no existe. "
+                                           "Considere realizar el cálculo primero"), 404
+
+        # variable para guardar el listado de tags con su respectiva indisponibilidad
+        df_tag = pd.DataFrame(columns=[lb_empresa, lb_unidad_negocio, lb_utr_id, lb_utr,
+                                       lb_tag_name, lb_indisponible_minutos])
+
+        for reporte_nodo_resumen in final_report_db.reportes_nodos:
             if u.isTemporal(ini_date, end_date):
-                # Obtener el reporte final con los detalles de cada reporte por nodo
-                final_report_virtual = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
-                final_report_db = SRFinalReportTemporal.objects(id_report=final_report_virtual.id_report).first()
+                reporte_nodo_db = SRNodeDetailsTemporal.objects(id_report=reporte_nodo_resumen.id_report).first()
             else:
-                # Obtener el reporte final con los detalles de cada reporte por nodo
-                final_report_virtual = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
-                final_report_db = SRFinalReportPermanente.objects(id_report=final_report_virtual.id_report).first()
+                reporte_nodo_db = SRNodeDetailsPermanente.objects(id_report=reporte_nodo_resumen.id_report).first()
+            empresa = reporte_nodo_db.nombre
+            for reporte_entidad in reporte_nodo_db.reportes_entidades:
+                unidad_negocio = reporte_entidad.entidad_nombre
+                for reporte_utr in reporte_entidad.reportes_utrs:
+                    utr_id = reporte_utr.id_utr
+                    utr_nombre = reporte_utr.utr_nombre
+                    if len(reporte_utr.indisponibilidad_detalle) > 0:
+                        df_tag_aux = pd.DataFrame([t.to_dict() for t in reporte_utr.indisponibilidad_detalle])
+                        df_tag_aux[lb_empresa] = empresa
+                        df_tag_aux[lb_unidad_negocio] = unidad_negocio
+                        df_tag_aux[lb_utr_id] = utr_id
+                        df_tag_aux[lb_utr] = utr_nombre
+                        if umbral > 0:
+                            mask = df_tag_aux[lb_indisponible_minutos] >= umbral
+                            df_tag_aux = df_tag_aux[mask]
+                        df_tag = df_tag.append(df_tag_aux, ignore_index=True)
 
-            if final_report_db is None:
-                return dict(success=False, msg="El reporte para esta fecha no existe. "
-                                               "Considere realizar el cálculo primero"), 404
+        if formato == "json":
+            resp = df_tag.to_dict(orient="records")
+            return dict(success=True, reporte=resp)
 
-            # variable para guardar el listado de tags con su respectiva indisponibilidad
-            df_tag = pd.DataFrame(columns=[lb_empresa, lb_unidad_negocio, lb_utr_id, lb_utr,
-                                           lb_tag_name, lb_indisponible_minutos])
-
-            for reporte_nodo_resumen in final_report_db.reportes_nodos:
-                if u.isTemporal(ini_date, end_date):
-                    reporte_nodo_db = SRNodeDetailsTemporal.objects(id_report=reporte_nodo_resumen.id_report).first()
-                else:
-                    reporte_nodo_db = SRNodeDetailsPermanente.objects(id_report=reporte_nodo_resumen.id_report).first()
-                empresa = reporte_nodo_db.nombre
-                for reporte_entidad in reporte_nodo_db.reportes_entidades:
-                    unidad_negocio = reporte_entidad.entidad_nombre
-                    for reporte_utr in reporte_entidad.reportes_utrs:
-                        utr_id = reporte_utr.id_utr
-                        utr_nombre = reporte_utr.utr_nombre
-                        if len(reporte_utr.indisponibilidad_detalle) > 0:
-                            df_tag_aux = pd.DataFrame([t.to_dict() for t in reporte_utr.indisponibilidad_detalle])
-                            df_tag_aux[lb_empresa] = empresa
-                            df_tag_aux[lb_unidad_negocio] = unidad_negocio
-                            df_tag_aux[lb_utr_id] = utr_id
-                            df_tag_aux[lb_utr] = utr_nombre
-                            if umbral > 0:
-                                mask = df_tag_aux[lb_indisponible_minutos] >= umbral
-                                df_tag_aux = df_tag_aux[mask]
-                            df_tag = df_tag.append(df_tag_aux, ignore_index=True)
-
-            if formato == "json":
-                resp = df_tag.to_dict(orient="records")
-                return dict(success=True, reporte=resp)
-
-            if formato == "excel":
-                # nombre del archivo
-                ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
-                file_name = f"IndispTags_{ini_date_str}@{end_date_str}.xlsx"
-                path = os.path.join(init.TEMP_PATH, file_name)
-                # crear en el directorio temporal para envío del archivo
-                with pd.ExcelWriter(path) as writer:
-                    df_tag.to_excel(writer, sheet_name="Detalles")
-                if os.path.exists(path):
-                    return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
-
-        except Exception as e:
-            return default_error_handler(e)
+        if formato == "excel":
+            # nombre del archivo
+            ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+            file_name = f"IndispTags_{ini_date_str}@{end_date_str}.xlsx"
+            path = os.path.join(init.TEMP_PATH, file_name)
+            # crear en el directorio temporal para envío del archivo
+            with pd.ExcelWriter(path) as writer:
+                df_tag.to_excel(writer, sheet_name="Detalles")
+            if os.path.exists(path):
+                return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
 
 
 

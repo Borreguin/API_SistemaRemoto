@@ -37,7 +37,7 @@ script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
 output_path = init.OUTPUT_MOTOR_REPO
 node_script = os.path.join(motor_path, 'node_scripts', 'eng_sRnode.py')
-debug = init.FLASK_DEBUG
+debug = init.DEBUG
 log = log_master
 
 """ Import clases for MongoDB """

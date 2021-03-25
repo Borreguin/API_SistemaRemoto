@@ -135,6 +135,9 @@ class ReportGenerator:
             else f"No fue posible recuperar los siguientes reportes: \n{failed_reports}"
         return is_ok, reports, msg
 
+    def get_details(self, general_report:dict):
+        print(general_report)
+
 
 def test():
     span = dt.timedelta(days=1)
@@ -146,11 +149,12 @@ def test():
     report_generator.update_time_parameters(today=today)
     log.info(f"Empezando recopilación de reportes: {report_generator}")
     success, general_reports, msg = report_generator.get_reports()
+    details_report = report_generator.get_details(general_reports[-1])
     log.info(msg)
 
     print(success, msg)
 
 
 if __name__ == "__main__":
-    if init.FLASK_DEBUG:
+    if init.DEBUG:
         test()

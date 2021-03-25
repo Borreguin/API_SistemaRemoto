@@ -17,11 +17,6 @@ Colossians 3:23
 import argparse, os, sys
 import queue
 
-# import custom libraries:
-from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
-from motor import log_node
-
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
 project_path = os.path.dirname(motor_path)
@@ -29,10 +24,13 @@ sys.path.append(script_path)
 sys.path.append(motor_path)
 sys.path.append(project_path)
 
-from my_lib import utils as u
+# import custom libraries:
+from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from motor import log_node
+
 from my_lib.PI_connection import pi_connect as pi
 from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
-from settings import initial_settings as init
 import logging
 import threading as th
 from tqdm import tqdm
@@ -44,7 +42,7 @@ from dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import *
 
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
-if init.FLASK_DEBUG:
+if init.DEBUG:
     # pi server por defecto
     pi_svr = pi.PIserver()
 else:
@@ -63,7 +61,7 @@ n_lines = 40  # Para dar formato al log
 
 """ configuración de logger """
 verbosity = False
-debug = init.FLASK_DEBUG
+debug = init.DEBUG
 log = log_node
 # nivel de eventos a registrar:
 log.setLevel(logging.INFO)

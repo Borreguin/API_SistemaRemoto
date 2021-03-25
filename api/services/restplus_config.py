@@ -75,7 +75,7 @@ def default_error_handler(e):
                     details=to_send), 409
     return dict(success=False, errors=str(e), msg=str(e)), 500
 
-    # if not FLASK_DEBUG:
+    # if not DEBUG:
     #    return {'message': message}, 500
 
 

@@ -12,7 +12,7 @@ config["version"] = "0.3"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
 #Configuración de Debbugging
-config["FLASK_DEBUG"] = True
+config["DEBUG"] = True
 #Configuración de UI de SWAGGER
 config["RESTPLUS_SWAGGER_UI_DOC_EXPANSION"] = "list"
 config["RESTPLUS_VALIDATE"] = True

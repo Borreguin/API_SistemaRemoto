@@ -179,12 +179,12 @@ class DisponibilidadDiariaExcel(Resource):
         """ Entrega el cálculo en formato Excel/JSON realizado de manera diaria a las 00:00
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
-            Fecha inicial formato:  <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
-            Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Fecha inicial formato:  <b>yyyy-mm-dd</b>
+            Fecha final formato:    <b>yyyy-mm-dd</b>
             Rand_key:               <b>cualquier valor, permite actualizar el reporte</b>
         """
-        success1, ini_date = u.check_date(ini_date)
-        success2, end_date = u.check_date(end_date)
+        success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+        success2, end_date = u.check_date_yyyy_mm_dd(end_date)
         if not success1 or not success2:
             msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
             return dict(success=False, msg=msg), 400
@@ -220,7 +220,9 @@ class DisponibilidadDiariaExcel(Resource):
                 df_details.to_excel(writer, sheet_name="Detalles")
                 df_novedades.to_excel(writer, sheet_name="Novedades")
             if os.path.exists(path):
-                return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+                resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+                resp.expires = dt.datetime.now() + dt.timedelta(minutes=2)
+                return resp
 
         if formato == "json":
             result_dict = dict()

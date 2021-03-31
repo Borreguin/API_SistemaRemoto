@@ -86,7 +86,7 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
     """ variables para llevar logs"""
     msg = list()
     results = dict()
-    log.info(f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Empezando el cálculo de los nodos: {node_list_name}")
+    log.info(f"{head(report_ini_date, report_end_date)} Empezando el cálculo de los nodos: {node_list_name}")
 
     """ check si es una lista de strings """
     check = all(isinstance(li, str) for li in node_list_name)
@@ -107,11 +107,12 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
 
         # now we can join them together
         # uniendo todos los procesos juntos:
-        _msg = f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Procesando todos los nodos:"
+        _msg = f"{head(report_ini_date, report_end_date)} Procesando todos los nodos:"
         log.info(_msg)
         msg.append(_msg)
         # recollecting results from child processes
         success, results, _msg = collecting_results_from(child_processes)
+        log_master.info(f"{head(report_ini_date, report_end_date)} Se recolecta todos los reportes")
         if success:
             msg += _msg
             return success, results, msg
@@ -120,7 +121,8 @@ def run_node_list(node_list_name: list, report_ini_date: dt.datetime, report_end
             return success, results, msg
 
     except Exception as e:
-        msg = f"No se pudo procesar todos los nodos \n [{str(e)}]\n [{traceback.format_exc()}]"
+        msg = f"{head(report_ini_date, report_end_date)} No se pudo procesar todos los nodos " \
+              f"\n [{str(e)}]\n [{traceback.format_exc()}] "
         log.error(msg)
         return False, None, msg
 
@@ -138,11 +140,11 @@ def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
                 to_run += ["--f"]
             # empezando un proceso a la vez
             p = sb.Popen(to_run, stdout=out, stderr=out)
-            msg = f"->[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] Ejecutando: [{valid_name(node)}] " \
+            msg = f"->{head(report_ini_date, report_end_date)} Ejecutando: [{valid_name(node)}] " \
                   f"save_in_db={save_in_db} force={force}"
             return True, p, msg
     except Exception as e:
-        msg = f"Error al ejecutar el nodo: [{node}] \n {str(e)}"
+        msg = f"{head(report_ini_date, report_end_date)} Error al ejecutar el nodo: [{node}] \n {str(e)}"
         tb = traceback.extract_stack()
         log.error(f"{msg} \n {tb}")
         return False, None, msg
@@ -157,7 +159,8 @@ def collecting_results_from(child_processes):
         for cp in child_processes:
             cp.wait()
             # para dar seguimiento a los resultados:
-            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] (#st) Finalizando el nodo [{valid_name(cp.args[2])}] "
+            to_print = f"<-[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] " \
+                       f"(#st) Finalizando el nodo [{valid_name(cp.args[2])}] "
             if cp.returncode in [0, 9, 10]:
                 to_print = to_print.replace("#st", "OK   ")
             elif cp.returncode in [8]:
@@ -194,7 +197,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         connect(**mongo_config)
     except Exception as e:
         print(e)
-    log.info("Empezando el cálculo del reporte final")
+    log.info(f"{head(report_ini_date, report_end_date)} Empezando el cálculo del reporte final")
     # Verificando si debe usar el reporte temporal o definitivo:
     isTemporalReport = u.isTemporal(report_ini_date, report_end_date)
     if isTemporalReport:
@@ -215,7 +218,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     all_nodes = [n for n in all_nodes if n.activado]
     for node in all_nodes:
         report_v = SRNodeDetailsBase(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,
-                                         fecha_final=report_end_date)
+                                     fecha_final=report_end_date)
         if isTemporalReport:
             report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
         else:
@@ -244,18 +247,30 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
     delta_time = dt.datetime.now() - start_time_script
     final_report_v.actualizado = dt.datetime.now()
     final_report_v.tiempo_calculo_segundos = delta_time.total_seconds()
-    log.info("Guardando reporte final en base de datos...")
+    log.info(f"{head(report_ini_date, report_end_date)} Guardando reporte final en base de datos...")
     # log.info(final_report.to_dict())
     # Save in database
     try:
         final_report_v.save()
-        msg = "El reporte ha sido calculado exitosamente"
+        msg = f"{head(report_ini_date, report_end_date)} El reporte ha sido calculado exitosamente"
         log.info(msg)
         return True, final_report_v, msg
     except Exception as e:
-        msg = f"Problemas al guardar el reporte \n{str(e)}"
+        msg = f"{head(report_ini_date, report_end_date)} Problemas al guardar el reporte \n{str(e)}"
         log.info(msg)
         return False, final_report_v, "El reporte no ha sido guardado"
+
+
+def run_nodes_and_summarize(report_ini_date, report_end_date, save_in_db, force):
+    success, results, msg = run_all_nodes(report_ini_date, report_end_date, save_in_db, force)
+    if not success:
+        return success, None, msg
+    success, final_report, msg = run_summary(report_ini_date, report_end_date, force, results=results, log_msg=msg)
+    return success, final_report, msg
+
+
+def head(ini: dt.datetime, end: dt.datetime):
+    return f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] ({ini}@{end})"
 
 
 def valid_name(name):

@@ -53,7 +53,7 @@ class Disponibilidad(Resource):
         # puede el cálculo estar activo más de 20 minutos?
         active = u.is_active(path_file, id, time_delta)
         if active:
-            return dict(success=False,
+            return dict(success=False, result=None,
                         msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}. "
                             f"Tiempo restante: {int(time_delta.total_seconds() / 60)} min "
                             f"{time_delta.total_seconds() % 60} seg"), 409
@@ -63,20 +63,12 @@ class Disponibilidad(Resource):
         u.save_in_file(path_file, id, dict_value)
 
         # realizando el cálculo por cada nodo:
-        success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True, force=True)
+        success, report, msg = run_nodes_and_summarize(ini_date, end_date, save_in_db=True, force=True)
         # desbloqueando la instancia:
         dict_value["activo"] = False
         u.save_in_file(path_file, id, dict_value)
-
-        if success1:
-            success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
-                                                 results=result, log_msg=msg1)
-            if success2:
-                return dict(success=True, result=result, msg=msg1, report=report.to_dict()), 200
-            else:
-                return dict(success=False, msg=msg2), 409
-        else:
-            return dict(success=False, msg=result), 409
+        result = report.to_dict() if success else report
+        return dict(success=success, report=result, msg=msg), 200 if success else 409
 
     @staticmethod
     def post(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):

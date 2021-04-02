@@ -11,9 +11,9 @@ import pandas as pd
 import requests
 
 host = "localhost"
-url_disponibilidad = f"http://{host}:{init.PORT}{init.API_PREFIX}/disp-sRemoto/disponibilidad/ini_date/end_date"
+url_disponibilidad = f"http://{host}:{init.PORT}{init.API_PREFIX}/admin-report/run/ini_date/end_date"
 url_detail_report = f"http://{host}:{init.PORT}{init.API_PREFIX}/disp-sRemoto/disponibilidad/detalles/id_report"
-url_disponibilidad_diaria = f"http://{host}:{init.PORT}{init.API_PREFIX}/sRemoto/disponibilidad/diaria/json/ini_date/end_date"
+url_disponibilidad_diaria = f"http://{host}:{init.PORT}{init.API_PREFIX}/admin-report/run/reporte/diario/ini_date/end_date"
 log = init.LogDefaultConfig("StoppableThreadReport.log").logger
 
 
@@ -120,7 +120,6 @@ class ReportGenerator:
         self.ini_date, self.end_date = self.ini_date + self.trigger, self.end_date + self.trigger
         self.send_mail = self.today + self.trigger_mail
         self.date_range = pd.date_range(start=self.ini_date, end=self.end_date, freq=self.span)
-
 
     def execute_reports(self):
         reports = list()

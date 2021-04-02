@@ -19,7 +19,7 @@ from pymongo import MongoClient
 from settings import initial_settings as init
 
 # log events:
-log = init.LogDefaultConfig("app_flask.log").logger               # Activity Logger
+log = init.LogDefaultConfig("app_activity.log").logger               # Activity Logger
 error_log = init.LogDefaultConfig("app_errors.log").logger        # Error logger
 mongo_client = init.MONGOCLIENT_SETTINGS.copy()
 

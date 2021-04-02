@@ -69,27 +69,41 @@ class CheckDailyAPI(Resource):
         return dict(success=is_ok, done_reports=done, missing_reports=missing, msg=msg), 200 if is_ok else 404
 
 
+@ns.route('/run/reporte/diario')
 @ns.route('/run/reporte/diario/<string:ini_date>/<string:end_date>')
 class ExecuteDailyAPI(Resource):
-    def put(self, ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
-        # realizando el cálculo por cada nodo:
-        success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-        success2, end_date = u.check_date_yyyy_mm_dd(end_date)
-        if not success1 or not success2:
-            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-            return dict(success=False, msg=msg), 400
+
+    def put(self, ini_date: str = None, end_date: str = None):
+        """ Ejecuta reportes diarios desde fecha inicial a final
+            Fecha inicial formato:  <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+        """
+        if ini_date is None and end_date is None:
+            ini_date, end_date = u.get_dates_for_last_month()
+        else:
+            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            if not success1 or not success2:
+                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+                return dict(success=False, msg=msg), 400
         date_range = pd.date_range(start=ini_date, end=end_date, freq=dt.timedelta(days=1))
-        executing_reports = list()
+        to_execute_reports = list()
         existing_reports = list()
+        executing_reports = list()
         for ini, end in zip(date_range, date_range[1:]):
             report = SRFinalReportTemporal.objects(fecha_inicio=ini, fecha_final=end).first()
-            if report is None:
-                p = threading.Thread(target=run_nodes_and_summarize, kwargs={"report_ini_date": ini,
-                                                                             "report_end_date": end,
-                                                                             "save_in_db": True, "force": True})
-                p.start()
-                executing_reports.append([str(ini), str(end)])
-            else:
+            if report is not None:
                 existing_reports.append([str(ini), str(end)])
+            else:
+                to_execute_reports.append([ini, end])
+                executing_reports.append([str(ini), str(end)])
+
+        p = threading.Thread(target=executing_all_reports, kwargs={"to_execute_reports": to_execute_reports})
+        p.start()
         return dict(success=True, existing_reports=existing_reports, executing_reports=executing_reports), 200
 
+
+def executing_all_reports(to_execute_reports):
+    # realizando el cálculo por cada nodo:
+    for ini, end in to_execute_reports:
+        run_nodes_and_summarize(ini, end,save_in_db=True, force=True)

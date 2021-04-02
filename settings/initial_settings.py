@@ -120,7 +120,7 @@ class LogDefaultConfig():
     """
     rotating_file_handler = None
 
-    def __init__(self, log_name: str = None):
+    def __init__(self, log_name: str = None, with_time=True):
         if log_name is None:
             log_name = "Default.log"
 
@@ -128,7 +128,10 @@ class LogDefaultConfig():
         self.rotating_file_handler = ROTATING_FILE_HANDLER
         self.rotating_file_handler["filename"] = self.log_file_name
         logger = logging.getLogger(log_name)
-        formatter = logging.Formatter('%(levelname)s - %(message)s')
+        if with_time:
+            formatter = logging.Formatter('%(levelname)s - [%(asctime)s] - %(message)s')
+        else:
+            formatter = logging.Formatter('%(levelname)s - %(message)s')
         # creating rotating and stream Handler
         R_handler = RotatingFileHandler(**self.rotating_file_handler)
         R_handler.setFormatter(formatter)

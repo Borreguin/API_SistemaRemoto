@@ -22,8 +22,7 @@ from api.services.restplus_config import default_error_handler
 from dto.mongo_engine_handler.Consignment import Consignments, Consignment
 from my_lib import utils as u
 from settings import initial_settings as init
-# configurando logger y el servicio web
-log = init.LogDefaultConfig("ws_Consignaciones.log").logger
+# configurando el servicio web
 ns = api.namespace('admin-consignacion', description='Relativas a la administración de consignaciones')
 
 ser_from = srl.ConsignacionSerializers(api)

@@ -23,7 +23,6 @@ from my_lib.utils import group_files
 import random
 
 # configurando logger y el servicio web
-log = init.LogDefaultConfig("ws_sFiles.log").logger
 ns = api.namespace('files', description='Relativas a la administración de archivos estáticos en el servidor')
 
 ser_from = srl.sRemotoSerializers(api)
@@ -80,17 +79,14 @@ class FileDownloadAPI(Resource):
             repo: Nombre del repositorio [s_remoto_excel, s_central_excel]
             nombre: Nombre del archivo
         """
-        try:
-            names = [n.split("\\")[-1] for n in init.REPOS]
-            if repo not in names:
-                return dict(success=False, msg="No existe el repositorio consultado"), 404
-            repo = init.FINAL_REPO[names.index(repo)]
-            files = [f for f in os.listdir(repo) if os.path.isfile(os.path.join(repo, f))]
-            files = [str(file).lower() for file in files]
-            if nombre.lower() not in files:
-                return dict(success=False, msg="No existe el archivo buscado")
+        names = [n.split("\\")[-1] for n in init.REPOS]
+        if repo not in names:
+            return dict(success=False, msg="No existe el repositorio consultado"), 404
+        repo = init.FINAL_REPO[names.index(repo)]
+        files = [f for f in os.listdir(repo) if os.path.isfile(os.path.join(repo, f))]
+        files = [str(file).lower() for file in files]
+        if nombre.lower() not in files:
+            return dict(success=False, msg="No existe el archivo buscado")
 
-            return send_from_directory(repo, nombre, as_attachment=False)
+        return send_from_directory(repo, nombre, as_attachment=True)
 
-        except Exception as e:
-            return default_error_handler(e)

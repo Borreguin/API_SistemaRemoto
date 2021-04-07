@@ -27,16 +27,21 @@ class Serializers:
             "seconds": fields.Float(required=False, default=0)
         })
 
-        self.time = api.model("Hora", {
-            "hour": fields.Integer(required=False, default=0),
-            "minute": fields.Integer(required=False, default=0),
-            "second": fields.Integer(required=False, default=0)
+        self.trigger = api.model("Trigger", {
+            "hours": fields.Float(required=False, default=0),
+            "minutes": fields.Float(required=False, default=0),
+            "seconds": fields.Integer(required=False, default=0)
         })
 
-        """ serializador configuración de reportes """
-        self.report_config = api.model("Configuración de reportes", {
-            "span": fields.Nested(self.span, description="Rango de tiempo entre reportes"),
-            "trigger": fields.Nested(self.time, description="Hora de ejecución"),
-            "send_mail": fields.Nested(self.time, description="Envío de mail")})
+        self.mail_config = api.model("Configuración mail", {
+            "from_mail": fields.String(required=True, default="sistemaremoto@cenace.org.ec"),
+            "to": fields.List(fields.String, required=True, default=[]),
+        })
+
+        """ serializador para configuración de ejecución de reportes """
+        self.report_config = api.model("Configuración del reporte", {
+            "trigger": fields.Nested(self.trigger, description="Hora de ejecución del reporte", required=True),
+            "mail_config": fields.Nested(self.mail_config, description="Configuración mail", required=False)
+        })
 
         return api

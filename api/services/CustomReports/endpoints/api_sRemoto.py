@@ -168,22 +168,27 @@ class IndisponibilidadTAGSs(Resource):
                 return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
 
 
+@ns.route('/disponibilidad/diaria/<string:formato>')
 @ns.route('/disponibilidad/diaria/<string:formato>/<string:ini_date>/<string:end_date>')
 class DisponibilidadDiariaExcel(Resource):
 
     @staticmethod
-    def get(formato, ini_date: str = "yyyy-mm-dd", end_date: str = "yyyy-mm-dd"):
+    def get(formato, ini_date=None, end_date=None):
         """ Entrega el cálculo en formato Excel/JSON realizado de manera diaria a las 00:00
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
             Fecha inicial formato:  <b>yyyy-mm-dd</b>
             Fecha final formato:    <b>yyyy-mm-dd</b>
         """
-        success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
-        success2, end_date = u.check_date_yyyy_mm_dd(end_date)
-        if not success1 or not success2:
-            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-            return dict(success=False, msg=msg), 400
+        if ini_date is None and end_date is None:
+            ini_date, end_date = u.get_dates_by_default()
+        else:
+            success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+            success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+            if not success1 or not success2:
+                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+                return dict(success=False, msg=msg), 400
+        # time range for each consult
         date_range = pd.date_range(ini_date, end_date, freq=dt.timedelta(days=1))
         if len(date_range) == 0:
             return dict(success=False, report=None, msg="Las fechas de inicio y fin no son correctas.")

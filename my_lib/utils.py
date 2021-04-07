@@ -34,6 +34,18 @@ def get_dates_for_last_month():
     return date_ini, date_end
 
 
+def get_dates_by_default():
+    today = dt.datetime.now()
+    today = dt.datetime(year=today.year, month=today.month, day=today.day)
+    end_date = today
+    if today.day > 1:
+        ini_date = today - dt.timedelta(days=today.day-1)
+    else:
+        yesterday = today - dt.timedelta(days=1)
+        ini_date = yesterday - dt.timedelta(days=yesterday.day - 1)
+    return ini_date, end_date
+
+
 def check_date(s):
     success, date = check_date_yyyy_mm_dd(s)
     if success:

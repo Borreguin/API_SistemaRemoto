@@ -8,18 +8,21 @@
     "My work is well done to honor God at any time" R Sanchez A.
     Mateo 6:33
 """
+import time
 
 from flask_restplus import Resource
 from flask import request, send_from_directory
 import re, os
 # importando configuraciones iniciales
-from dto.classes.StoppableThreadReport import ReportGenerator
+from dto.classes.StoppableThreadDailyReport import StoppableThreadDailyReport
+from dto.classes.StoppableThreadMailReport import ReportGenerator
+from dto.classes.utils import get_thread_by_name
 from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 from settings import initial_settings as init
 from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
-from api.services.Reports import serializers as srl
+from api.services.CustomReports import serializers as srl
 from api.services.sRemoto import parsers
 # importando clases para leer desde MongoDB
 from dto.mongo_engine_handler.sRNode import *
@@ -35,17 +38,51 @@ ser_from = srl.Serializers(api)
 api = ser_from.add_serializers()
 
 
-@ns.route('/acumulado/<string:report_id>')
-class AcumuladoAPI(Resource):
+@ns.route('/config/<string:id_report>')
+class ConfigRoutineReportAPI(Resource):
     @api.expect(ser_from.report_config)
-    def put(self, report_id):
-        """ Configuración del reporte acumulado """
-
+    def put(self, id_report):
+        """ Configuración para la ejecución del reporte """
         request_data = dict(request.json)
-        state_report = TemporalProcessingStateReport.objects(id_report=report_id).first()
+        state_report = TemporalProcessingStateReport.objects(id_report=id_report).first()
         if state_report is not None:
-            state_report.update_time_parameters(info=request_data)
-        return True
+            state_report.update(info=request_data)
+        else:
+            state_report = TemporalProcessingStateReport(id_report=id_report, info=request_data, msg="Rutina configurada")
+            state_report.save()
+        return dict(success=True, msg="Parámetros configurados de manera correcta"), 200
+
+
+@ns.route('/run/routine/report/<string:id_report>')
+class RunRoutineReportAPI(Resource):
+    def post(self, id_report):
+        """ Corre de manera rutinaria el reporte con el id """
+        th = get_thread_by_name(id_report)
+        if th is None:
+            if id_report == 'rutina_de_reporte_diario':
+                state = TemporalProcessingStateReport.objects(id_report=id_report).first()
+                if state is None:
+                    return dict(success=False, msg="La rutina aún no ha sido configurada"), 404
+                trigger = dt.timedelta(**state.info["trigger"])
+                th_v = StoppableThreadDailyReport(trigger=trigger, name=id_report)
+                th_v.start()
+                return dict(success=True, msg="La rutina ha sido inicializada"), 200
+        return dict(success=False, msg="La rutina ya se encuentra en ejecución"), 409
+
+    def delete(self, id_report):
+        """ Detiene la rutina que este en ejecución, si no está en ejecución entonces 404 """
+        th = get_thread_by_name(id_report)
+        if th is None:
+            return dict(success=False, msg="Esta rutina no está en ejecución"), 404
+        th.stop()
+        time.sleep(th.seconds_to_sleep/2)
+        return dict(success=True, msg="La rutina ha sido detenida"), 200
+
+    def put(self, id_report):
+        """ Reinicia la rutina <id_report> """
+        self.delete(id_report)
+        return self.post(id_report)
+
 
 
 @ns.route('/check/reporte/diario/<string:ini_date>/<string:end_date>')
@@ -79,7 +116,7 @@ class ExecuteDailyAPI(Resource):
             Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
         """
         if ini_date is None and end_date is None:
-            ini_date, end_date = u.get_dates_for_last_month()
+            ini_date, end_date = u.get_dates_by_default()
         else:
             success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
             success2, end_date = u.check_date_yyyy_mm_dd(end_date)

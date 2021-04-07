@@ -5,12 +5,11 @@
         - Sistema Remoto: Implementa lo referente a sistema remoto
         - Sistema Central: Implementa lo referente a sistema Central
 """
-from flask import Flask
 from flask import send_from_directory
 import os, sys
 import copy, json
 from flask import Blueprint
-from flask_mongoengine import MongoEngine
+
 # añadiendo a sys el path del proyecto:
 # permitiendo el uso de librerías propias:
 api_path = os.path.dirname(os.path.abspath(__file__))
@@ -22,22 +21,21 @@ from settings import initial_settings as init
 # importando la configuración general de la API
 from api.services.restplus_config import api as api_p
 from api import app
-import datetime as dt
-from flask import request
 from waitress import serve
 
 """ EndPoints """
 # namespaces: Todos los servicios de esta API
-from api.services.sRemoto.endpoints.api_sR_admin import ns as namespace_sR_admin
-from api.services.Consignaciones.endpoints.api_Consignaciones import ns as namespace_Consignaciones
-from api.services.sRemoto.endpoints.api_sR_cal_disponibilidad import ns as namespace_sR_cal_disponibilidad
-from api.services.sRemoto.endpoints.api_sR_reportes import ns as namespace_sR_reportes
+from api.services.sRemoto.endpoints.api_admin_sRemoto import ns as namespace_admin_sRemoto
+from api.services.sRemoto.endpoints.api_admin_report import ns as namespace_admin_report
+from api.services.Consignaciones.endpoints.api_admin_consignacion import ns as namespace_admin_consignacion
 from api.services.Files.api_files import ns as namespace_files
-from api.services.Reports.endpoints.api_report import ns as namespace_reports_config
+from api.services.sRemoto.endpoints.api_disp_sRemoto import ns as namespace_disp_sRemoto
+from api.services.CustomReports.endpoints.api_sRemoto import ns as namespace_sRemoto
 
 """ global variables """
-from api.app_config import log                                                   # Logger
-blueprint = Blueprint('api', __name__, url_prefix=init.API_PREFIX)               # Name Space for API
+from api.app_config import log  # Logger
+
+blueprint = Blueprint('api', __name__, url_prefix=init.API_PREFIX)  # Name Space for API
 
 
 def adding_end_points(blueprint, app):
@@ -50,15 +48,16 @@ def adding_end_points(blueprint, app):
 
     # adding Endpoints to this API
     # añadiendo los servicios de la API (EndPoints)
-    api_p.add_namespace(namespace_sR_admin)
-    api_p.add_namespace(namespace_Consignaciones)
-    api_p.add_namespace(namespace_sR_cal_disponibilidad)
+    api_p.add_namespace(namespace_admin_sRemoto)
+    api_p.add_namespace(namespace_admin_report)
+    api_p.add_namespace(namespace_disp_sRemoto)
+    api_p.add_namespace(namespace_admin_consignacion)
     api_p.add_namespace(namespace_files)
-    api_p.add_namespace(namespace_sR_reportes)
-    api_p.add_namespace(namespace_reports_config)
+    api_p.add_namespace(namespace_sRemoto)
 
     # registrando las rutas:
     app.register_blueprint(blueprint)
+
 
 def generate_swagger_json_file(app):
     # to generate the local copy of swagger.json
@@ -78,18 +77,20 @@ def adding_blueprint_routes(blueprint):
         """
         return "This is a test. Blueprint is working correctly."
 
+
 def adding_app_routes(app):
     @app.route("/")
     def main_page():
         """ Adding initial page """
         return f"This is home page for this API, check the prefix to see the UI: {init.API_PREFIX} " \
-           f"<br><br>Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad de " \
+               f"<br><br>Gerencia Nacional de Desarrollo Técnico - Octubre 2020 - API Cálculo de disponibilidad de " \
                f"Sistema Remoto"
 
     @app.route('/favicon.ico')
     def favicon():
         return send_from_directory(os.path.join(app.root_path, 'static'),
                                    'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 
 def build_app():
     # Add authentication for this API

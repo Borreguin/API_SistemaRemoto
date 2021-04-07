@@ -72,7 +72,6 @@ class FileAPI(Resource):
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/file/<string:repo>/<string:nombre>')
 class FileDownloadAPI(Resource):
-
     def get(self, repo="Nombre del repositorio", nombre="Nombre del archivo"):
         """
             Descarga un archivo de un repositorio

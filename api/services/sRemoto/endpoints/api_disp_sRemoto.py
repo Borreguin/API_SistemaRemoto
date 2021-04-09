@@ -67,7 +67,7 @@ class Disponibilidad(Resource):
         # desbloqueando la instancia:
         dict_value["activo"] = False
         u.save_in_file(path_file, id, dict_value)
-        result = report.to_dict() if success else report
+        result = report.to_dict() if success else None
         return dict(success=success, report=result, msg=msg), 200 if success else 409
 
     @staticmethod

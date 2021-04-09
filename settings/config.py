@@ -43,6 +43,7 @@ config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_ex
 config["OUTPUT_MOTOR"] = os.path.join(config["LOGS_REPO"], "output")
 config["CONSIGNACIONES"] = os.path.join(config["DB_REPO"], "consignaciones")
 config["TEMPLATES_REPO"] = "templates"
+config["IMAGES_REPO"] = os.path.join(config["TEMPLATES_REPO"], "images")
 
 
 config["SUPPORTED_FORMAT_DATES"] = ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d", "%Y-%m-%d %H:%M:%S.%f"]

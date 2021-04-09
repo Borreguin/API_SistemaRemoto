@@ -46,6 +46,12 @@ def get_dates_by_default():
     return ini_date, end_date
 
 
+def get_last_day():
+    today = dt.datetime.now()
+    today = dt.datetime(year=today.year, month=today.month, day=today.day)
+    yesterday = today - dt.timedelta(days=1)
+    return yesterday, today
+
 def check_date(s):
     success, date = check_date_yyyy_mm_dd(s)
     if success:
@@ -127,26 +133,6 @@ def read_excel(file_name):
         with open(pkl_file, 'rb') as handle:
             dt_excel = pkl.load(handle)
         return dt_excel, "[{0}] Leído correctamente".format(file_name)
-
-
-def create_datetime_and_span(ini_date: dt.datetime, end_date: dt.datetime):
-    """ Create time_range """
-    try:
-        time_range_aux = pi._time_range(str(ini_date), str(end_date))
-    except Exception as e:
-        return None, None, "No se puede crear el time_range con los siguientes parámetros [{0}, {1}]" \
-            .format(ini_date, end_date)
-
-    """ Create Span value """
-    span_aux = end_date - ini_date
-    try:
-        span_aux = max(1, span_aux.days)
-        span_aux = pi._span(str(span_aux) + "d")
-    except Exception as e:
-        return None, None, "No se pudo calcular el span [{0}, {1}] \n ".format(ini_date, end_date) + str(e)
-
-    return time_range_aux, span_aux, "Cálculo correcto de time_range y span [{0}, {1}, {2}]".format(ini_date, end_date,
-                                                                                                    span_aux)
 
 
 def group_files(repo, files):
@@ -235,3 +221,22 @@ def is_active(path_file, id: str,  time_delta: dt.timedelta):
 def isTemporal(ini_date: dt.datetime, end_date: dt.datetime):
     delta = end_date - ini_date
     return delta.days < 27 and delta.days != 7
+
+
+def get_block(from_label: str, to_label: str, html_str: str):
+    str_result = str()
+    from_index = html_str.find(from_label)
+    to_index = html_str.find(to_label)
+    if from_index > 0 and to_index > 0:
+        str_result = html_str[from_index + len(from_label): to_index]
+    return str_result
+
+
+def replace_block(from_label: str, to_label: str, html_str: str, to_replace: str):
+    str_result = html_str
+    from_index = html_str.find(from_label)
+    to_index = html_str.find(to_label)
+    if from_index > 0 and to_index > 0:
+        str_result = html_str[:from_index] + to_replace + html_str[to_index:]
+        str_result = str_result.replace(to_label, "")
+    return str_result

@@ -121,15 +121,16 @@ class SRRTUSAPI(Resource):
         if idx is None:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
-        utrs_dict = nodo["entidades"][idx]["utrs"]
-        for utr in utrs_dict:
+        utrs_list = nodo["entidades"][idx]["utrs"]
+        for utr in utrs_list:
             utr.pop('consignaciones')
             utr.pop("tags")
             utr['longitude'] = utr['longitude'] \
                 if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
             utr['latitude'] = utr['latitude'] \
                 if 'latitude' in utr.keys() and not math.isnan(utr['latitude']) else 0
-        return dict(success=True, utrs=utrs_dict), 200
+        utrs_list = sorted(utrs_list, key=lambda i: i['utr_nombre'])
+        return dict(success=True, utrs=utrs_list), 200
 
     @api.expect(ser_from.rtu)
     def post(self, id_nodo: str = "id nodo", id_entidad: str = "id entidad"):
@@ -425,6 +426,7 @@ class SRNodoAPI(Resource):
                     continue
                 for entidad in node["entidades"]:
                     if "utrs" in entidad.keys():
+                        entidad["utrs"] = sorted(entidad["utrs"], key=lambda i: i['utr_nombre'])
                         n_rtu = len(entidad["utrs"])
                         n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
                         n_tags += n_tag_inside

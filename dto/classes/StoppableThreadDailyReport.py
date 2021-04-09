@@ -105,7 +105,7 @@ def test():
     mongo_config = init.MONGOCLIENT_SETTINGS
     connect(**mongo_config)
     rutine_name = "rutina_de_reporte_diario"
-    trigger = dict(hours=23, minutes=00, seconds=0)
+    trigger = dict(hours=13, minutes=56, seconds=0)
     th_v = StoppableThreadDailyReport(trigger=dt.timedelta(**trigger), name=rutine_name)
     th_v.save(msg="Configuración guardada")
     state = TemporalProcessingStateReport.objects(id_report=rutine_name).first()

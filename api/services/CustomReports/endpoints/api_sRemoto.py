@@ -84,12 +84,13 @@ class DisponibilidadExcel(Resource):
 
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
+@ns.route('/indisponibilidad/tags')
 @ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>')
 @ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>/<string:umbral>')
 class IndisponibilidadTAGSs(Resource):
 
     @staticmethod
-    def get(formato, ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S", umbral=None):
+    def get(formato, ini_date: str = None, end_date: str = None, umbral=None):
         """ Entrega el listado de tags cuya indisponibilidad sea mayor igual al umbral (por defecto 0)
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
@@ -97,11 +98,14 @@ class IndisponibilidadTAGSs(Resource):
             Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
             Umbral:                 <b>float</b>
         """
-        success1, ini_date = u.check_date(ini_date)
-        success2, end_date = u.check_date(end_date)
-        if not success1 or not success2:
-            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
-            return dict(success=False, msg=msg), 400
+        if ini_date is None or end_date is None:
+            ini_date, end_date = u.get_last_day()
+        else:
+            success1, ini_date = u.check_date(ini_date)
+            success2, end_date = u.check_date(end_date)
+            if not success1 or not success2:
+                msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+                return dict(success=False, msg=msg), 400
         # definición del umbral
         if umbral is None:
             umbral = 0
@@ -127,7 +131,7 @@ class IndisponibilidadTAGSs(Resource):
                                            "Considere realizar el cálculo primero"), 404
 
         # variable para guardar el listado de tags con su respectiva indisponibilidad
-        df_tag = pd.DataFrame(columns=[lb_empresa, lb_unidad_negocio, lb_utr_id, lb_utr,
+        df_tag = pd.DataFrame(columns=[lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr_id, lb_utr,
                                        lb_tag_name, lb_indisponible_minutos])
 
         for reporte_nodo_resumen in final_report_db.reportes_nodos:
@@ -151,7 +155,8 @@ class IndisponibilidadTAGSs(Resource):
                             mask = df_tag_aux[lb_indisponible_minutos] >= umbral
                             df_tag_aux = df_tag_aux[mask]
                         df_tag = df_tag.append(df_tag_aux, ignore_index=True)
-
+        df_tag[lb_fecha_ini] = str(ini_date)
+        df_tag[lb_fecha_fin] = str(end_date)
         if formato == "json":
             resp = df_tag.to_dict(orient="records")
             return dict(success=True, reporte=resp)
@@ -165,7 +170,9 @@ class IndisponibilidadTAGSs(Resource):
             with pd.ExcelWriter(path) as writer:
                 df_tag.to_excel(writer, sheet_name="Detalles")
             if os.path.exists(path):
-                return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+                resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+                resp.expires = dt.datetime.now() + dt.timedelta(minutes=2)
+                return resp
 
 
 @ns.route('/disponibilidad/diaria/<string:formato>')

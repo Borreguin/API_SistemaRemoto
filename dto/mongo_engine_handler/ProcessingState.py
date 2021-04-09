@@ -20,7 +20,7 @@ class TemporalProcessingStateReport(Document):
         'expireAfterSeconds': 360000
     }]}
 
-    def __init__(self, *args, **values):
+    def     __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.created is None:
             self.created = dt.datetime.now()

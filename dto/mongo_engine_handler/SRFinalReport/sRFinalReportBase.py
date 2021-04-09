@@ -21,6 +21,8 @@ lb_latitud = "Latitud"
 lb_longitud = "Longitud"
 lb_tag_name = "tag_name"
 lb_indisponible_minutos = "indisponible_minutos"
+lb_indisponible_minutos_promedio = "indisponible_minutos_promedio"
+lb_periodo_evaluacion = "Periodo evaluación"
 details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr, lb_protocolo, lb_disponibilidad_ponderada_empresa,
            lb_disponibilidad_ponderada_unidad, lb_disponibilidad_promedio_utr, lb_no_seniales, lb_latitud, lb_longitud]
 
@@ -188,7 +190,7 @@ class SRFinalReportBase(Document):
             df_summary = pd.DataFrame(columns=list(summary.keys()))
             df_summary = df_summary.append(summary, ignore_index=True)
             df_novedades = pd.DataFrame(columns=["item", "tags_fallidas", "utr_fallidas", "entidades_fallidas",
-                                                 "nodos_fallidos", "result",	"log"], data=self.novedades_as_dict())
+                                                 "nodos_fallidos", "result", "log"], data=self.novedades_as_dict())
             df_novedades.set_index("item", inplace=True)
             row = {lb_fecha_ini:str(self.fecha_inicio), lb_fecha_fin: str(self.fecha_final)}
             for reporte in self.reportes_nodos:
@@ -214,6 +216,9 @@ class SRFinalReportBase(Document):
                         row[lb_disponibilidad_promedio_utr] = reporte_utr.disponibilidad_promedio_porcentage/100
                         row[lb_utr] = reporte_utr.utr_nombre
                         row[lb_no_seniales] = reporte_utr.numero_tags
+                        row[lb_indisponible_minutos_promedio] = \
+                            reporte_utr.indisponibilidad_acumulada_minutos / reporte_utr.numero_tags \
+                                if reporte_utr.numero_tags > 0 else -1
                         f_utr = [utr for utr in utrs if reporte_utr.id_utr == utr.id_utr]
                         if len(f_utr) == 1:
                             row[lb_protocolo] = f_utr[0].protocol

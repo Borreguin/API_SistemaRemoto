@@ -34,8 +34,9 @@ class Serializers:
         })
 
         self.mail_config = api.model("Configuración mail", {
-            "from_mail": fields.String(required=True, default="sistemaremoto@cenace.org.ec"),
-            "to": fields.List(fields.String, required=True, default=[]),
+            "from_email": fields.String(required=True, default="sistemaremoto@cenace.org.ec"),
+            "users": fields.List(fields.String, required=True, default=[]),
+            "admin": fields.List(fields.String, required=True, default=[]),
         })
 
         """ serializador para configuración de ejecución de reportes """

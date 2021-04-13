@@ -84,7 +84,7 @@ class DisponibilidadExcel(Resource):
 
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
-@ns.route('/indisponibilidad/tags')
+@ns.route('/indisponibilidad/tags/<string:formato>')
 @ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>')
 @ns.route('/indisponibilidad/tags/<string:formato>/<string:ini_date>/<string:end_date>/<string:umbral>')
 class IndisponibilidadTAGSs(Resource):

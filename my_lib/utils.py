@@ -240,3 +240,13 @@ def replace_block(from_label: str, to_label: str, html_str: str, to_replace: str
         str_result = html_str[:from_index] + to_replace + html_str[to_index:]
         str_result = str_result.replace(to_label, "")
     return str_result
+
+
+def save_html(html_str, path_html_to_save):
+    # Guardar el archivo html en la carpeta reportes:
+    try:
+        Html_file = open(path_html_to_save, "w", encoding='utf-8')
+        Html_file.write(html_str)
+        Html_file.close()
+    except Exception as e:
+        print(e)

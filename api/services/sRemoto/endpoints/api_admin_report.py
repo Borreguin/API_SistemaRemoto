@@ -15,7 +15,7 @@ from flask import request, send_from_directory
 import re, os
 # importando configuraciones iniciales
 from dto.classes.StoppableThreadDailyReport import StoppableThreadDailyReport
-from dto.classes.StoppableThreadMailReport import ReportGenerator
+from dto.classes.StoppableThreadMailReport import ReportGenerator, StoppableThreadMailReport
 from dto.classes.utils import get_thread_by_name
 from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
@@ -65,6 +65,17 @@ class RunRoutineReportAPI(Resource):
                     return dict(success=False, msg="La rutina aún no ha sido configurada"), 404
                 trigger = dt.timedelta(**state.info["trigger"])
                 th_v = StoppableThreadDailyReport(trigger=trigger, name=id_report)
+                th_v.start()
+                return dict(success=True, msg="La rutina ha sido inicializada"), 200
+            if id_report == 'rutina_correo_electronico':
+                state = TemporalProcessingStateReport.objects(id_report=id_report).first()
+                if state is None:
+                    return dict(success=False, msg="La rutina aún no ha sido configurada"), 404
+                trigger = dt.timedelta(**state.info["trigger"])
+                mail_config = state.info["mail_config"]
+                parameters = dict(disp_utr_umbral=0.9, disp_tag_umbral=0.9)
+                th_v = StoppableThreadMailReport(name=id_report, trigger=trigger, mail_config=mail_config,
+                                                 parameters=parameters)
                 th_v.start()
                 return dict(success=True, msg="La rutina ha sido inicializada"), 200
         return dict(success=False, msg="La rutina ya se encuentra en ejecución"), 409

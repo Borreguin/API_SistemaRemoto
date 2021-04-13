@@ -86,17 +86,18 @@ class StoppableThreadDailyReport(threading.Thread):
                         log.info(msg)
                         msg = f"This process was executed: [{month_response}]"
                         log.info(msg)
-                    msg = "All was correctly executed"
+                    msg = f"All was correctly executed"
                 except Exception as e:
                     msg = f"{e}"
+                msg = f"{msg} \nWainting until {self.trigger_event}"
                 self.save(msg)
                 self.update()
                 log.info(msg)
             if n_iter % 50 == 0 or n_iter == 0:
-                msg = f"The process is running"
+                msg = f"The process is running. Waiting until {self.trigger_event}"
                 log.info(msg)
                 self.save(msg)
-                n_iter = n_iter + 1 if n_iter < 100 else 0
+                n_iter = n_iter + 1 if n_iter <= 500 else 0
             left_time = self.get_left_time_seconds()
             time.sleep(left_time)
 
@@ -105,7 +106,7 @@ def test():
     mongo_config = init.MONGOCLIENT_SETTINGS
     connect(**mongo_config)
     rutine_name = "rutina_de_reporte_diario"
-    trigger = dict(hours=13, minutes=56, seconds=0)
+    trigger = dict(hours=7, minutes=29, seconds=0)
     th_v = StoppableThreadDailyReport(trigger=dt.timedelta(**trigger), name=rutine_name)
     th_v.save(msg="Configuración guardada")
     state = TemporalProcessingStateReport.objects(id_report=rutine_name).first()

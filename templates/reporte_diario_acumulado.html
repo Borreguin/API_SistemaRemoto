@@ -68,10 +68,9 @@
 
 <p>Desde: (#ini_dd/mm/yyyy) hasta (#end_dd/mm/yyyy)</p>
 
-<hr><strong>RESUMEN</strong>
+<hr><strong>ANÁLISIS DEL PERIODO</strong>
 
-<hr><u>UTRs con tags con alta indisponibilidad</u>
-<p>De un total de (#no_UTR) UTRs, se encuentran (#no_UTR_indisponible) UTRs con una disponibilidad menor a (#_disponibilidad):</p>
+<p>De un total de (#no_UTR) UTRs, se encuentran (#no_UTR_indisponible) UTRs con una disponibilidad menor a (#_disponibilidad)%:</p>
 
 <table id="tbl_remoto" style="border: 1px solid black">
 
@@ -95,7 +94,9 @@
   </tbody>
 </table>
 
-<p>Las siguientes UTRs tienen tags con baja disponibilidad (inferior al #disponibilidad_tag):</p>
+<br>
+<hr><strong>ÚLTIMO DÍA</strong></body><hr>
+<p>Las siguientes UTRs tienen tags con baja disponibilidad (inferior al #disponibilidad_tag%):</p>
 
 <table id="tbl_remoto" style="border: 1px solid black">
 
@@ -103,29 +104,39 @@
     <tr style="background-color: #d1e0e0;">
       <th scope="col" width="100">U.NEGOCIO</th>
       <th scope="col" width="100">UTR</th>
-      <th scope="col" width="50">PROTOCOLO</th>
       <th scope="col" width="100">No. TAGS INDIS.</th>
+      <th scope="col" width="100">No. TOTAL TAGS</th>
       <th scope="col" width="100">% TAGS INDIS.</th>
     </tr>
 <!--INI: TAGS_REPORT-->
   <tr>
     <td >#U_NEGOCIO</td>
     <td >#UTR</td>
-    <td >#PROTOCOLO</td>
     <td >#TAGS_INDISP</td>
+    <td >#TOTAL_TAGS</td>
     <td >#%TAGS_INDISP</td>
   </tr>
-<!--END: TAGS_REPORT-->
+<!--FIN: TAGS_REPORT-->
   </tbody>
 </table>
 
 <br>
+<hr><strong>TENDENCIA DE DISPONIBILIDAD:</strong><hr>
 <br>
-<hr><strong>TENDENCIA DE DISPONIBILIDAD:</strong>
-
 <!--Tendencia: DISPONIBILIDAD ACUMULADA -->
+<div style="display: flex; justify-content: center; flex-wrap: wrap;">
+            <img alt="tendencia_disponibilidad" src="./images/disponibilidad.jpeg" style="min-height:150px; max-width:100%">
+</div>
 
-<hr style="width: 100%">
-<p>&nbsp;Atentamente,</p>
-<p>Sistema Remoto</p>
+<br>
+<div><strong>Links de descarga:</strong></div>
+<span>Reportes diarios: </span> <a href="#link1a">Excel</a> <a href="#link1b">JSON</a> <a href="#link1c">Link completo</a> <br>
+<span>Reporte tags: </span> <a href="#link2a">Excel</a> <a href="#link2b">JSON</a> <a href="#link2c">Link completo</a>
+
+<br>
+<br>
+<div>
+  <span>Atentamente,</span> <br>
+  <span>Sistema Remoto</span>
+</div>
 </body></html>

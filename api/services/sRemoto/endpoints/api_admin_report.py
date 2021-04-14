@@ -73,7 +73,7 @@ class RunRoutineReportAPI(Resource):
                     return dict(success=False, msg="La rutina aún no ha sido configurada"), 404
                 trigger = dt.timedelta(**state.info["trigger"])
                 mail_config = state.info["mail_config"]
-                parameters = dict(disp_utr_umbral=0.9, disp_tag_umbral=0.9)
+                parameters = state.info["parameters"]
                 th_v = StoppableThreadMailReport(name=id_report, trigger=trigger, mail_config=mail_config,
                                                  parameters=parameters)
                 th_v.start()

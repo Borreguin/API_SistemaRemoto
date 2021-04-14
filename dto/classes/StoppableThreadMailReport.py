@@ -78,6 +78,7 @@ class StoppableThreadMailReport(threading.Thread):
             ini_date, end_date = get_dates_by_default()
         self.ini_date = ini_date
         self.end_date = end_date
+        self.daemon = True
 
     def stop(self):
         self._stop.set()
@@ -96,6 +97,7 @@ class StoppableThreadMailReport(threading.Thread):
         if state is not None:
             self.trigger = dt.timedelta(**state.info["trigger"])
             self.mail_config = state.info["mail_config"]
+            self.parameters = state.info["parameters"]
 
     def get_left_time_seconds(self):
         left_time = self.trigger_event - dt.datetime.now()
@@ -104,7 +106,8 @@ class StoppableThreadMailReport(threading.Thread):
         return remain_time if remain_time > 0 else 0
 
     def save(self, msg=None):
-        info = dict(trigger=dict(seconds=self.trigger.seconds, days=self.trigger.days), mail_config=self.mail_config)
+        info = dict(trigger=dict(seconds=self.trigger.seconds, days=self.trigger.days), mail_config=self.mail_config,
+                    parameters=self.parameters)
         state = TemporalProcessingStateReport.objects(id_report=self.name).first()
         if state is None:
             state = TemporalProcessingStateReport(id_report=self.name, info=info, msg=msg)
@@ -140,29 +143,32 @@ class StoppableThreadMailReport(threading.Thread):
         n_iter = 0
         log.info("Starting this routine")
         while not self._stop.is_set():
-            self.update_from_db()
-            if dt.datetime.now() >= self.trigger_event:
-                gen = ReportGenerator(url_daily_report=url_disponibilidad_diaria, url_tags_report=url_tags_report,
-                                      parameters=self.parameters, ini_date=self.ini_date, end_date=self.end_date)
+            try:
+                self.update_from_db()
+                if dt.datetime.now() >= self.trigger_event:
+                    gen = ReportGenerator(url_daily_report=url_disponibilidad_diaria, url_tags_report=url_tags_report,
+                                          parameters=self.parameters, ini_date=self.ini_date, end_date=self.end_date)
 
-                # generación del reporte diario para enviar vía mail
-                success, msg = gen.process_information()
-                log.info(msg)
-                # enviando email de reporte o error:
-                if success:
-                    self.send_report("Reporte disponibilidad acumulada")
-                else:
-                    self.send_error("reporte diario acumulado", msg)
-                self.save(msg)
-                self.update()
-                msg = f"{msg} Waiting until {self.trigger_event}"
-                log.info(msg)
+                    # generación del reporte diario para enviar vía mail
+                    success, msg = gen.process_information()
+                    log.info(msg)
+                    # enviando email de reporte o error:
+                    if success:
+                        self.send_report("Reporte disponibilidad acumulada")
+                    else:
+                        self.send_error("reporte diario acumulado", msg)
+                    self.save(msg)
+                    self.update()
+                    msg = f"{msg} Waiting until {self.trigger_event}"
+                    log.info(msg)
+            except Exception as e:
+                log.error(f"Ha ocurrido un error al procesar la información \n{str(e)}\n{traceback.format_exc()}")
             # after each interaction:
-            if n_iter % 50 == 0 or n_iter == 0:
+            if n_iter % 10 == 0 or n_iter == 0:
                 msg = f"The process is running. Waiting until {self.trigger_event}"
                 log.info(msg)
                 self.save(msg)
-                n_iter = n_iter + 1 if n_iter <= 500 else 0
+            n_iter = n_iter + 1 if n_iter <= 500 else 0
             left_time = self.get_left_time_seconds()
             time.sleep(left_time)
 

@@ -32,6 +32,7 @@ class StoppableThreadDailyReport(threading.Thread):
         self.trigger_event = self.today + self.trigger if dt.datetime.now() < self.today + self.trigger else \
             self.today + dt.timedelta(days=1) + self.trigger
         self.seconds_to_sleep = 10
+        self.daemon = True
 
     def stop(self):
         self._stop.set()
@@ -70,6 +71,7 @@ class StoppableThreadDailyReport(threading.Thread):
         log.info("Starting this routine")
         while not self._stop.is_set():
             self.update_from_db()
+            n_iter += 1
             if dt.datetime.now() >= self.trigger_event:
                 try:
                     msg = f"Executing: {url_disponibilidad_diaria}"
@@ -93,11 +95,11 @@ class StoppableThreadDailyReport(threading.Thread):
                 self.save(msg)
                 self.update()
                 log.info(msg)
-            if n_iter % 50 == 0 or n_iter == 0:
+            if n_iter % 10 == 0 or n_iter == 0:
                 msg = f"The process is running. Waiting until {self.trigger_event}"
                 log.info(msg)
                 self.save(msg)
-                n_iter = n_iter + 1 if n_iter <= 500 else 0
+            n_iter = n_iter + 1 if n_iter <= 500 else 0
             left_time = self.get_left_time_seconds()
             time.sleep(left_time)
 

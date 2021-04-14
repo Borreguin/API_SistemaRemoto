@@ -39,10 +39,16 @@ class Serializers:
             "admin": fields.List(fields.String, required=True, default=[]),
         })
 
+        self.parameters = api.model("Parámetros Umbrales", {
+            "disp_utr_umbral": fields.Float(required=False, default=0.95),
+            "disp_tag_umbral": fields.Float(required=False, default=0.95)
+        })
+
         """ serializador para configuración de ejecución de reportes """
         self.report_config = api.model("Configuración del reporte", {
             "trigger": fields.Nested(self.trigger, description="Hora de ejecución del reporte", required=True),
-            "mail_config": fields.Nested(self.mail_config, description="Configuración mail", required=False)
+            "mail_config": fields.Nested(self.mail_config, description="Configuración mail", required=False),
+            "parameters": fields.Nested(self.parameters, description="Configuración de parámetros", required=False),
         })
 
         return api

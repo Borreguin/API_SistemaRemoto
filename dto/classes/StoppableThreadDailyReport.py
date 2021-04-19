@@ -70,10 +70,9 @@ class StoppableThreadDailyReport(threading.Thread):
         n_iter = 0
         log.info("Starting this routine")
         while not self._stop.is_set():
-            self.update_from_db()
-            n_iter += 1
-            if dt.datetime.now() >= self.trigger_event:
-                try:
+            try:
+                self.update_from_db()
+                if dt.datetime.now() >= self.trigger_event:
                     msg = f"Executing: {url_disponibilidad_diaria}"
                     log.info(msg)
                     daily_response = requests.put(url_disponibilidad_diaria)
@@ -89,12 +88,12 @@ class StoppableThreadDailyReport(threading.Thread):
                         msg = f"This process was executed: [{month_response}]"
                         log.info(msg)
                     msg = f"All was correctly executed"
-                except Exception as e:
-                    msg = f"{e}"
-                msg = f"{msg} \nWainting until {self.trigger_event}"
-                self.save(msg)
-                self.update()
-                log.info(msg)
+                    msg = f"{msg} \nWainting until {self.trigger_event}"
+                    self.save(msg)
+                    self.update()
+                    log.info(msg)
+            except Exception as e:
+                log.error(f"Error al procesar la información \n{str(e)}\n{traceback.format_exc()}")
             if n_iter % 10 == 0 or n_iter == 0:
                 msg = f"The process is running. Waiting until {self.trigger_event}"
                 log.info(msg)

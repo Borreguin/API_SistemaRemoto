@@ -94,7 +94,7 @@ class StoppableThreadDailyReport(threading.Thread):
                     log.info(msg)
             except Exception as e:
                 log.error(f"Error al procesar la información \n{str(e)}\n{traceback.format_exc()}")
-            if n_iter % 10 == 0 or n_iter == 0:
+            if n_iter % 50 == 0 or n_iter == 0:
                 msg = f"The process is running. Waiting until {self.trigger_event}"
                 log.info(msg)
                 self.save(msg)

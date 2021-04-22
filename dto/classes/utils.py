@@ -11,7 +11,7 @@ def get_thread_by_name(name):
 
 
 def get_today():
-    today = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     return today
 
 

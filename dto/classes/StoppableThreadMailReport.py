@@ -91,6 +91,7 @@ class StoppableThreadMailReport(threading.Thread):
     def update(self):
         self.today = get_today()
         self.start_time = dt.datetime.now()
+        self.ini_date, self.end_date = get_dates_by_default()
         self.trigger_event = self.today + self.trigger if dt.datetime.now() < self.today + self.trigger else \
             self.today + dt.timedelta(days=1) + self.trigger
 
@@ -166,7 +167,7 @@ class StoppableThreadMailReport(threading.Thread):
             except Exception as e:
                 log.error(f"Ha ocurrido un error al procesar la información \n{str(e)}\n{traceback.format_exc()}")
             # after each interaction:
-            if n_iter % 10 == 0 or n_iter == 0:
+            if n_iter % 50 == 0 or n_iter == 0:
                 msg = f"The process is running. Waiting until {self.trigger_event}"
                 log.info(msg)
                 self.save(msg)

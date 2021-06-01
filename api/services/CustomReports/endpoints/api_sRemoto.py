@@ -9,6 +9,8 @@
     "My work is well done to honor God at any time" R Sanchez A.
     Mateo 6:33
 """
+import time
+
 from flask_restplus import Resource
 # importando configuraciones iniciales
 from api.services.restplus_config import api
@@ -20,12 +22,19 @@ from dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDet
 from motor.master_scripts.eng_sRmaster import *
 from flask import send_from_directory
 
+# for running as threading process:
+import threading as th
+import queue
+from multiprocessing.pool import ThreadPool
+
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()
 
 # configurando logger y el servicio web
 ns = api.namespace('sRemoto', description='Relativas a reportes personalizados de Sistema Remoto')
 
+# log all changes here inside:
+log = init.LogDefaultConfig("api_sRemoto.log").logger
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/disponibilidad/<string:formato>/<string:ini_date>/<string:end_date>')
@@ -187,6 +196,7 @@ class DisponibilidadDiariaExcel(Resource):
             Fecha inicial formato:  <b>yyyy-mm-dd</b>
             Fecha final formato:    <b>yyyy-mm-dd</b>
         """
+        log.info("Starting this report")
         if ini_date is None and end_date is None:
             ini_date, end_date = u.get_dates_by_default()
         else:
@@ -199,16 +209,38 @@ class DisponibilidadDiariaExcel(Resource):
         date_range = pd.date_range(ini_date, end_date, freq=dt.timedelta(days=1))
         if len(date_range) == 0:
             return dict(success=False, report=None, msg="Las fechas de inicio y fin no son correctas.")
-        df_summary, df_details, df_novedades = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        n_threads = 0
+        pool = ThreadPool(8)
+        results = []
+        utrs_dict = None
+        log.info("Going to get each report")
         for ini, end in zip(date_range, date_range[1:]):
             final_report_v = SRFinalReportTemporal(fecha_inicio=ini, fecha_final=end)
             final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+            log.info(f"thread # {n_threads}")
+            if utrs_dict is None:
+                utrs_dict = final_report.load_nodes_info().create_utrs_list()
             if final_report is not None:
-                success, _df_summary, _df_details, _df_novedades, msg = final_report.to_dataframe()
-                if success:
-                    df_summary = pd.DataFrame.append(df_summary, _df_summary, ignore_index=True)
-                    df_details = pd.DataFrame.append(df_details, _df_details, ignore_index=True)
-                    df_novedades = pd.DataFrame.append(df_novedades, _df_novedades, ignore_index=True)
+                results.append(pool.apply_async(final_report.to_dataframe, kwds={"utrs_dict": utrs_dict}))
+                n_threads += 1
+            else:
+                log.warning(f"El reporte [{final_report}] no ha sido encontrado ")
+
+        log.info(f"Se han desplegado {n_threads} threads")
+
+        # la cola permitirá recibir los informes de manera paralela:
+        df_summary, df_details, df_novedades = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        pool.close()
+        pool.join()
+        for result in results:
+            success, _df_summary, _df_details, _df_novedades, msg = result.get()
+            log.info(f"{success}, {msg}")
+            if success:
+                df_summary = pd.DataFrame.append(df_summary, _df_summary, ignore_index=True)
+                df_details = pd.DataFrame.append(df_details, _df_details, ignore_index=True)
+                df_novedades = pd.DataFrame.append(df_novedades, _df_novedades, ignore_index=True)
+                n_threads -= 1
+                log.info(f"threads faltantes: {n_threads}")
 
         # formato permitido:
         permitido = ["excel", "json"]

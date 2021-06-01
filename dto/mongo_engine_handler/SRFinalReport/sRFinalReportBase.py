@@ -4,6 +4,9 @@ from dto.mongo_engine_handler.sRNode import *
 import hashlib
 from my_lib import utils as u
 from dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from multiprocessing.pool import ThreadPool
+import threading as th
+import queue
 
 lb_fecha_ini = "Fecha inicial"
 lb_fecha_fin = "Fecha final"
@@ -12,9 +15,9 @@ lb_unidad_negocio = "Unidad de Negocio"
 lb_utr = "UTR"
 lb_utr_id = "UTR ID"
 lb_protocolo = "Protocolo"
-lb_disponibilidad_ponderada_empresa = "Disponibilidad ponderada Empresa"
-lb_disponibilidad_ponderada_unidad = "Disponibilidad ponderada Unidad de Negocio"
-lb_disponibilidad_promedio_utr = "Disponibilidad promedio UTR"
+lb_dispo_ponderada_empresa = "Disponibilidad ponderada Empresa"
+lb_dispo_ponderada_unidad = "Disponibilidad ponderada Unidad de Negocio"
+lb_dispo_promedio_utr = "Disponibilidad promedio UTR"
 lb_no_seniales = "No. señales"
 lb_falladas = "Falladas"
 lb_latitud = "Latitud"
@@ -23,8 +26,12 @@ lb_tag_name = "tag_name"
 lb_indisponible_minutos = "indisponible_minutos"
 lb_indisponible_minutos_promedio = "indisponible_minutos_promedio"
 lb_periodo_evaluacion = "Periodo evaluación"
-details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr, lb_protocolo, lb_disponibilidad_ponderada_empresa,
-           lb_disponibilidad_ponderada_unidad, lb_disponibilidad_promedio_utr, lb_no_seniales, lb_latitud, lb_longitud]
+details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr, lb_protocolo,
+                   lb_dispo_ponderada_empresa,
+                   lb_dispo_ponderada_unidad, lb_dispo_promedio_utr, lb_no_seniales, lb_latitud,
+                   lb_longitud]
+
+log = init.LogDefaultConfig("sRFinalReportBase.log").logger
 
 
 class SRNodeSummaryReport(EmbeddedDocument):
@@ -56,7 +63,6 @@ class SRFinalReportBase(Document):
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     reportes_nodos = ListField(EmbeddedDocumentField(SRNodeSummaryReport))
-    #TODO: Revisar posible problema de referencia SRNodeDetalilsBase
     reportes_nodos_detalle = ListField(ReferenceField(SRNodeDetailsBase, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
     procesamiento = DictField(default=dict(numero_tags_total=0, numero_utrs_procesadas=0,
@@ -64,7 +70,10 @@ class SRFinalReportBase(Document):
     novedades = DictField(default=dict(tags_fallidas=0, utr_fallidas=0,
                                        entidades_fallidas=0, nodos_fallidos=0, detalle={}))
     actualizado = DateTimeField(default=dt.datetime.now())
-    meta = {'allow_inheritance': True,'abstract':True}
+    meta = {'allow_inheritance': True, 'abstract': True}
+    # attributos utilizados para calculos internos:
+    nodes_info = None
+    utrs_dict = None
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -136,7 +145,7 @@ class SRFinalReportBase(Document):
                     n_reports += 1
                     n_tags += report.procesamiento['numero_tags_total']
             if n_reports > 0:
-                self.disponibilidad_promedio_porcentage = self.disponibilidad_promedio_porcentage/n_reports
+                self.disponibilidad_promedio_porcentage = self.disponibilidad_promedio_porcentage / n_reports
             else:
                 # No se ha podido establecer la disponibilidad
                 self.disponibilidad_promedio_porcentage = -1
@@ -147,7 +156,8 @@ class SRFinalReportBase(Document):
                 for rp in self.reportes_nodos:
                     if rp.disponibilidad_promedio_ponderada_porcentage > 0:
                         self.disponibilidad_promedio_ponderada_porcentage += \
-                            rp.disponibilidad_promedio_ponderada_porcentage * rp.procesamiento["numero_tags_total"] / n_tags
+                            rp.disponibilidad_promedio_ponderada_porcentage * rp.procesamiento[
+                                "numero_tags_total"] / n_tags
                 if self.disponibilidad_promedio_ponderada_porcentage > 100:
                     self.disponibilidad_promedio_ponderada_porcentage = 100
 
@@ -175,16 +185,60 @@ class SRFinalReportBase(Document):
 
     def to_table(self):
         resp = dict(id_report=self.id_report, tipo=self.tipo, fecha_inicio=str(self.fecha_inicio),
-             fecha_final=str(self.fecha_final), periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
-             disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
-             disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
-             actualizado=str(self.actualizado),
-             tiempo_calculo_segundos=self.tiempo_calculo_segundos)
+                    fecha_final=str(self.fecha_final), periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
+                    disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
+                    disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
+                    actualizado=str(self.actualizado),
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos)
         resp.update(self.procesamiento)
         return resp
 
-    def to_dataframe(self):
+    def load_nodes_info(self):
         try:
+            self.nodes_info = list()
+            nodes_info = SRNode.objects().as_pymongo()
+            self.nodes_info = [n for n in nodes_info]
+        except Exception as e:
+            log.error(f"{str(e)}")
+            self.nodes_info = []
+        return self
+
+    def create_utrs_list(self):
+        self.utrs_dict = dict()
+        for node_info in self.nodes_info:
+            for entidad in node_info["entidades"]:
+                for utr in entidad["utrs"]:
+                    self.utrs_dict[utr["id_utr"]] = utr
+        return self.utrs_dict
+
+    def process_this_node_detail_report(self, row:dict, detail_report):
+        # log.info(f"Procesando reporte: {detail_report.nombre}")
+        rows = list()
+        for reporte_entidad in detail_report.reportes_entidades:
+            # print(reporte_entidad.entidad_nombre)
+            row[lb_dispo_ponderada_unidad] = reporte_entidad.disponibilidad_promedio_ponderada_porcentage / 100
+            row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
+            for reporte_utr in reporte_entidad.reportes_utrs:
+                row[lb_dispo_promedio_utr] = reporte_utr.disponibilidad_promedio_porcentage / 100
+                row[lb_utr] = reporte_utr.utr_nombre
+                row[lb_no_seniales] = reporte_utr.numero_tags
+                row[lb_indisponible_minutos_promedio] = \
+                    reporte_utr.indisponibilidad_acumulada_minutos / reporte_utr.numero_tags \
+                        if reporte_utr.numero_tags > 0 else -1
+                f_utr = self.utrs_dict.get(reporte_utr.id_utr, None)
+                row[lb_protocolo] = f_utr.get("protocol", None) if f_utr is not None else None
+                row[lb_latitud] = f_utr.get("latitude", None) if f_utr is not None else None
+                row[lb_longitud] = f_utr.get("longitude", None) if f_utr is not None else None
+                # log.info(f"Finalizando reporte: {self.id_report}, {reporte_entidad.entidad_nombre}")
+                rows.append(row.copy())
+        return rows
+
+    def to_dataframe(self, utrs_dict: dict, q: queue.Queue = None):
+        self.utrs_dict = utrs_dict
+        try:
+            # cola para recibir resultados
+            log.info("Empezando la transformación a Dataframe")
+            out_queue = queue.Queue()
             df_details = pd.DataFrame(columns=details_columns)
             summary = self.to_table()
             df_summary = pd.DataFrame(columns=list(summary.keys()))
@@ -192,44 +246,48 @@ class SRFinalReportBase(Document):
             df_novedades = pd.DataFrame(columns=["item", "tags_fallidas", "utr_fallidas", "entidades_fallidas",
                                                  "nodos_fallidos", "result", "log"], data=self.novedades_as_dict())
             df_novedades.set_index("item", inplace=True)
-            row = {lb_fecha_ini:str(self.fecha_inicio), lb_fecha_fin: str(self.fecha_final)}
-            for reporte in self.reportes_nodos:
-                row[lb_disponibilidad_ponderada_empresa] = reporte.disponibilidad_promedio_ponderada_porcentage/100
-                row[lb_empresa] = reporte.nombre
-                if u.isTemporal(self.fecha_inicio,self.fecha_final):
-                    node_report_db = SRNodeDetailsTemporal.objects(id_report=reporte.id_report).first()
+            row = {lb_fecha_ini: str(self.fecha_inicio), lb_fecha_fin: str(self.fecha_final)}
+            # loading node info for each detail report
+            n_threads = 0
+            results = []
+            n_pool = min(max(5, int(len(self.reportes_nodos)/5)), len(self.reportes_nodos))
+            pool = ThreadPool(n_pool)
+            log.info(f"Procesando la información de: {self.fecha_inicio}, {self.fecha_final}")
+            for general_report in self.reportes_nodos:
+                # recolectando reportes por cada nodo interno:
+                if u.isTemporal(self.fecha_inicio, self.fecha_final):
+                    detail_report = SRNodeDetailsTemporal.objects(id_report=general_report.id_report).first()
                 else:
-                    node_report_db = SRNodeDetailsPermanente.objects(id_report=reporte.id_report).first()
-                nodo = node_report_db.nodo.fetch()
-                entidades = nodo.entidades
-                utrs = list()
-                for entidad in entidades:
-                    utrs += entidad.utrs
-                if node_report_db is None:
-                    # No se encontró reporte asociado al Nodo
+                    detail_report = SRNodeDetailsPermanente.objects(id_report=general_report.id_report).first()
+                if detail_report is None:
+                    log.warning(f"Este reporte no existe para este nodo: {general_report}")
                     continue
-                for reporte_entidad in node_report_db.reportes_entidades:
-                    # print(reporte_entidad.entidad_nombre)
-                    row[lb_disponibilidad_ponderada_unidad] = reporte_entidad.disponibilidad_promedio_ponderada_porcentage/100
-                    row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
-                    for reporte_utr in reporte_entidad.reportes_utrs:
-                        row[lb_disponibilidad_promedio_utr] = reporte_utr.disponibilidad_promedio_porcentage/100
-                        row[lb_utr] = reporte_utr.utr_nombre
-                        row[lb_no_seniales] = reporte_utr.numero_tags
-                        row[lb_indisponible_minutos_promedio] = \
-                            reporte_utr.indisponibilidad_acumulada_minutos / reporte_utr.numero_tags \
-                                if reporte_utr.numero_tags > 0 else -1
-                        f_utr = [utr for utr in utrs if reporte_utr.id_utr == utr.id_utr]
-                        if len(f_utr) == 1:
-                            row[lb_protocolo] = f_utr[0].protocol
-                            row[lb_latitud] = f_utr[0].latitude
-                            row[lb_longitud] = f_utr[0].longitude
+                # creating rows to process:
+                row[lb_dispo_ponderada_empresa] = general_report.disponibilidad_promedio_ponderada_porcentage / 100
+                row[lb_empresa] = general_report.nombre
+                results.append(pool.apply_async(self.process_this_node_detail_report,
+                                                kwds={"row": row.copy(), "detail_report": detail_report}))
+                n_threads += 1
 
-                        df_details = df_details.append(row.copy(), ignore_index=True)
+            log.info(f"({self.fecha_inicio}, {self.fecha_final}) Se han desplegado {n_threads} threads")
+            pool.close()
+            pool.join()
+            for result in results:
+                rows = result.get()
+                df_details = df_details.append(rows, ignore_index=True)
+                log.info(f"({self.fecha_inicio}, {self.fecha_final}) Nuevas filas añadidas")
+
+            log.info(f"({self.fecha_inicio}, {self.fecha_final}) Reporte finalizado {self.id_report}")
             df_summary = df_summary.where(pd.notnull(df_summary), None)
             df_details = df_details.where(pd.notnull(df_details), None)
             df_novedades = df_novedades.where(pd.notnull(df_novedades), None)
-            return True, df_summary, df_details, df_novedades, "Información correcta"
+            resp = True, df_summary, df_details, df_novedades, "Información correcta"
+            if q is not None:
+                q.put(resp)
+            return resp
 
         except Exception as e:
-            return False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), f"Problemas al procesar la información \n {e}"
+            resp = False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), f"Problemas al procesar la información \n {e}"
+            if q is not None:
+                q.put(resp)
+            return resp

@@ -319,9 +319,9 @@ class SRTAGSAPI(Resource):
                 if success:
                     nodo.save()
                     tags = [t.to_dict() for t in nodo.entidades[idx].utrs[ix].tags]
-                    return dict(success=success, msg=f"TAGS: -editadas: {n_remove} "
+                    return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} "
                                                      f"-añadidas: {len(tags_req) - n_remove}", tags=tags), 200
-                return dict(success=success, msg=msg), 409
+                return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} {msg}"), 409
         return dict(success=False, msg="No se encuentra la UTR"), 404
 
     @api.expect(ser_from.tags)

@@ -18,7 +18,7 @@ config["RESTPLUS_SWAGGER_UI_DOC_EXPANSION"] = "list"
 config["RESTPLUS_VALIDATE"] = True
 config["RESTPLUS_MASK_SWAGGER"] = False
 config["RESTPLUS_ERROR_404_HELP"] = False
-config["API_PREFIX"] = '/api'
+config["API_PREFIX"] = '/api-rmt'
 config["PORT"] = 7820
 config["DEBUG_PORT"] = 5000
 

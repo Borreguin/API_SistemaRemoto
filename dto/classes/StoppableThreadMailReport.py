@@ -13,7 +13,7 @@ from mongoengine import connect
 from dto.classes.utils import get_today, get_thread_by_name
 from dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
 from dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import lb_unidad_negocio, lb_empresa, \
-    lb_utr_id, lb_utr, lb_disponibilidad_promedio_utr, lb_protocolo, lb_indisponible_minutos_promedio
+    lb_utr_id, lb_utr, lb_dispo_promedio_utr, lb_protocolo, lb_indisponible_minutos_promedio
 from my_lib.SendMail.send_mail import report_error, send_mail
 from settings import initial_settings as init
 import pandas as pd
@@ -285,8 +285,8 @@ class ReportGenerator:
             df_group_resp = self.daily_details.groupby(by=[lb_unidad_negocio, lb_utr, lb_protocolo]).mean()
             df_group_sum = self.daily_details.groupby(by=[lb_unidad_negocio, lb_utr, lb_protocolo]).sum()
             df_group_resp[lb_indisponible_acumulado_minutos] = df_group_sum[lb_indisponible_minutos_promedio]
-            df_group_resp.sort_values(by=[lb_disponibilidad_promedio_utr], inplace=True)
-            mask = df_group_resp[lb_disponibilidad_promedio_utr] < self.parameters[k_disp_utr_umbral]
+            df_group_resp.sort_values(by=[lb_dispo_promedio_utr], inplace=True)
+            mask = df_group_resp[lb_dispo_promedio_utr] < self.parameters[k_disp_utr_umbral]
             self.to_report_details = df_group_resp[mask]
             n = len(self.daily_summary.index)
             width = 0.5 * n if n > 15 else 1.8 * n
@@ -342,7 +342,7 @@ class ReportGenerator:
                 utr_item = utr_item.replace("#PROTOCOLO", protocol)
                 min_acc = item.loc[lb_indisponible_acumulado_minutos]
                 utr_item = utr_item.replace("#TIEMPO_ACUMULADO", str(dt.timedelta(minutes=int(min_acc))))
-                utr_disp = item.loc[lb_disponibilidad_promedio_utr]
+                utr_disp = item.loc[lb_dispo_promedio_utr]
                 utr_item = utr_item.replace("#DISP_PROMEDIO", str(round(utr_disp*100, 2)))
                 utr_table += utr_item
             html_str = html_str.replace("(#no_UTR_indisponible)", str(n_utrs))

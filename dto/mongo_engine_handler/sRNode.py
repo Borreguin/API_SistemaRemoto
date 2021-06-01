@@ -298,6 +298,13 @@ class SRNode(Document):
                     print(str(e))
         self.delete()
 
+    def get_utr_dict(self):
+        utrs = dict()
+        for entidad in self.entidades:
+            for utr in entidad.utrs:
+                utrs[utr.id_utr] = utr
+        return utrs
+
     def __str__(self):
         return f"[({self.tipo}) {self.nombre}] entidades: {[str(e) for e in self.entidades]}"
 

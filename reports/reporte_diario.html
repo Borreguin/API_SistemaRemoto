@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html><head>
+  <style>
+
+	#tbl_remoto {
+	  border-collapse: collapse;
+	  width: 100%;
+	}
+
+	td, th {
+	  border: 1px solid black;
+	  padding: 4px;
+	}
+
+	#tbl_remoto tr:nth-child(even){background-color: #f2f2f2;}
+
+	#tbl_remoto tr:hover {background-color: #c3d5d5;}
+
+	#tbl_remoto th {
+	  padding-top: 5px;
+	  padding-bottom: 5px;
+	  text-align: left;
+	  background-color: #d1e0e0;
+	  color: black;
+	}
+    td.prioridad_1{
+		vertical-align: top; text-align: center; background-color: rgb(255, 0, 0); font-weight: bold
+	}
+	#prioridad_2{
+		vertical-align: top; text-align: center; background-color: rgb(255, 203, 0); font-weight: bold
+	}
+	td.prioridad_3{
+		vertical-align: top; text-align: center; background-color: rgb(255, 255, 102); font-weight: bold
+	}
+
+  .meter {
+	height: 18px;  /* Can be anything */
+	position: relative;
+	-webkit-border-radius: 2px;
+	border-radius: 2px;
+	padding: 1px;
+  }
+
+  .meter > span {
+    display: block;
+    height: 100%;
+    float: left;
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+    background-color: rgb(43,194,83);
+    box-shadow:
+      inset 0 2px 9px  rgba(255,255,255,0.3),
+      inset 0 -2px 6px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+  }
+</style>
+  <meta charset="utf-8">
+  <title>REPORTE DE SUPERVISIÓN </title>
+  	
+</head><body>
+<p style="text-align: left;">
+<p> <font size="+1"><strong><span >
+<span style="text-decoration: underline;">REPORTE DE SUPERVISIÓN ACUMULADO (DETALLE POR TAG)</span></span></strong></font>
+</p>
+
+<p>Desde: 2021-03-01 00:00:00 hasta 2021-03-30 00:00:00</p>
+
+<hr><strong>ANÁLISIS DEL PERIODO</strong>
+
+<p>De un total de 3 UTRs, se encuentran 1 UTRs con una disponibilidad menor a 90.0%:</p>
+
+<table id="tbl_remoto" style="border: 1px solid black">
+
+  <tbody>
+    <tr style="background-color: #d1e0e0;">
+      <th scope="col" width="100">U.NEGOCIO</th>
+      <th scope="col" width="100">UTR</th>
+      <th scope="col" width="50">PROTOCOLO</th>
+      <th scope="col" width="100">TIEMPO INDISPONIBLE ACUMULADO</th>
+      <th scope="col" width="100">DISPONIBILIDAD PROMEDIO</th>
+    </tr>
+
+  <tr>
+    <td >CENACE</td>
+    <td >TBOX_1</td>
+    <td >DNP 3</td>
+    <td >6 days, 5:29:00</td>
+    <td >78.52</td>
+  </tr>
+
+  </tbody>
+</table>
+
+<br>
+<hr><strong>ÚLTIMO DÍA</strong></body><hr>
+<p>Las siguientes UTRs tienen tags con baja disponibilidad (inferior al 90.0%):</p>
+
+<table id="tbl_remoto" style="border: 1px solid black">
+
+  <tbody>
+    <tr style="background-color: #d1e0e0;">
+      <th scope="col" width="100">U.NEGOCIO</th>
+      <th scope="col" width="100">UTR</th>
+      <th scope="col" width="100">No. TAGS INDIS.</th>
+      <th scope="col" width="100">No. TOTAL TAGS</th>
+      <th scope="col" width="100">% TAGS INDIS.</th>
+    </tr>
+
+  <tr>
+    <td >CENACE</td>
+    <td >TBOX_1</td>
+    <td >9</td>
+    <td >34.0</td>
+    <td >26.47</td>
+  </tr>
+
+  </tbody>
+</table>
+
+<br>
+<hr><strong>TENDENCIA DE DISPONIBILIDAD:</strong><hr>
+<br>
+<!--Tendencia: DISPONIBILIDAD ACUMULADA -->
+<div style="display: flex; justify-content: center; flex-wrap: wrap;">
+            <img alt="tendencia_disponibilidad" src="./images/disponibilidad.jpeg" style="min-height:150px; max-width:100%">
+</div>
+
+<br>
+<div><strong>Links de descarga:</strong></div>
+<span>Reportes diarios: </span> <a href="http://localhost:5000/api/sRemoto/indisponibilidad/tags/excel">Excel</a> <a href="http://localhost:5000/api/sRemoto/indisponibilidad/tags/json">JSON</a> <a href="http://localhost:5000/api/sRemoto/indisponibilidad/tags/json/2021-03-29/2021-03-30">Link completo</a> <br>
+<span>Reporte tags: </span> <a href="http://localhost:5000/api/sRemoto/disponibilidad/diaria/excel">Excel</a> <a href="http://localhost:5000/api/sRemoto/disponibilidad/diaria/json">JSON</a> <a href="http://localhost:5000/api/sRemoto/disponibilidad/diaria/json/2021-03-01/2021-03-30">Link completo</a>
+
+<br>
+<br>
+<div>
+  <span>Atentamente,</span> <br>
+  <span>Sistema Remoto</span>
+</div>
+</body></html>

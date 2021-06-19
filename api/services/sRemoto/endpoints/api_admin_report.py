@@ -151,6 +151,29 @@ class ExecuteDailyAPI(Resource):
         return dict(success=True, existing_reports=existing_reports, executing_reports=executing_reports), 200
 
 
+@ns.route('/reporte/diario/<string:ini_date>/<string:end_date>')
+class ExecuteDailyAPI(Resource):
+
+    def delete(self, ini_date: str = None, end_date: str = None):
+        """ Elimina reportes diarios desde fecha inicial a final
+            Fecha inicial formato:  <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+            Fecha final formato:    <b>yyyy-mm-dd, yyyy-mm-dd H:M:S</b>
+        """
+        success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+        success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
+        date_range = pd.date_range(start=ini_date, end=end_date, freq=dt.timedelta(days=1))
+        deleted_reports = list()
+        for ini, end in zip(date_range, date_range[1:]):
+            report = SRFinalReportTemporal.objects(fecha_inicio=ini, fecha_final=end).first()
+            if report is not None:
+                report.delete()
+                deleted_reports.append([str(ini), str(end)])
+        return dict(success=True, deleted_reports=deleted_reports), 200
+
+
 def executing_all_reports(to_execute_reports):
     # realizando el cálculo por cada nodo:
     for ini, end in to_execute_reports:

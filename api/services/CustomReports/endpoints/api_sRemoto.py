@@ -68,7 +68,8 @@ class DisponibilidadExcel(Resource):
             msg = f"No se puede presentar el reporte en el formato {formato}, considere las opciones: {permitido}"
             return dict(success=False, msg=msg), 400
 
-        success, df_summary, df_details, df_novedades, msg = final_report.to_dataframe()
+        utrs_dict = final_report.load_nodes_info().create_utrs_list()
+        success, df_summary, df_details, df_novedades, msg = final_report.to_dataframe(utrs_dict)
         if not success:
             return dict(success=False, report=None, msg=msg), 409
 

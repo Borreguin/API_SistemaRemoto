@@ -157,9 +157,12 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
         # se debe exceptuar periodos de consignación
 
         # verificar que exista el contenedor de consignaciones:
-        consDB = utr.consignaciones
+        consDB = Consignments.objects(id_elemento=utr.utr_code).first()
+        if consDB is not None:
+            consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
+        else:
+            consignaciones_utr = []
 
-        consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
         # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
         time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
 

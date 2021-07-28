@@ -22,6 +22,7 @@ from api.services.restplus_config import default_error_handler
 from dto.mongo_engine_handler.Consignment import Consignments, Consignment
 from my_lib import utils as u
 from settings import initial_settings as init
+
 # configurando el servicio web
 ns = api.namespace('admin-consignacion', description='Relativas a la administración de consignaciones')
 
@@ -76,10 +77,10 @@ class ConsignacionAPI(Resource):
             detalle = request.json
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
-                new_consignments=Consignments(id_elemento=id_elemento)
+                new_consignments = Consignments(id_elemento=id_elemento)
                 new_consignments.save()
-                consignaciones=new_consignments
-            consignaciones.elemento=detalle["elemento"]
+                consignaciones = new_consignments
+            consignaciones.elemento = detalle["elemento"]
             consignacion = Consignment(no_consignacion=detalle["no_consignacion"], fecha_inicio=ini_date,
                                        fecha_final=end_date, detalle=detalle["detalle"])
             # ingresando consignación y guardando si es exitoso:
@@ -106,7 +107,7 @@ class ConsignacionDeleteEditAPI(Resource):
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
                 return dict(success=False, msg="No existen consignaciones para este elemento. "
-                                                  "El elemento no existe"), 404
+                                               "El elemento no existe"), 404
 
             # eliminando consignación por id
             success, msg = consignaciones.delete_consignment_by_id(id_consignacion)
@@ -131,7 +132,7 @@ class ConsignacionDeleteEditAPI(Resource):
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
                 return dict(success=False, msg="No existen consignaciones para este elemento. "
-                                                  "El elemento no existe"), 404
+                                               "El elemento no existe"), 404
 
             # eliminando consignación por id
             consignacion = Consignment(**detalle)
@@ -144,7 +145,6 @@ class ConsignacionDeleteEditAPI(Resource):
 
         except Exception as e:
             return default_error_handler(e)
-
 
     @api.expect(parsers.consignacion_upload)
     def post(self, id_elemento: str = "id_elemento", id_consignacion: str = "id_consignacion"):
@@ -173,7 +173,3 @@ class ConsignacionDeleteEditAPI(Resource):
             return dict(success=True, msg="Documento cargado exitosamente")
         except Exception as e:
             return default_error_handler(e)
-
-
-
-

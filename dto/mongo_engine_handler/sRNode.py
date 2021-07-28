@@ -45,7 +45,7 @@ class SRUTR(EmbeddedDocument):
         if self.utr_code is None:
             id = str(self.id_utr).lower().strip()
             self.utr_code = hashlib.md5(id.encode()).hexdigest()
-            self.create_consignments_container()
+            # self.create_consignments_container()
 
     def create_consignments_container(self):
         try:

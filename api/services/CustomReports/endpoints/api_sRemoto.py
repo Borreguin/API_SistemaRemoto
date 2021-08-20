@@ -271,4 +271,43 @@ class DisponibilidadDiariaExcel(Resource):
             return dict(success=True, report=result_dict, msg="Reporte encontrado")
 
 
+@ns.route('/tendencia/diaria/<string:formato>/<string:ini_date>/<string:end_date>')
+class TendenciaDiariaExcel(Resource):
+
+    @staticmethod
+    def get(formato, ini_date=None, end_date=None):
+        """ Entrega el cálculo en formato Excel/JSON realizado de manera diaria a las 00:00
+            Si el cálculo no existe entonces <b>código 404</b>
+            Formato:                excel, json
+            Fecha inicial formato:  <b>yyyy-mm-dd</b>
+            Fecha final formato:    <b>yyyy-mm-dd</b>
+        """
+        log.info("Starting this report")
+        success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
+        success2, end_date = u.check_date_yyyy_mm_dd(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
+        # time range for each consult
+        date_range = pd.date_range(ini_date, end_date, freq=dt.timedelta(days=1))
+        if len(date_range) == 0:
+            return dict(success=False, report=None, msg="Las fechas de inicio y fin no son correctas.")
+
+        dates = []
+        values = []
+        log.info("Going to get each report")
+        for ini, end in zip(date_range, date_range[1:]):
+            final_report_v = SRFinalReportTemporal(fecha_inicio=ini, fecha_final=end)
+            final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
+            dates.append(str(ini))
+            if final_report is not None:
+                values.append(final_report.disponibilidad_promedio_porcentage)
+            else:
+                values.append(None)
+
+        if formato == "json":
+            result = dict(dates=dates, values=values)
+            return dict(success=True, result=result, msg="Tendencia")
+
+
 

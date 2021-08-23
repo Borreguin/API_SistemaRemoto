@@ -19,7 +19,7 @@ from api.services.restplus_config import default_error_handler
 from api.services.sRemoto import serializers as srl
 # importando clases para leer desde MongoDB
 from dto.mongo_engine_handler.sRNode import *
-from my_lib.utils import group_files
+from my_lib.utils import group_files, set_max_age_to_response
 import random
 
 # configurando logger y el servicio web
@@ -87,6 +87,5 @@ class FileDownloadAPI(Resource):
         if nombre.lower() not in files:
             return dict(success=False, msg="No existe el archivo buscado")
         resp = send_from_directory(repo, nombre, as_attachment=True)
-        resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=3)
-        return resp
+        return set_max_age_to_response(resp, 3)
 

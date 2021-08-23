@@ -27,6 +27,8 @@ import threading as th
 import queue
 from multiprocessing.pool import ThreadPool
 
+from my_lib.utils import set_max_age_to_response
+
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()
 
@@ -84,8 +86,7 @@ class DisponibilidadExcel(Resource):
                 df_novedades.to_excel(writer, sheet_name="Novedades")
             if os.path.exists(path):
                 resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
-                resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=5)
-                return resp
+                return set_max_age_to_response(resp, 5)
 
         if formato == "json":
             result_dict = dict()
@@ -183,8 +184,7 @@ class IndisponibilidadTAGSs(Resource):
                 df_tag.to_excel(writer, sheet_name="Detalles")
             if os.path.exists(path):
                 resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
-                resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=2)
-                return resp
+                return set_max_age_to_response(resp, 2)
 
 
 @ns.route('/disponibilidad/diaria/<string:formato>')
@@ -262,8 +262,7 @@ class DisponibilidadDiariaExcel(Resource):
                 df_novedades.to_excel(writer, sheet_name="Novedades")
             if os.path.exists(path):
                 resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
-                resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=2)
-                return resp
+                return set_max_age_to_response(resp, 2)
 
         if formato == "json":
             result_dict = dict()

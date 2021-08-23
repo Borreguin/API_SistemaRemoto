@@ -14,6 +14,7 @@ from flask_restplus import Resource
 from flask import request, send_from_directory
 import re, os
 # importando configuraciones iniciales
+from my_lib.utils import set_max_age_to_response
 from settings import initial_settings as init
 from api.services.restplus_config import api
 from api.services.restplus_config import default_error_handler
@@ -593,8 +594,7 @@ class SRNodeFromExcel(Resource):
             df_tags.to_excel(writer, sheet_name="tags")
         if os.path.exists(path):
             resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
-            resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=5)
-            return resp
+            return set_max_age_to_response(resp, 5)
 
 
 def save_excel_file_from_bytes(destination, stream_excel_file):

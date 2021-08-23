@@ -250,3 +250,9 @@ def save_html(html_str, path_html_to_save):
         Html_file.close()
     except Exception as e:
         print(e)
+
+
+def set_max_age_to_response(response, minutes):
+    response.expires = dt.datetime.utcnow() + dt.timedelta(minutes=minutes)
+    response.cache_control.max_age = minutes * 60
+    return response

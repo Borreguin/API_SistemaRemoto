@@ -592,7 +592,9 @@ class SRNodeFromExcel(Resource):
             df_main.to_excel(writer, sheet_name="main")
             df_tags.to_excel(writer, sheet_name="tags")
         if os.path.exists(path):
-            return send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
+            resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
+            resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=5)
+            return resp
 
 
 def save_excel_file_from_bytes(destination, stream_excel_file):

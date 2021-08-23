@@ -86,6 +86,7 @@ class FileDownloadAPI(Resource):
         files = [str(file).lower() for file in files]
         if nombre.lower() not in files:
             return dict(success=False, msg="No existe el archivo buscado")
-
-        return send_from_directory(repo, nombre, as_attachment=True)
+        resp = send_from_directory(repo, nombre, as_attachment=True)
+        resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=3)
+        return resp
 

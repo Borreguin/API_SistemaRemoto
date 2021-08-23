@@ -83,7 +83,9 @@ class DisponibilidadExcel(Resource):
                 df_details.to_excel(writer, sheet_name="Detalles")
                 df_novedades.to_excel(writer, sheet_name="Novedades")
             if os.path.exists(path):
-                return send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+                resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
+                resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=5)
+                return resp
 
         if formato == "json":
             result_dict = dict()
@@ -181,7 +183,7 @@ class IndisponibilidadTAGSs(Resource):
                 df_tag.to_excel(writer, sheet_name="Detalles")
             if os.path.exists(path):
                 resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
-                resp.expires = dt.datetime.now() + dt.timedelta(minutes=2)
+                resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=2)
                 return resp
 
 
@@ -260,7 +262,7 @@ class DisponibilidadDiariaExcel(Resource):
                 df_novedades.to_excel(writer, sheet_name="Novedades")
             if os.path.exists(path):
                 resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=True)
-                resp.expires = dt.datetime.now() + dt.timedelta(minutes=2)
+                resp.expires = dt.datetime.utcnow() + dt.timedelta(minutes=2)
                 return resp
 
         if formato == "json":

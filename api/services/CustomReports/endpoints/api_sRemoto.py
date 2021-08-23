@@ -282,7 +282,6 @@ class TendenciaDiariaExcel(Resource):
             Fecha inicial formato:  <b>yyyy-mm-dd</b>
             Fecha final formato:    <b>yyyy-mm-dd</b>
         """
-        log.info("Starting this report")
         success1, ini_date = u.check_date_yyyy_mm_dd(ini_date)
         success2, end_date = u.check_date_yyyy_mm_dd(end_date)
         if not success1 or not success2:

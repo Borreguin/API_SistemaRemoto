@@ -1,0 +1,5 @@
+/.idea/
+/_db
+/temp
+/logs
+/flask_app/settings/dev.py

@@ -2,7 +2,8 @@
 import os
 import subprocess as sb #Procesos en paralelo
 import traceback # Seguimiento de errores
-from settings import initial_settings as init
+from flask_app.settings import initial_settings as init
+
 script_path = os.path.dirname(os.path.abspath(__file__)) # obtener el path absoluto de este script
 db_path = os.path.join(script_path, "_db", "mongo_db")
 path_v4_2='C:\\Program Files\\MongoDB\\Server\\4.2\\bin\\mongod.exe'

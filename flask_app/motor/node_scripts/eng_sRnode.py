@@ -41,7 +41,7 @@ from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import *
 
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
-if init.DEBUG:
+if not init.PRODUCTION_ENV or init.DEBUG:
     # pi server por defecto
     pi_svr = pi.PIserver()
 else:

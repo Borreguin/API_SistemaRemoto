@@ -1,11 +1,7 @@
 # Created by Roberto Sanchez at 3/29/2019
 # -*- coding: utf-8 -*-
 """ Set the initial settings of this application"""
-"""
-CAMBIOS EN ESTA VERSION: 
-1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
 
-"""
 import os
 from .config import config as raw_config
 
@@ -41,18 +37,45 @@ else:
 TESTING_ENV = os.getenv('testing_env', None) == 'True'
 
 if PRODUCTION_ENV:
-    dev = dict()
-else:
-    from flask_app.settings.dev import dev as developer_dict
+    """ Production environment """
+    from flask_app.settings.prod import prod
 
-    dev = developer_dict
+    """ 
+    Settings for Mongo Client:
+    Connections in MongoEngine are registered globally and are identified with aliases
+    Therefore no need to initialize other connections. 
+    """
+    MONGOCLIENT_SETTINGS = prod["MONGOCLIENT_SETTINGS"]
+    MONGO_LOG_LEVEL = prod["MONGO_LOG_LEVEL"]["value"]
+    MONGO_LOG_LEVEL_OPTIONS = prod["MONGO_LOG_LEVEL"]["options"]
+    SECRET_KEY = os.getenv('SECRET_KEY', None)
+    DEBUG = False
+
+    """ PIServer Config """
+    PISERVERS = config["PISERVERS"]
+
+else:
+    """ Developer environment """
+    from flask_app.settings.dev import dev
+
+    """ 
+    Settings for Mongo Client:
+    Connections in MongoEngine are registered globally and are identified with aliases
+    Therefore no need to initialize other connections. 
+    """
+    MONGOCLIENT_SETTINGS = dev["MONGOCLIENT_SETTINGS"]
+    MONGO_LOG_LEVEL = dev["MONGO_LOG_LEVEL"]["value"]
+    MONGO_LOG_LEVEL_OPTIONS = dev["MONGO_LOG_LEVEL"]["options"]
+    SECRET_KEY = "ChAng3-Th1$-$6creTK6y"
+    DEBUG = config["DEBUG"]
+
     if TESTING_ENV:
-        dev["MONGOCLIENT_SETTINGS"]["db"] = "DB_DISP_EMS"
+        MONGOCLIENT_SETTINGS["db"] = "DB_DISP_EMS_TEST"
+
+""" GENERAL CONFIGURATIONS """
 
 """" FLASK CONFIGURATION """
 FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]
-SECRET_KEY = os.environ['SECRET_KEY'] if not PRODUCTION_ENV else "ChAng3-Th1$-$6creTK6y"
-DEBUG = config["DEBUG"]
 
 """ Log file settings: """
 sR_node_name = config["ROTATING_FILE_HANDLER"]["filename"]
@@ -61,21 +84,6 @@ log_file_name = os.path.join(project_path, sR_node_name)
 config["ROTATING_FILE_HANDLER"]["filename"] = log_file_name
 ROTATING_FILE_HANDLER = config["ROTATING_FILE_HANDLER"]
 ROTATING_FILE_HANDLER_LOG_LEVEL = config["ROTATING_FILE_HANDLER_LOG_LEVEL"]
-
-""" Settings for Mongo Client"""
-MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
-MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
-MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
-
-# if DEBUG:
-#    MONGOCLIENT_SETTINGS.update(dict(db="DB_DISP_EMS_TEST"))
-# print('Configuraciones de MongoDB:' + str(MONGOCLIENT_SETTINGS))
-
-""" Configuration of Mongo Engine """
-"""
-Connections in MongoEngine are registered globally and are identified with aliases
-Therefore no need to initialize other connections. 
-"""
 
 """ SUPPORTED DATES """
 SUPPORTED_FORMAT_DATES = config["SUPPORTED_FORMAT_DATES"]
@@ -87,12 +95,11 @@ RESTPLUS_VALIDATE = config["RESTPLUS_VALIDATE"]
 RESTPLUS_MASK_SWAGGER = config["RESTPLUS_MASK_SWAGGER"]
 RESTPLUS_ERROR_404_HELP = config["RESTPLUS_ERROR_404_HELP"]
 API_PREFIX = config["API_PREFIX"]
-PORT = config["PORT"] if PRODUCTION_ENV else config["DEBUG_PORT"]
+API_PORT = config["API_PORT"] if PRODUCTION_ENV else config["DEBUG_PORT"]
 DEBUG_PORT = config["DEBUG_PORT"]
 VERSION = config["version"]
 
-""" PIServer Config """
-PISERVERS = config["PISERVERS"]
+
 
 """" EXCEL REPO CONFIGURATION """
 LOGS_REPO = config["LOGS_REPO"]

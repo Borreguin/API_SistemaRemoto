@@ -27,14 +27,14 @@ sns.set()
 
 host = "10.30.250.52"
 # URL TAGS report:
-# url_tags_base = f"http://{host}:{init.PORT}{init.API_PREFIX}/sRemoto/indisponibilidad/tags"
+# url_tags_base = f"http://{host}:{init.API_PORT}{init.API_PREFIX}/sRemoto/indisponibilidad/tags"
 url_tags_base = f"http://{host}{init.API_PREFIX}/sRemoto/indisponibilidad/tags"
 url_tags_report = f"{url_tags_base}/json/ini_date/end_date"
 url_tags_json = f"{url_tags_base}/json"
 url_tags_excel = f"{url_tags_base}/excel"
 
 # URL DISPONIBILIDAD report:
-# url_disponibilidad_base = f"http://{host}:{init.PORT}{init.API_PREFIX}/sRemoto/disponibilidad/diaria"
+# url_disponibilidad_base = f"http://{host}:{init.API_PORT}{init.API_PREFIX}/sRemoto/disponibilidad/diaria"
 url_disponibilidad_base = f"http://{host}{init.API_PREFIX}/sRemoto/disponibilidad/diaria"
 url_disponibilidad_diaria = f"{url_disponibilidad_base}/json/ini_date/end_date"
 url_disponibilidad_json = f"{url_disponibilidad_base}/json"

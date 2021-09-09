@@ -15,8 +15,8 @@ from flask_app.my_lib.utils import get_dates_by_default
 import requests
 
 host = "localhost"
-url_disponibilidad_diaria = f"http://{host}:{init.PORT}{init.API_PREFIX}/admin-report/run/reporte/diario"
-url_disponibilidad_mes = f"http://{host}:{init.PORT}{init.API_PREFIX}/disp-sRemoto/disponibilidad/ini_date/end_date"
+url_disponibilidad_diaria = f"http://{host}:{init.API_PORT}{init.API_PREFIX}/admin-report/run/reporte/diario"
+url_disponibilidad_mes = f"http://{host}:{init.API_PORT}{init.API_PREFIX}/disp-sRemoto/disponibilidad/ini_date/end_date"
 log = flask_app.settings.LogDeafultConfig.LogDefaultConfig("StoppableThreadDailyReport.log").logger
 
 

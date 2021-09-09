@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 """
-CAMBIOS EN ESTA VERSION :
-1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS PARA CONSIGNACIONES
+CAMBIOS EN ESTA VERSION 
 
 """
 config = dict()
@@ -19,7 +18,7 @@ config["RESTPLUS_VALIDATE"] = True
 config["RESTPLUS_MASK_SWAGGER"] = False
 config["RESTPLUS_ERROR_404_HELP"] = False
 config["API_PREFIX"] = '/api-rmt'
-config["PORT"] = 7820
+config["API_PORT"] = 7820
 config["DEBUG_PORT"] = 5000
 
 config["ROTATING_FILE_HANDLER_HELP"] = "https://docs.python.org/3.6/library/logging.handlers.html#logging.handlers.RotatingFileHandler.__init__",
@@ -39,7 +38,7 @@ config["SREMOTO_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_remoto_exce
 config["SCENTRAL_EXCEL_REPO"] = os.path.join(config["EXCEL_REPO"], "s_central_excel")
 config["OUTPUT_MOTOR"] = os.path.join(config["LOGS_REPO"], "output")
 config["CONSIGNACIONES"] = os.path.join(config["DB_REPO"], "consignaciones")
-config["TEMPLATES_REPO"] = "templates"
+config["TEMPLATES_REPO"] = os.path.join("flask_app", "templates")
 config["REPORTS_REPO"] = "reports"
 config["IMAGES_REPO"] = os.path.join(config["REPORTS_REPO"], "images")
 

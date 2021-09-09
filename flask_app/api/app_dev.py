@@ -14,7 +14,7 @@ def main():
     # serve the application in development mode
     log.info(f'>>>>> Starting development server <<<<<')
     app.run(debug=init.DEBUG, port=5000)
-    log.info(f'>>>>> host: localhost port: {init.PORT}<<<<<')
+    log.info(f'>>>>> host: localhost port: {init.API_PORT}<<<<<')
     log.info(f">>>>> API running over: {init.API_PREFIX}")
 
 

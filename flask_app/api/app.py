@@ -121,7 +121,7 @@ def main():
     log.info(">>>>> Starting production server <<<<<")
     log.info(f">>>>> API running over: {init.API_PREFIX}")
     # serve the application
-    serve(app, host='0.0.0.0', port=init.PORT)
+    serve(app, host='0.0.0.0', port=init.API_PORT)
 
 
 if __name__ == "__main__":

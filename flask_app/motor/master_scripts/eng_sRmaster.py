@@ -269,7 +269,7 @@ def run_nodes_and_summarize(report_ini_date, report_end_date, save_in_db, force)
     success, results, msg = run_all_nodes(report_ini_date, report_end_date, save_in_db, force)
     if not success:
         return success, None, msg
-    success, final_report, msg = run_summary(report_ini_date, report_end_date,save_in_db=save_in_db, force=force,
+    success, final_report, msg = run_summary(report_ini_date, report_end_date, save_in_db=save_in_db, force=force,
                                              results=results, log_msg=msg)
     return success, final_report, msg
 

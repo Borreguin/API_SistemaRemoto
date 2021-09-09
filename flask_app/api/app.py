@@ -16,7 +16,7 @@ api_path = os.path.dirname(os.path.abspath(__file__))
 flask_path = os.path.dirname(api_path)
 project_path = os.path.dirname(flask_path)
 sys.path.append(api_path)
-sys.path.append(flask_path)
+sys.path.append(project_path)
 
 from flask_app.settings import initial_settings as init
 # importando la configuración general de la API

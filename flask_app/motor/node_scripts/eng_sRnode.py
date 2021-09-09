@@ -19,7 +19,8 @@ import queue
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
-project_path = os.path.dirname(motor_path)
+flask_path = os.path.dirname(motor_path)
+project_path = os.path.dirname(flask_path)
 sys.path.append(script_path)
 sys.path.append(motor_path)
 sys.path.append(project_path)

@@ -19,11 +19,14 @@ from flask_app.dto.classes.utils import get_thread_by_name
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.CustomReports import serializers as srl
 # importando clases para leer desde MongoDB
+from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
+from flask_app.dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 from flask_app.dto.mongo_engine_handler.sRNode import *
 import threading
 
 # configurando logger y el servicio web
 import flask_app.my_lib.utils as u
+from flask_app.motor.master_scripts.eng_sRmaster import run_nodes_and_summarize
 
 ns = api.namespace('admin-report', description='Administración/Configuración de reportes')
 

@@ -1,13 +1,17 @@
 # Script de inicialización de Base de Datos MongoDB
-import os
+
+# Script de inicialización de Base de Datos MongoDB
+import os, sys
 import subprocess as sb #Procesos en paralelo
 import traceback # Seguimiento de errores
+script_path = os.path.dirname(os.path.abspath(__file__)) # obtener el path absoluto de este script
+sys.path.append(script_path)
 from flask_app.settings import initial_settings as init
 
-script_path = os.path.dirname(os.path.abspath(__file__)) # obtener el path absoluto de este script
 db_path = os.path.join(script_path, "_db", "mongo_db")
 path_v4_2='C:\\Program Files\\MongoDB\\Server\\4.2\\bin\\mongod.exe'
 path_v4_4='C:\\Program Files\\MongoDB\\Server\\4.4\\bin\\mongod.exe'
+
 if os.path.exists(path_v4_2):
     mongo_exe = path_v4_2
 elif os.path.exists(path_v4_4):

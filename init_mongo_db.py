@@ -1,6 +1,5 @@
 # Script de inicialización de Base de Datos MongoDB
 
-# Script de inicialización de Base de Datos MongoDB
 import os, sys
 import subprocess as sb #Procesos en paralelo
 import traceback # Seguimiento de errores

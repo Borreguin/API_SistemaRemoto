@@ -14,7 +14,7 @@ from flask_restplus import Resource
 from flask import request, send_from_directory
 import re
 # importando configuraciones iniciales
-from flask_app.my_lib.utils import set_max_age_to_response
+from flask_app.my_lib.utils import set_max_age_to_response, find_entity_in_node
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.sRemoto import serializers as srl
 from flask_app.api.services.sRemoto import parsers
@@ -112,12 +112,8 @@ class SRRTUSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).as_pymongo().first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo["entidades"]):
-            if _entidad["id_entidad"] == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
         utrs_list = nodo["entidades"][idx]["utrs"]
@@ -142,12 +138,8 @@ class SRRTUSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
         rtu = SRUTR(**request_data)
         success, msg = nodo.entidades[idx].add_or_rename_utrs([rtu])
@@ -170,12 +162,8 @@ class SRRTUSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
         success, msg = nodo.entidades[idx].remove_utrs([request_data["id_utr"]])
         if success:
@@ -199,12 +187,8 @@ class SRRTUAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
         for ix, _utr in enumerate(nodo.entidades[idx].utrs):
@@ -228,12 +212,8 @@ class SRTAGSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
         for ix, _utr in enumerate(nodo.entidades[idx].utrs):
@@ -253,12 +233,8 @@ class SRTAGSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
         for ix, _utr in enumerate(nodo.entidades[idx].utrs):
@@ -297,12 +273,8 @@ class SRTAGSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
         for ix, _utr in enumerate(nodo.entidades[idx].utrs):
@@ -336,12 +308,8 @@ class SRTAGSAPI(Resource):
         nodo = SRNode.objects(id_node=id_nodo).first()
         if nodo is None:
             return dict(success=False, msg="No se encuentra el nodo"), 404
-        idx = None
-        for ix, _entidad in enumerate(nodo.entidades):
-            if _entidad.id_entidad == id_entidad:
-                idx = ix
-                break
-        if idx is None:
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
 
         for ix, _utr in enumerate(nodo.entidades[idx].utrs):
@@ -355,6 +323,43 @@ class SRTAGSAPI(Resource):
                 return dict(success=success, msg=f"TAGS: -eliminadas: {n_remove} "
                                                  f"-no encontradas: {len(tag_names) - n_remove}", tags=tags), 200
 
+        return dict(success=False, msg="No se encuentra la UTR"), 404
+
+
+@ns.route('/tags/<string:id_nodo>/<string:id_entidad>/<string:id_utr>/from-excel')
+class SRTAGSAPIExcel(Resource):
+    @api.expect(ser_from.list_edited_tagname)
+    def put(self, id_nodo: str = "id nodo", id_entidad: str = "id entidad", id_utr: str = "id utr"):
+        """ Edita una lista de TAGS en una UTR basado en tag_name_original de un archivo Excel
+            Id nodo: id único del nodo
+            Id entidad: id único de la entidad
+            Id UTR: id o código único de la UTR
+            <b>404</b> Si el nodo, entidad o UTR no existe
+        """
+        nodo = SRNode.objects(id_node=id_nodo).first()
+        if nodo is None:
+            return dict(success=False, msg="No se encuentra el nodo"), 404
+        success, idx = find_entity_in_node(nodo, id_entidad)
+        if not success:
+            return dict(success=False, msg="No se encuentra la entidad"), 404
+
+        request_data = dict(request.json)
+        for ix, _utr in enumerate(nodo.entidades[idx].utrs):
+            if _utr.id_utr == id_utr or _utr.utr_code == id_utr:
+                tags_req = request_data["tags"]
+                tag_names = [t.pop("tag_name_original", None) for t in tags_req]
+                [t.pop("edited", None) for t in tags_req]
+                SRTags = [SRTag(**d) for d in tags_req]
+                success, (n_remove, msg) = nodo.entidades[idx].utrs[ix].remove_tags(tag_names)
+                if not success:
+                    return dict(success=success, msg=msg)
+                success, msg = nodo.entidades[idx].utrs[ix].add_or_replace_tags(SRTags)
+                if success:
+                    nodo.save()
+                    tags = [t.to_dict() for t in nodo.entidades[idx].utrs[ix].tags]
+                    return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} "
+                                                     f"-añadidas: {len(tags_req) - n_remove}", tags=tags), 200
+                return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} {msg}"), 409
         return dict(success=False, msg="No se encuentra la UTR"), 404
 
 

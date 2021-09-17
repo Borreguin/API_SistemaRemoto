@@ -38,7 +38,7 @@ def get_dates_by_default():
     today = dt.datetime(year=today.year, month=today.month, day=today.day)
     end_date = today
     if today.day > 1:
-        ini_date = today - dt.timedelta(days=today.day-1)
+        ini_date = today - dt.timedelta(days=today.day - 1)
     else:
         yesterday = today - dt.timedelta(days=1)
         ini_date = yesterday - dt.timedelta(days=yesterday.day - 1)
@@ -50,6 +50,7 @@ def get_last_day():
     today = dt.datetime(year=today.year, month=today.month, day=today.day)
     yesterday = today - dt.timedelta(days=1)
     return yesterday, today
+
 
 def check_date(s):
     success, date = check_date_yyyy_mm_dd(s)
@@ -173,7 +174,6 @@ def get_id(params: list):
 
 
 def retrieve_from_file(temp_file, id):
-
     if os.path.exists(temp_file):
         with open(temp_file) as json_file:
             resp = json.load(json_file)
@@ -186,7 +186,6 @@ def retrieve_from_file(temp_file, id):
 
 
 def save_in_file(temp_file, id, data_dict):
-
     if not os.path.exists(temp_file):
         to_save = {id: data_dict}
     else:
@@ -198,7 +197,7 @@ def save_in_file(temp_file, id, data_dict):
         json.dump(to_save, outfile, indent=4, sort_keys=True)
 
 
-def is_active(path_file, id: str,  time_delta: dt.timedelta):
+def is_active(path_file, id: str, time_delta: dt.timedelta):
     try:
         value_dict = retrieve_from_file(path_file, id)
         if value_dict is None:
@@ -255,3 +254,12 @@ def set_max_age_to_response(response, minutes):
     response.expires = dt.datetime.utcnow() + dt.timedelta(minutes=minutes)
     response.cache_control.max_age = minutes * 60
     return response
+
+
+def find_entity_in_node(node, id_entity):
+    idx = None
+    for ix, _entidad in enumerate(node.entidades):
+        if _entidad.id_entidad == id_entity:
+            idx = ix
+            break
+    return idx is not None, idx

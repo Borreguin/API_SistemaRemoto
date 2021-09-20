@@ -339,6 +339,7 @@ class SRTAGSAPIExcel(Resource):
         if not success:
             return dict(success=False, msg=f"Las siguientes columnas [{no_ok}] no existen en el archivo")
         df_edited_tags = df_edited_tags[df_edited_tags["edited"] == True]
+        df_edited_tags["activado"].fillna(False, inplace=True)
         tags_req = df_edited_tags[columns].to_dict(orient="records")
         # working with list of tags
         success, tags, msg = replace_edit_tags_in_node(nodo, idx, id_utr, tags_req)

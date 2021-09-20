@@ -3,9 +3,11 @@ import datetime as dt
 import hashlib
 import json
 import traceback
-
+from random import randint
 import pandas as pd
 import pickle as pkl
+
+from flask_app.dto.mongo_engine_handler.sRNode import SRTag
 
 script_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -258,8 +260,63 @@ def set_max_age_to_response(response, minutes):
 
 def find_entity_in_node(node, id_entity):
     idx = None
-    for ix, _entidad in enumerate(node.entidades):
-        if _entidad.id_entidad == id_entity:
+    entidades = node["entidades"] if isinstance(node, dict) else node.entidades
+    for ix, _entidad in enumerate(entidades):
+        id_entidad = _entidad["id_entidad"] if isinstance(_entidad, dict) else _entidad.id_entidad
+        if id_entidad == id_entity:
             idx = ix
             break
     return idx is not None, idx
+
+
+def check_if_all_are_there(reference, to_check):
+    no_ok = list()
+    for ref in reference:
+        if ref not in list(to_check):
+            no_ok.append(ref)
+    return len(no_ok) == 0, no_ok
+
+
+def write_temporal_file(streamed_file, temp_path):
+    filename = streamed_file.filename
+    stream_excel_file = streamed_file.stream.read()
+    # path del archivo temporal a guardar para poderlo leer inmediatamente
+    temp_file = os.path.join(temp_path, f"{str(randint(0, 100))}_{filename}")
+    with open(temp_file, 'wb') as f:
+        f.write(stream_excel_file)
+    return os.path.exists(temp_file), temp_file
+
+
+def get_df_from_excel_streamed_file(streamed_file, temp_path):
+    if streamed_file.mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
+                                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        try:
+            success, temp_file = write_temporal_file(streamed_file, temp_path)
+            if not success:
+                return False, "No fue posible subir este archivo"
+            # obtener el dataframe:
+            df = pd.read_excel(temp_file, engine='openpyxl')
+            # una vez leído, eliminar archivo temporal
+            os.remove(temp_file)
+            return True, df, "Archivo leído correctamente"
+        except Exception as e:
+            msg = f"Error al leer información del archivo: {str(e)}"
+            return False, pd.DataFrame(), msg
+
+
+def replace_edit_tags_in_node(nodo, idx, id_utr, tags_req):
+    for ix, _utr in enumerate(nodo.entidades[idx].utrs):
+        if _utr.id_utr == id_utr or _utr.utr_code == id_utr:
+            tag_names = [t.pop("tag_name_original", None) for t in tags_req]
+            [t.pop("edited", None) for t in tags_req]
+            SRTags = [SRTag(**d) for d in tags_req]
+            success, (n_remove, msg) = nodo.entidades[idx].utrs[ix].remove_tags(tag_names)
+            if not success:
+                return False, None, msg
+            success, msg = nodo.entidades[idx].utrs[ix].add_or_replace_tags(SRTags)
+            if success:
+                nodo.save()
+                tags = [t.to_dict() for t in nodo.entidades[idx].utrs[ix].tags]
+                return True, tags, f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} " \
+                             f"-añadidas: {len(tags_req) - n_remove}"
+            return False, None, f"{nodo.entidades[idx].utrs[ix]} {msg}"

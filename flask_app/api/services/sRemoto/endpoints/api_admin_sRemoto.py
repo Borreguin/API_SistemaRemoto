@@ -9,12 +9,14 @@
     "My work is well done to honor God at any time" R Sanchez A.
     Mateo 6:33
 """
+import os
 
 from flask_restplus import Resource
 from flask import request, send_from_directory
 import re
 # importando configuraciones iniciales
-from flask_app.my_lib.utils import set_max_age_to_response, find_entity_in_node
+from flask_app.my_lib.utils import set_max_age_to_response, find_entity_in_node, check_if_all_are_there, \
+    get_df_from_excel_streamed_file, replace_edit_tags_in_node
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.sRemoto import serializers as srl
 from flask_app.api.services.sRemoto import parsers
@@ -147,7 +149,7 @@ class SRRTUSAPI(Resource):
         if success:
             rtu.create_consignments_container()
             nodo.save()
-            return dict(success=success, utrs=[u.to_dict() for u in utrs],  msg=msg), 200
+            return dict(success=success, utrs=[u.to_dict() for u in utrs], msg=msg), 200
         else:
             return dict(success=success, utrs=[u.to_dict() for u in utrs], msg=msg), 409
 
@@ -276,24 +278,9 @@ class SRTAGSAPI(Resource):
         success, idx = find_entity_in_node(nodo, id_entidad)
         if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
-
-        for ix, _utr in enumerate(nodo.entidades[idx].utrs):
-            if _utr.id_utr == id_utr or _utr.utr_code == id_utr:
-                tags_req = request_data["tags"]
-                tag_names = [t.pop("tag_name_original", None) for t in tags_req]
-                [t.pop("edited", None) for t in tags_req]
-                SRTags = [SRTag(**d) for d in tags_req]
-                success, (n_remove, msg) = nodo.entidades[idx].utrs[ix].remove_tags(tag_names)
-                if not success:
-                    return dict(success=success, msg=msg)
-                success, msg = nodo.entidades[idx].utrs[ix].add_or_replace_tags(SRTags)
-                if success:
-                    nodo.save()
-                    tags = [t.to_dict() for t in nodo.entidades[idx].utrs[ix].tags]
-                    return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} "
-                                                     f"-añadidas: {len(tags_req) - n_remove}", tags=tags), 200
-                return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} {msg}"), 409
-        return dict(success=False, msg="No se encuentra la UTR"), 404
+        tags_req = request_data["tags"]
+        success, tags, msg = replace_edit_tags_in_node(nodo, idx, id_utr, tags_req)
+        return dict(success=success, tags=tags, msg=msg), 200 if success else 409
 
     @api.expect(ser_from.tags)
     def delete(self, id_nodo: str = "id nodo", id_entidad: str = "id entidad", id_utr: str = "id utr"):
@@ -328,7 +315,7 @@ class SRTAGSAPI(Resource):
 
 @ns.route('/tags/<string:id_nodo>/<string:id_entidad>/<string:id_utr>/from-excel')
 class SRTAGSAPIExcel(Resource):
-    @api.expect(ser_from.list_edited_tagname)
+    @api.expect(parsers.file_upload)
     def put(self, id_nodo: str = "id nodo", id_entidad: str = "id entidad", id_utr: str = "id utr"):
         """ Edita una lista de TAGS en una UTR basado en tag_name_original de un archivo Excel
             Id nodo: id único del nodo
@@ -342,25 +329,20 @@ class SRTAGSAPIExcel(Resource):
         success, idx = find_entity_in_node(nodo, id_entidad)
         if not success:
             return dict(success=False, msg="No se encuentra la entidad"), 404
-
-        request_data = dict(request.json)
-        for ix, _utr in enumerate(nodo.entidades[idx].utrs):
-            if _utr.id_utr == id_utr or _utr.utr_code == id_utr:
-                tags_req = request_data["tags"]
-                tag_names = [t.pop("tag_name_original", None) for t in tags_req]
-                [t.pop("edited", None) for t in tags_req]
-                SRTags = [SRTag(**d) for d in tags_req]
-                success, (n_remove, msg) = nodo.entidades[idx].utrs[ix].remove_tags(tag_names)
-                if not success:
-                    return dict(success=success, msg=msg)
-                success, msg = nodo.entidades[idx].utrs[ix].add_or_replace_tags(SRTags)
-                if success:
-                    nodo.save()
-                    tags = [t.to_dict() for t in nodo.entidades[idx].utrs[ix].tags]
-                    return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} "
-                                                     f"-añadidas: {len(tags_req) - n_remove}", tags=tags), 200
-                return dict(success=success, msg=f"{nodo.entidades[idx].utrs[ix]} {msg}"), 409
-        return dict(success=False, msg="No se encuentra la UTR"), 404
+        # reading file for reading tag changes:
+        args = dict(parsers.file_upload.parse_args())
+        success, df_edited_tags, msg = get_df_from_excel_streamed_file(args['file'], init.TEMP_REPO)
+        if not success:
+            return dict(success=False, msg=msg), 409
+        columns = ['tag_name', 'filter_expression', 'activado', 'edited', 'tag_name_original']
+        success, no_ok = check_if_all_are_there(columns, to_check=list(df_edited_tags.columns))
+        if not success:
+            return dict(success=False, msg=f"Las siguientes columnas [{no_ok}] no existen en el archivo")
+        df_edited_tags = df_edited_tags[df_edited_tags["edited"] == True]
+        tags_req = df_edited_tags[columns].to_dict(orient="records")
+        # working with list of tags
+        success, tags, msg = replace_edit_tags_in_node(nodo, idx, id_utr, tags_req)
+        return dict(success=success, tags=tags, msg=msg), 200 if success else 409
 
 
 @ns.route('/nodo/id/<string:id>')
@@ -405,6 +387,7 @@ class SRNodeIDAPI(Resource):
                 nodo.add_or_replace_entities([entidad])
                 nodo.save()
         return dict(success=True, nodo=nodo.to_summary(), msg="Nodo creado"), 200
+
 
 @ns.route('/nodos/')
 @ns.route('/nodos/<string:filter>')

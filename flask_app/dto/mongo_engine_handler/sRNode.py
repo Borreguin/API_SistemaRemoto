@@ -400,16 +400,17 @@ class SRNodeFromDataFrames():
         self.df_tags[self.cl_activado] = [str(a).lower().strip() for a in self.df_tags[self.cl_activado]]
 
         # filter those who are activated
-        self.df_main = self.df_main[self.main_columns]
-        self.df_tags = self.df_tags[self.tags_columns]
-        self.df_main = self.df_main[self.df_main[self.cl_activado] == "x"]
-        self.df_tags = self.df_tags[self.df_tags[self.cl_activado] == "x"]
+        self.df_main = self.df_main[self.main_columns].copy()
+        self.df_tags = self.df_tags[self.tags_columns].copy()
 
         # if there is spaces after values
         for c in self.main_columns:
             self.df_main[c] = [str(a).strip() for a in self.df_main[c]]
         for c in self.tags_columns:
             self.df_tags[c] = [str(a).strip() for a in self.df_tags[c]]
+
+        self.df_main[self.cl_activado] = [act == "x" for act in self.df_main[self.cl_activado]]
+        self.df_tags[self.cl_activado] = [act == "x" for act in self.df_tags[self.cl_activado]]
 
         return True, f"El formato del nodo [{self.nombre}] es correcto"
 
@@ -422,7 +423,8 @@ class SRNodeFromDataFrames():
             entities = list()
             for (entity_name, entity_type), df_e in df_m:
                 # creando entidad:
-                entity = SREntity(entidad_nombre=entity_name, entidad_tipo=entity_type)
+                active = any(df_e[self.cl_activado])
+                entity = SREntity(entidad_nombre=entity_name, entidad_tipo=entity_type, activado=active)
                 # collección de UTRs
                 utrs = list()
                 for idx in df_e.index:
@@ -430,18 +432,19 @@ class SRNodeFromDataFrames():
                     utr_nombre = df_e[self.cl_utr_name].loc[idx]
                     utr_type = df_e[self.cl_utr_type].loc[idx]
                     utr_protocol = df_e[self.cl_protocolo].loc[idx]
+                    activate = df_e[self.cl_activado].loc[idx]
                     latitud = float(df_e[self.cl_latitud].loc[idx])
                     longitud = float(df_e[self.cl_longitud].loc[idx])
 
                     # crear utr para agregar tags
                     utr = SRUTR(id_utr=utr_code, utr_nombre=utr_nombre, utr_tipo=utr_type,
-                                protocol=utr_protocol, latitude=latitud, longitude=longitud)
+                                protocol=utr_protocol, latitude=latitud, longitude=longitud, activado=activate)
                     # filtrar y añadir tags en la utr list (utrs)
                     df_u = df_t[df_t[self.cl_utr] == utr_code].copy()
                     for ide in df_u.index:
                         tag = SRTag(tag_name=df_u[self.cl_tag_name].loc[ide],
                                     filter_expression=df_u[self.cl_f_expression].loc[ide],
-                                    activado=True)
+                                    activado=df_u[self.cl_activado].loc[ide])
                         # añadir tag en lista de tags
                         utr.tags.append(tag)
                     # añadir utr en lista utr

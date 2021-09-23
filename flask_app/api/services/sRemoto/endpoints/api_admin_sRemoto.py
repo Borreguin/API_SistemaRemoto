@@ -419,8 +419,8 @@ class SRNodoAPI(Resource):
                         n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
                         n_tags += n_tag_inside
                         for utr in entidad["utrs"]:
-                            utr.pop("consignaciones")
-                            utr.pop("tags")
+                            utr.pop("consignaciones", None)
+                            utr.pop("tags", None)
                             utr['longitude'] = utr['longitude'] \
                                 if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
                             utr['latitude'] = utr['latitude'] \
@@ -453,7 +453,6 @@ class SRNodeFromExcel(Resource):
         """ Permite añadir un nodo mediante un archivo excel
             Si el nodo ha sido ingresado correctamente, entonces el código es 200
             Si el nodo ya existe entonces error 409
-            r simplemente permite la actualización de la petición, puede ser cualquier valor
         """
         args = parsers.excel_upload.parse_args()
         nodo = SRNode.objects(nombre=nombre).first()

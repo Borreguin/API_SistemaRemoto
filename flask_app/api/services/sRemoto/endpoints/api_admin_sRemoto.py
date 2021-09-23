@@ -147,7 +147,7 @@ class SRRTUSAPI(Resource):
         success, msg = nodo.entidades[idx].add_or_rename_utrs([rtu])
         utrs = nodo.entidades[idx].utrs
         if success:
-            rtu.create_consignments_container()
+            # rtu.create_consignments_container()
             nodo.save()
             return dict(success=success, utrs=[u.to_dict() for u in utrs], msg=msg), 200
         else:
@@ -487,9 +487,9 @@ class SRNodeFromExcel(Resource):
                 return dict(success=False, msg=str(node)), 400
             node.actualizado = dt.datetime.now()
             node.save()
-            for entity in node.entidades:
-                for utr in entity.utrs:
-                    utr.create_consignments_container()
+            # for entity in node.entidades:
+            #    for utr in entity.utrs:
+            #        utr.create_consignments_container()
             node.save()
             # Guardar como archivo Excel con versionamiento
             destination = os.path.join(init.SREMOTO_REPO, filename)
@@ -551,9 +551,9 @@ class SRNodeFromExcel(Resource):
                 new_node.save()
                 nodo = new_node
             # crear contenedores de consignaciones si fuera necesario
-            for entity in nodo.entidades:
-                for utr in entity.utrs:
-                    utr.create_consignments_container()
+            # for entity in nodo.entidades:
+            #    for utr in entity.utrs:
+            #        utr.create_consignments_container()
             nodo.save()
             # Guardar como archivo Excel con versionamiento
             destination = os.path.join(init.SREMOTO_REPO, filename)

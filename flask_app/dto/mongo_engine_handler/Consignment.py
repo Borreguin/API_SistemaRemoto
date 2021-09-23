@@ -9,23 +9,14 @@ Consignación:
 •	DOCUMENTO TIPO JSON
 •	Permite indicar tiempos de consignación donde el elemento no será consgnado para el cálculo de disponibilidad
 
-CAMBIOS EN ESTA VERSION:
-1 INCLUIR CARPETA PARA COLOCAR ARCHIVOS ADJUNTOS
-
 """
-
-
-
-import traceback
-import uuid
-import hashlib
+from typing import List
 from shutil import rmtree
-
-
 from mongoengine import *
 import datetime as dt
-import os
+import os, uuid, hashlib, traceback
 
+from flask_app.my_lib.utils import check_date
 from flask_app.settings import initial_settings as init
 
 
@@ -37,8 +28,8 @@ class Consignment(EmbeddedDocument):
     id_consignacion = StringField(default=None, required=True)
     detalle = DictField()
     folder = StringField(default=None, required=False)
+    responsable = StringField(required=True, default=None)
     updated = DateTimeField(required=False, default=dt.datetime.now())
-
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
@@ -49,7 +40,6 @@ class Consignment(EmbeddedDocument):
             id = str(uuid.uuid4()) + str(self.fecha_inicio) + str(self.fecha_final)
             self.id_consignacion = hashlib.md5(id.encode()).hexdigest()
         self.calculate()
-
 
     def create_folder(self):
         this_repo = os.path.join(init.CONS_REPO, self.id_consignacion)
@@ -79,12 +69,12 @@ class Consignment(EmbeddedDocument):
     def to_dict(self):
         return dict(no_consignacion=self.no_consignacion,
                     fecha_inicio=str(self.fecha_inicio), fecha_final=str(self.fecha_final),
-                    id_consignacion=self.id_consignacion,
+                    id_consignacion=self.id_consignacion, responsable=self.responsable,
                     detalle=self.detalle)
 
     def edit(self, new_consignment: dict):
         try:
-            to_update = ["no_consignacion", "fecha_inicio", "fecha_final", "detalle"]
+            to_update = ["no_consignacion", "fecha_inicio", "fecha_final", "detalle", "responsable"]
             for key, value in new_consignment.items():
                 if key in to_update:
                     setattr(self, key, value)
@@ -98,6 +88,8 @@ class Consignment(EmbeddedDocument):
 
 class Consignments(Document):
     id_elemento = StringField(required=True, unique=True)
+    desde = DateTimeField(required=False, default=None)
+    hasta = DateTimeField(required=False, default=None)
     elemento = DictField(required=False)
     consignacion_reciente = EmbeddedDocumentField(Consignment)
     consignaciones = ListField(EmbeddedDocumentField(Consignment))
@@ -119,8 +111,10 @@ class Consignments(Document):
         if len(self.consignaciones) == 0:
             self.consignaciones.append(consignacion)
             self.update_last_consignment()
+            self.update_from_until(consignacion.fecha_inicio, consignacion.fecha_final)
             return True, f"Consignación insertada: {consignacion}"
         where = 0
+        until_date, from_date = dt.datetime(1900, 1, 1), dt.datetime(3000, 1, 1)
         for ix, c in enumerate(self.consignaciones):
             # check si no existe overlapping
             incorrect_ini = c.fecha_inicio <= consignacion.fecha_inicio < c.fecha_final
@@ -135,29 +129,60 @@ class Consignments(Document):
             correct_end = consignacion.fecha_final > c.fecha_inicio
             if correct_ini and correct_end:
                 where = ix + 1
+            # evaluar desde y hasta que fecha existe registro:
+            if c.fecha_inicio < from_date:
+                from_date = c.fecha_inicio
+            if c.fecha_final > until_date:
+                until_date = c.fecha_final
         if 0 <= where < len(self.consignaciones):
             self.consignaciones = self.consignaciones[0:where] + [consignacion] + self.consignaciones[where:]
         else:
             self.consignaciones.append(consignacion)
+        self.desde, self.hasta = from_date, until_date
+        self.update_from_until(consignacion.fecha_inicio, consignacion.fecha_final)
         self.update_last_consignment()
         return True, f"Consignación insertada: {consignacion}"
 
-    def delete_consignment_by_id(self, id_consignacion):
-        new_consignaciones = [c for c in self.consignaciones if c.id_consignacion != id_consignacion]
-        if len(new_consignaciones) == len(self.consignaciones):
+    def update_from_until(self, from_date: dt.datetime, until_date: dt.datetime):
+        if self.hasta is None or self.desde is None:
+            self.desde = from_date
+            self.hasta = until_date
+        else:
+            if from_date < self.desde:
+                self.desde = from_date
+            if self.hasta < until_date:
+                self.hasta = until_date
 
-            return False, f"No existe la consignación [{id_consignacion}] en elemento [{self.id_elemento}]"
+    def delete_consignment_by_id(self, id_consignacion):
+        t_max, t_min, ixr = dt.datetime(1900, 1, 1), dt.datetime(3000, 1, 1), -1
+        new_consignaciones = []
+        self.consignacion_reciente = None
         for consignment in self.consignaciones:
+            # Se procede a eliminar si existe:
             if consignment.id_consignacion == id_consignacion:
                 if consignment.folder is not None and os.path.exists(consignment.folder):
                     rmtree(consignment.folder)
-                else:
-                    continue
+                continue
+            # añadiendo elemento con id diferente:
+            new_consignaciones.append(consignment)
+            # check last date:
+            if consignment.fecha_final > t_max:
+                t_max = consignment.fecha_final
+                self.ingreso_reciente = consignment
+                self.hasta = t_max
+            if consignment.fecha_inicio < t_min:
+                t_min = consignment.fecha_inicio
+                self.desde = t_min
+
+        if len(new_consignaciones) == len(self.consignaciones):
+            return False, f"No existe la consignación [{id_consignacion}] en elemento [{self.id_elemento}]"
         self.consignaciones = new_consignaciones
-        self.update_last_consignment()
         return True, f"Consignación [{id_consignacion}] ha sido eliminada"
 
-    def consignments_in_time_range(self, ini_date: dt.datetime, end_time: dt.datetime):
+    def consignments_in_time_range(self, ini_date: dt.datetime, end_time: dt.datetime) -> List[Consignment]:
+        success, ini_date = check_date(ini_date)
+        success, end_time = check_date(end_time)
+
         return [c for c in self.consignaciones if
                 (ini_date <= c.fecha_inicio < end_time or ini_date < c.fecha_final <= end_time) or
                 # el periodo consignado cubre la totalidad del periodo a evaluar:
@@ -168,6 +193,18 @@ class Consignments(Document):
             if consignment.id_consignacion == id_to_search:
                 return True, consignment
         return False, None
+
+    def get_periodos_in_range(self, ini_date, end_date) -> (bool, List[tuple]):
+        consignacion_list = self.consignments_in_time_range(ini_date, end_date)
+        period_list = list()
+        for consignment in consignacion_list:
+            ini_per, end_per = consignment.fecha_inicio, consignment.fecha_final
+            if consignment.fecha_inicio < ini_date:
+                ini_per = ini_date
+            if consignment.fecha_final > end_date:
+                end_per = end_date
+            period_list.append((ini_per, end_per))
+        return len(period_list) > 0, period_list
 
     def edit_consignment_by_id(self, id_to_edit, consignment: Consignment):
         found = False

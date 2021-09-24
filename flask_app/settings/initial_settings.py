@@ -31,6 +31,7 @@ print(production_path, os.path.exists(production_path))
 if os.path.exists(production_path):
     PRODUCTION_ENV = True
     config["DEBUG"] = False
+    DEBUG = False
 else:
     PRODUCTION_ENV = False
 
@@ -39,40 +40,26 @@ TESTING_ENV = os.getenv('testing_env', None) == 'True'
 if PRODUCTION_ENV:
     """ Production environment """
     from flask_app.settings.prod import prod
-
-    """ 
-    Settings for Mongo Client:
-    Connections in MongoEngine are registered globally and are identified with aliases
-    Therefore no need to initialize other connections. 
-    """
-    MONGOCLIENT_SETTINGS = prod["MONGOCLIENT_SETTINGS"]
-    MONGO_LOG_LEVEL = prod["MONGO_LOG_LEVEL"]["value"]
-    MONGO_LOG_LEVEL_OPTIONS = prod["MONGO_LOG_LEVEL"]["options"]
-    SECRET_KEY = os.getenv('SECRET_KEY', None)
-    DEBUG = False
-
-    """ PIServer Config """
-    PISERVERS = config["PISERVERS"]
-
+    config.update(prod)
 else:
     """ Developer environment """
     from flask_app.settings.dev import dev
-
-    """ 
-    Settings for Mongo Client:
-    Connections in MongoEngine are registered globally and are identified with aliases
-    Therefore no need to initialize other connections. 
-    """
-    MONGOCLIENT_SETTINGS = dev["MONGOCLIENT_SETTINGS"]
-    MONGO_LOG_LEVEL = dev["MONGO_LOG_LEVEL"]["value"]
-    MONGO_LOG_LEVEL_OPTIONS = dev["MONGO_LOG_LEVEL"]["options"]
-    SECRET_KEY = "ChAng3-Th1$-$6creTK6y"
-    DEBUG = config["DEBUG"]
+    config.update(dev)
 
     if TESTING_ENV:
-        MONGOCLIENT_SETTINGS["db"] = "DB_DISP_EMS_TEST"
+        config["MONGOCLIENT_SETTINGS"]["db"] = "DB_DISP_EMS_TEST"
 
-""" GENERAL CONFIGURATIONS """
+""" 
+Settings for Mongo Client:
+Connections in MongoEngine are registered globally and are identified with aliases
+Therefore no need to initialize other connections. 
+"""
+
+MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
+MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
+MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
+SECRET_KEY = os.getenv('SECRET_KEY', None)
+
 
 """" FLASK CONFIGURATION """
 FLASK_SERVER_NAME = config["FLASK_SERVER_NAME"]

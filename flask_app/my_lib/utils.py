@@ -53,6 +53,8 @@ def get_last_day():
 
 
 def check_date(s):
+    if isinstance(s, dt.datetime):
+        return True, s
     success, date = check_date_yyyy_mm_dd(s)
     if success:
         return success, date

@@ -24,7 +24,9 @@ class ConsignacionSerializers:
                                    "no_consignacion": fields.String(required=True,
                                                              description="Id de elemento"),
                                    "detalle": fields.Raw(required=False,
-                                                       description="json con detalle de la consignación")
+                                                       description="json con detalle de la consignación"),
+                                   "responsable": fields.String(required=True,
+                                                             description="responsable del ingreso de consignación")
                                })
 
         """ Serializador para formulario extendido de consignacion"""

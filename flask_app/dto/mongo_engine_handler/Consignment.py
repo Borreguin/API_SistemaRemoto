@@ -72,6 +72,12 @@ class Consignment(EmbeddedDocument):
                     id_consignacion=self.id_consignacion, responsable=self.responsable,
                     detalle=self.detalle)
 
+    def to_object(self):
+        return dict(no_consignacion=self.no_consignacion,
+                    fecha_inicio=self.fecha_inicio, fecha_final=self.fecha_final,
+                    id_consignacion=self.id_consignacion, responsable=self.responsable,
+                    detalle=self.detalle)
+
     def edit(self, new_consignment: dict):
         try:
             to_update = ["no_consignacion", "fecha_inicio", "fecha_final", "detalle", "responsable"]
@@ -211,7 +217,7 @@ class Consignments(Document):
         for consignacion in self.consignaciones:
             if consignacion.id_consignacion == id_to_edit:
                 found = True
-                consignacion.edit(consignment.to_dict())
+                consignacion.edit(consignment.to_object())
                 break
         return found, f"La consignación {consignment.no_consignacion} ha sido editada correctamente" if found \
             else f"La consignación no ha sido encontrada"

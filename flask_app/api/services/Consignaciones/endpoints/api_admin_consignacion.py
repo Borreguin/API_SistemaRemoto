@@ -73,15 +73,16 @@ class ConsignacionAPI(Resource):
             if ini_date >= end_date:
                 msg = "El rango de fechas es incorrecto. Revise que la fecha inicial sea anterior a fecha final"
                 return dict(success=False, msg=msg), 400
-            detalle = dict(request.json)
+            request_dict = dict(request.json)
             consignaciones = Consignments.objects(id_elemento=id_elemento).first()
             if consignaciones is None:
                 new_consignments = Consignments(id_elemento=id_elemento)
-                new_consignments.save()
+                # new_consignments.save()
                 consignaciones = new_consignments
-            consignaciones.elemento = detalle.get("elemento", None)
-            consignacion = Consignment(no_consignacion=detalle["no_consignacion"], fecha_inicio=ini_date,
-                                       fecha_final=end_date, detalle=detalle["detalle"])
+            consignaciones.elemento = request_dict.get("elemento", None)
+            consignacion = Consignment(no_consignacion=request_dict["no_consignacion"], fecha_inicio=ini_date,
+                                       fecha_final=end_date, detalle=request_dict["detalle"],
+                                       responsable=request_dict["responsable"])
             # ingresando consignación y guardando si es exitoso:
             success, msg = consignaciones.insert_consignments(consignacion)
             if success:

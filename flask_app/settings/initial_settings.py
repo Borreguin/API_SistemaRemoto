@@ -3,7 +3,7 @@
 """ Set the initial settings of this application"""
 
 import os
-from .config import config as raw_config
+from flask_app.settings.config import config as raw_config
 
 """"
     Created by Roberto Sánchez A
@@ -39,11 +39,11 @@ TESTING_ENV = os.getenv('testing_env', None) == 'True'
 
 if PRODUCTION_ENV:
     """ Production environment """
-    from flask_app.settings.prod import prod
+    from flask_app.settings.env.prod import prod
     config.update(prod)
 else:
     """ Developer environment """
-    from flask_app.settings.dev import dev
+    from flask_app.settings.env.dev import dev
     config.update(dev)
 
     if TESTING_ENV:
@@ -58,7 +58,7 @@ Therefore no need to initialize other connections.
 MONGOCLIENT_SETTINGS = config["MONGOCLIENT_SETTINGS"]
 MONGO_LOG_LEVEL = config["MONGO_LOG_LEVEL"]["value"]
 MONGO_LOG_LEVEL_OPTIONS = config["MONGO_LOG_LEVEL"]["options"]
-SECRET_KEY = os.getenv('SECRET_KEY', None)
+SECRET_KEY = config['SECRET_KEY']
 
 
 """" FLASK CONFIGURATION """
@@ -85,8 +85,6 @@ API_PREFIX = config["API_PREFIX"]
 API_PORT = config["API_PORT"] if PRODUCTION_ENV else config["DEBUG_PORT"]
 DEBUG_PORT = config["DEBUG_PORT"]
 VERSION = config["version"]
-
-
 
 """" EXCEL REPO CONFIGURATION """
 LOGS_REPO = config["LOGS_REPO"]

@@ -2,5 +2,5 @@
 /_db
 /temp
 /logs
-/flask_app/settings/dev.py
-/flask_app/settings/prod.py
+/flask_app/settings/env/dev.py
+/flask_app/settings/env/prod.py

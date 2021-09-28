@@ -41,10 +41,12 @@ if PRODUCTION_ENV:
     """ Production environment """
     from flask_app.settings.env.prod import prod
     config.update(prod)
+    DEBUG = False
 else:
     """ Developer environment """
     from flask_app.settings.env.dev import dev
     config.update(dev)
+    DEBUG = config["DEBUG"]
 
     if TESTING_ENV:
         config["MONGOCLIENT_SETTINGS"]["db"] = "DB_DISP_EMS_TEST"

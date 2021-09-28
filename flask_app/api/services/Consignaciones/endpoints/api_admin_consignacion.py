@@ -38,24 +38,20 @@ class ConsignacionAPI(Resource):
             <b>id_elemento</b> corresponde al elemento a consignar
             formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
-        try:
-            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-            if not success1 or not success2:
-                msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, msg=msg), 400
+        success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+        success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
 
-            consignacion = Consignments.objects(id_elemento=id_elemento).first()
-            if consignacion is None:
-                return dict(success=False, msg="No existen consignaciones asociadas a este elemento"), 404
-            consignaciones = consignacion.consignments_in_time_range(ini_date, end_date)
-            if len(consignaciones) == 0:
-                return dict(success=False, msg="No existen consignaciones en el periodo especificado"), 404
-            return dict(success=True, consignaciones=[c.to_dict() for c in consignaciones],
-                        msg="Se han encontrado consignaciones asociadas"), 200
-
-        except Exception as e:
-            return default_error_handler(e)
+        consignacion = Consignments.objects(id_elemento=id_elemento).first()
+        if consignacion is None:
+            return dict(success=False, msg="No existen consignaciones asociadas a este elemento"), 404
+        consignaciones = consignacion.consignments_in_time_range(ini_date, end_date)
+        if len(consignaciones) == 0:
+            return dict(success=False, msg="No existen consignaciones en el periodo especificado"), 404
+        return dict(success=True, consignaciones=[c.to_dict() for c in consignaciones],
+                    msg="Se han encontrado consignaciones asociadas"), 200
 
     @api.expect(ser_from.detalle_consignacion)
     def post(self, id_elemento: str = "id_elemento", ini_date: str = "yyyy-mm-dd hh:mm:ss",
@@ -64,35 +60,32 @@ class ConsignacionAPI(Resource):
             <b>id_elemento</b> corresponde al elemento a consignar
              formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
-        try:
-            success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-            success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-            if not success1 or not success2:
-                msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
-                return dict(success=False, msg=msg), 400
-            if ini_date >= end_date:
-                msg = "El rango de fechas es incorrecto. Revise que la fecha inicial sea anterior a fecha final"
-                return dict(success=False, msg=msg), 400
-            request_dict = dict(request.json)
-            consignaciones = Consignments.objects(id_elemento=id_elemento).first()
-            if consignaciones is None:
-                new_consignments = Consignments(id_elemento=id_elemento)
-                # new_consignments.save()
-                consignaciones = new_consignments
-            consignaciones.elemento = request_dict.get("elemento", None)
-            consignacion = Consignment(no_consignacion=request_dict["no_consignacion"], fecha_inicio=ini_date,
-                                       fecha_final=end_date, detalle=request_dict["detalle"],
-                                       responsable=request_dict["responsable"])
-            # ingresando consignación y guardando si es exitoso:
-            success, msg = consignaciones.insert_consignments(consignacion)
-            if success:
-                consignaciones.save()
-                return dict(success=success, msg=msg)
-            else:
-                return dict(success=success, msg=msg)
 
-        except Exception as e:
-            return default_error_handler(e)
+        success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+        success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
+        if not success1 or not success2:
+            msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+            return dict(success=False, msg=msg), 400
+        if ini_date >= end_date:
+            msg = "El rango de fechas es incorrecto. Revise que la fecha inicial sea anterior a fecha final"
+            return dict(success=False, msg=msg), 400
+        request_dict = dict(request.json)
+        consignaciones = Consignments.objects(id_elemento=id_elemento).first()
+        if consignaciones is None:
+            new_consignments = Consignments(id_elemento=id_elemento)
+            # new_consignments.save()
+            consignaciones = new_consignments
+        consignaciones.elemento = request_dict.get("elemento", None)
+        consignacion = Consignment(no_consignacion=request_dict["no_consignacion"], fecha_inicio=ini_date,
+                                   fecha_final=end_date, detalle=request_dict["detalle"],
+                                   responsable=request_dict["responsable"])
+        # ingresando consignación y guardando si es exitoso:
+        success, msg = consignaciones.insert_consignments(consignacion)
+        if success:
+            consignaciones.save()
+            return dict(success=success, msg=msg)
+        else:
+            return dict(success=success, msg=msg), 409
 
 
 @ns.route('/consignacion/<string:id_elemento>/<string:id_consignacion>')
@@ -103,22 +96,18 @@ class ConsignacionDeleteEditAPI(Resource):
             <b>id_elemento</b> corresponde al elemento consignado
             <b>id_consignacion</b> corresponde a la identificación de la consignación
         """
-        try:
-            consignaciones = Consignments.objects(id_elemento=id_elemento).first()
-            if consignaciones is None:
-                return dict(success=False, msg="No existen consignaciones para este elemento. "
-                                               "El elemento no existe"), 404
+        consignaciones = Consignments.objects(id_elemento=id_elemento).first()
+        if consignaciones is None:
+            return dict(success=False, msg="No existen consignaciones para este elemento. "
+                                           "El elemento no existe"), 404
 
-            # eliminando consignación por id
-            success, msg = consignaciones.delete_consignment_by_id(id_consignacion)
-            if success:
-                consignaciones.save()
-                return dict(success=success, msg=msg)
-            else:
-                return dict(success=success, msg=msg)
-
-        except Exception as e:
-            return default_error_handler(e)
+        # eliminando consignación por id
+        success, msg = consignaciones.delete_consignment_by_id(id_consignacion)
+        if success:
+            consignaciones.save()
+            return dict(success=success, msg=msg)
+        else:
+            return dict(success=success, msg=msg), 409
 
     @api.expect(ser_from.consignacion)
     def put(self, id_elemento: str = "id_elemento", id_consignacion: str = "id_consignacion"):
@@ -127,24 +116,20 @@ class ConsignacionDeleteEditAPI(Resource):
             <b>id_consignacion</b> corresponde a la identificación de la consignación
             formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
-        try:
-            detalle = request.json
-            consignaciones = Consignments.objects(id_elemento=id_elemento).first()
-            if consignaciones is None:
-                return dict(success=False, msg="No existen consignaciones para este elemento. "
-                                               "El elemento no existe"), 404
+        detalle = request.json
+        consignaciones = Consignments.objects(id_elemento=id_elemento).first()
+        if consignaciones is None:
+            return dict(success=False, msg="No existen consignaciones para este elemento. "
+                                           "El elemento no existe"), 404
 
-            # eliminando consignación por id
-            consignacion = Consignment(**detalle)
-            success, msg = consignaciones.edit_consignment_by_id(id_to_edit=id_consignacion, consignment=consignacion)
-            if success:
-                consignaciones.save()
-                return dict(success=success, msg=msg), 200
-            else:
-                return dict(success=success, msg=msg), 404
-
-        except Exception as e:
-            return default_error_handler(e)
+        # eliminando consignación por id
+        consignacion = Consignment(**detalle)
+        success, msg = consignaciones.edit_consignment_by_id(id_to_edit=id_consignacion, consignment=consignacion)
+        if success:
+            consignaciones.save()
+            return dict(success=success, msg=msg), 200
+        else:
+            return dict(success=success, msg=msg), 404
 
     @api.expect(parsers.consignacion_upload)
     def post(self, id_elemento: str = "id_elemento", id_consignacion: str = "id_consignacion"):
@@ -153,23 +138,20 @@ class ConsignacionDeleteEditAPI(Resource):
                     <b>id_consignacion</b> corresponde a la identificación de la consignación
                     formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
-        try:
-            args = parsers.consignacion_upload.parse_args()
-            consignaciones = Consignments.objects(id_elemento=id_elemento).first()
-            if consignaciones is None:
-                return dict(success=False, msg="No existen consignaciones para este elemento. "
-                                               "El elemento no existe"), 404
-            success, consignacion = consignaciones.search_consignment_by_id(id_to_search=id_consignacion)
-            if not success:
-                return dict(success=False, msg="No existe consignación para este elemento"), 404
-            consignacion.create_folder()
-            file = args['file']
-            filename = file.filename
-            stream_file = file.stream.read()
-            destination = os.path.join(init.CONS_REPO, id_consignacion, filename)
-            with open(destination, 'wb') as f:
-                f.write(stream_file)
-            consignaciones.save()
-            return dict(success=True, msg="Documento cargado exitosamente")
-        except Exception as e:
-            return default_error_handler(e)
+        args = parsers.consignacion_upload.parse_args()
+        consignaciones = Consignments.objects(id_elemento=id_elemento).first()
+        if consignaciones is None:
+            return dict(success=False, msg="No existen consignaciones para este elemento. "
+                                           "El elemento no existe"), 404
+        success, consignacion = consignaciones.search_consignment_by_id(id_to_search=id_consignacion)
+        if not success:
+            return dict(success=False, msg="No existe consignación para este elemento"), 404
+        consignacion.create_folder()
+        file = args['file']
+        filename = file.filename
+        stream_file = file.stream.read()
+        destination = os.path.join(init.CONS_REPO, id_consignacion, filename)
+        with open(destination, 'wb') as f:
+            f.write(stream_file)
+        consignaciones.save()
+        return dict(success=True, msg="Documento cargado exitosamente")

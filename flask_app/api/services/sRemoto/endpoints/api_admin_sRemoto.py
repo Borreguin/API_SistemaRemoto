@@ -120,8 +120,8 @@ class SRRTUSAPI(Resource):
 
         utrs_list = nodo["entidades"][idx]["utrs"]
         for utr in utrs_list:
-            utr.pop('consignaciones')
-            utr.pop("tags")
+            utr.pop('consignaciones', None)
+            utr.pop("tags", None)
             utr['longitude'] = utr['longitude'] \
                 if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
             utr['latitude'] = utr['latitude'] \

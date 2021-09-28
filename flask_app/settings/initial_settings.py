@@ -51,6 +51,9 @@ else:
     if TESTING_ENV:
         config["MONGOCLIENT_SETTINGS"]["db"] = "DB_DISP_EMS_TEST"
 
+""" PIServer Config """
+PISERVERS = config["PISERVERS"]
+
 """ 
 Settings for Mongo Client:
 Connections in MongoEngine are registered globally and are identified with aliases

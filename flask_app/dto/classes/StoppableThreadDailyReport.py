@@ -2,10 +2,19 @@
     This script allows to start and stop a thread.
 """
 import threading
-import time
+import time, os, sys
 import datetime as dt
 import traceback
 from mongoengine import connect
+
+# añadiendo a sys el path del proyecto:
+# permitiendo el uso de librerías propias:
+class_path = os.path.dirname(os.path.abspath(__file__))
+dto_path = os.path.dirname(class_path)
+flask_path = os.path.dirname(dto_path)
+project_path = os.path.dirname(flask_path)
+sys.path.append(flask_path)
+sys.path.append(project_path)
 
 import flask_app.settings.LogDeafultConfig
 from flask_app.dto.classes.utils import get_today, get_thread_by_name

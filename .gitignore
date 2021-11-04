@@ -1,6 +1,10 @@
 /.idea/
+/.vscode
 /_db
 /temp
 /logs
 /flask_app/settings/env/dev.py
 /flask_app/settings/env/prod.py
+/Production_server_1.txt
+__pycache__/
+*.pyc

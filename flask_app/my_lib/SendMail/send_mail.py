@@ -1,7 +1,7 @@
 import os, sys
 import traceback
 
-import flask_app.settings.LogDeafultConfig
+import flask_app.settings.LogDefaultConfig
 
 reader_path = os.path.dirname(os.path.abspath(__file__))
 my_lib_path = os.path.dirname(reader_path)
@@ -16,7 +16,7 @@ im_path = init.REPORTS_REPO
 template_path = os.path.join(init.TEMPLATES_REPO, "templates")
 html_error_template_path = os.path.join(template_path, "reportar_error.html")
 log_path = os.path.join(init.project_path, "logs")
-log = flask_app.settings.LogDeafultConfig.LogDefaultConfig("mail.log").logger
+log = flask_app.settings.LogDefaultConfig.LogDefaultConfig("mail.log").logger
 
 
 def report_error(descripcion: str, detalle: str, from_email: str, emails, log_file_path):

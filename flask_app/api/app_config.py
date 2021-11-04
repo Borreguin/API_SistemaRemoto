@@ -15,12 +15,12 @@ from flask_mongoengine import MongoEngine
 from mongoengine import NotUniqueError
 from pymongo import MongoClient
 
-import flask_app.settings.LogDeafultConfig
+import flask_app.settings.LogDefaultConfig
 from flask_app.settings import initial_settings as init
 
 # log events:
-log = flask_app.settings.LogDeafultConfig.LogDefaultConfig("app_activity.log").logger               # Activity Logger
-error_log = flask_app.settings.LogDeafultConfig.LogDefaultConfig("app_errors.log").logger        # Error logger
+log = flask_app.settings.LogDefaultConfig.LogDefaultConfig("app_activity.log").logger               # Activity Logger
+error_log = flask_app.settings.LogDefaultConfig.LogDefaultConfig("app_errors.log").logger        # Error logger
 mongo_client = init.MONGOCLIENT_SETTINGS.copy()
 
 

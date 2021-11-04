@@ -321,3 +321,13 @@ def replace_edit_tags_in_node(nodo, idx, id_utr, tags_req):
                 return True, tags, f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} " \
                              f"-añadidas: {len(tags_req) - n_remove}"
             return False, None, f"{nodo.entidades[idx].utrs[ix]} {msg}"
+
+def check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date):
+    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
+    if not success1 or not success2:
+        msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+        return False, ini_date, end_date, msg
+    if end_date < ini_date:
+        return False, ini_date, end_date, "La fecha de inicio es mayor que la fecha de fin"
+    return True, ini_date, end_date, "Rango correcto"

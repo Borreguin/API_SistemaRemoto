@@ -1,4 +1,4 @@
-import flask_app.settings.LogDeafultConfig
+import flask_app.settings.LogDefaultConfig
 from flask_app.dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
 from flask_app.dto.mongo_engine_handler.sRNode import *
@@ -31,7 +31,7 @@ details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb
                    lb_dispo_ponderada_unidad, lb_dispo_promedio_utr, lb_no_seniales, lb_latitud,
                    lb_longitud]
 
-log = flask_app.settings.LogDeafultConfig.LogDefaultConfig("sRFinalReportBase.log").logger
+log = flask_app.settings.LogDefaultConfig.LogDefaultConfig("sRFinalReportBase.log").logger
 
 
 class SRNodeSummaryReport(EmbeddedDocument):

@@ -12,7 +12,7 @@ import datetime as dt
 from flask_restplus import Api
 from sqlalchemy.orm.exc import NoResultFound
 from flask_app.settings.initial_settings import VERSION
-from flask_app.settings.LogDeafultConfig import LogDefaultConfig
+from flask_app.settings.LogDefaultConfig import LogDefaultConfig
 from flask_app.settings.initial_settings import MONGOCLIENT_SETTINGS
 
 """ mongo client config"""

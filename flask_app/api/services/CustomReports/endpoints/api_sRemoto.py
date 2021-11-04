@@ -12,7 +12,7 @@
 
 from flask_restplus import Resource
 # importando configuraciones iniciales
-import flask_app.settings.LogDeafultConfig
+import flask_app.settings.LogDefaultConfig
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
@@ -32,7 +32,7 @@ api = ser_from.add_serializers()
 ns = api.namespace('sRemoto', description='Relativas a reportes personalizados de Sistema Remoto')
 
 # log all changes here inside:
-log = flask_app.settings.LogDeafultConfig.LogDefaultConfig("api_sRemoto.log").logger
+log = flask_app.settings.LogDefaultConfig.LogDefaultConfig("api_sRemoto.log").logger
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 @ns.route('/disponibilidad/<string:formato>/<string:ini_date>/<string:end_date>')

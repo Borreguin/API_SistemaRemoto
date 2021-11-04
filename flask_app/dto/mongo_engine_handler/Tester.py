@@ -1,4 +1,5 @@
-from flask_app.dto.mongo_engine_handler import sRNode as DS, Consignment as Cons
+from flask_app.dto.mongo_engine_handler import sRNode as DS
+from flask_app.dto.mongo_engine_handler.Info import Consignment as Cons
 import random as r
 from mongoengine import *
 import datetime as dt

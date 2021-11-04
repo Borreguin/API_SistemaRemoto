@@ -11,13 +11,8 @@ Consignación:
 
 """
 from typing import List
-from shutil import rmtree
-from mongoengine import *
-import datetime as dt
-import os, uuid, hashlib, traceback
 
-from flask_app.my_lib.utils import check_date
-from flask_app.settings import initial_settings as init
+from flask_app.dto.mongo_engine_handler.Info import *
 
 
 class Consignment(EmbeddedDocument):
@@ -60,7 +55,7 @@ class Consignment(EmbeddedDocument):
         if self.fecha_inicio >= self.fecha_final:
             raise ValueError("La fecha de inicio no puede ser mayor o igual a la fecha de fin")
         t = self.fecha_final - self.fecha_inicio
-        self.t_minutos = t.days * (60 * 24) + t.seconds // 60 + (t.seconds % 60)/60
+        self.t_minutos = t.days * (60 * 24) + t.seconds // 60 + (t.seconds % 60) / 60
 
     def __str__(self):
         return f"({self.no_consignacion}: min={self.t_minutos}) [{self.fecha_inicio.strftime('%d-%m-%Y %H:%M')}, " \
@@ -69,12 +64,6 @@ class Consignment(EmbeddedDocument):
     def to_dict(self):
         return dict(no_consignacion=self.no_consignacion,
                     fecha_inicio=str(self.fecha_inicio), fecha_final=str(self.fecha_final),
-                    id_consignacion=self.id_consignacion, responsable=self.responsable,
-                    detalle=self.detalle)
-
-    def to_object(self):
-        return dict(no_consignacion=self.no_consignacion,
-                    fecha_inicio=self.fecha_inicio, fecha_final=self.fecha_final,
                     id_consignacion=self.id_consignacion, responsable=self.responsable,
                     detalle=self.detalle)
 
@@ -194,6 +183,34 @@ class Consignments(Document):
                 # el periodo consignado cubre la totalidad del periodo a evaluar:
                 (c.fecha_inicio <= ini_date and c.fecha_final >= end_time)]
 
+    def get_standard_element(self):
+        from flask_app.dto.mongo_engine_handler.Components.Comp_Root import ComponenteRoot
+        if "entidad_nombre" in dict(self.elemento).keys() and "utr_nombre" in dict(self.elemento).keys():
+            return dict(entidad=dict(self.elemento).get("entidad_nombre"),
+                        elemento=dict(self.elemento).get("utr_nombre"))
+
+        if dict(self.elemento).get("document") == "ComponenteLeaf":
+            parent_id = dict(self.elemento).get("parent_id", "")
+            componente = ComponenteRoot.objects(public_id=parent_id).first()
+            if componente is None:
+                return dict(entidad=None, elemento=dict(self.elemento).get("name"))
+            return dict(entidad=componente.name, elemento=dict(self.elemento).get("name"))
+
+        return dict(entidad=None, elemento=None)
+
+    def consignments_in_time_range_w_element(self, ini_date: dt.datetime, end_time: dt.datetime):
+        consignment_list = self.consignments_in_time_range(ini_date, end_time)
+        result = list()
+        if len(consignment_list) == 0:
+            return consignment_list
+        for consignment in consignment_list:
+            consignment_dict = consignment.to_dict()
+            detalle = consignment_dict.pop("detalle", None)
+            consignment_dict.update(detalle)
+            consignment_dict.update(self.get_standard_element())
+            result.append(consignment_dict)
+        return result
+
     def search_consignment_by_id(self, id_to_search):
         for consignment in self.consignaciones:
             if consignment.id_consignacion == id_to_search:
@@ -217,7 +234,7 @@ class Consignments(Document):
         for consignacion in self.consignaciones:
             if consignacion.id_consignacion == id_to_edit:
                 found = True
-                consignacion.edit(consignment.to_object())
+                consignacion.edit(consignment.to_dict())
                 break
         return found, f"La consignación {consignment.no_consignacion} ha sido editada correctamente" if found \
             else f"La consignación no ha sido encontrada"

@@ -18,11 +18,9 @@ import flask_app.settings.LogDefaultConfig
 from flask_app.api.services.Consignaciones import parsers
 from flask_app.api.services.Consignaciones import serializers as srl
 from flask_app.api.services.restplus_config import api
-from flask_app.api.services.restplus_config import default_error_handler
 # importando clases para leer desde MongoDB
 # importando configuraciones iniciales
-from flask_app.dto.mongo_engine_handler.Consignment import Consignments, Consignment
-from flask_app.my_lib import utils as u
+from flask_app.dto.mongo_engine_handler.Info.Consignment import Consignments, Consignment
 from flask_app.my_lib.utils import check_range_yyyy_mm_dd_hh_mm_ss, set_max_age_to_response
 from flask_app.settings import initial_settings as init
 

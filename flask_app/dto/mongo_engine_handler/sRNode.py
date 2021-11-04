@@ -8,7 +8,7 @@
 """
 import math
 
-from flask_app.dto.mongo_engine_handler.Consignment import *
+from flask_app.dto.mongo_engine_handler.Info.Consignment import *
 import datetime as dt
 import pandas as pd
 

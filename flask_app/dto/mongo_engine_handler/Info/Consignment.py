@@ -184,17 +184,19 @@ class Consignments(Document):
                 (c.fecha_inicio <= ini_date and c.fecha_final >= end_time)]
 
     def get_standard_element(self):
-        from flask_app.dto.mongo_engine_handler.Components.Comp_Root import ComponenteRoot
         if "entidad_nombre" in dict(self.elemento).keys() and "utr_nombre" in dict(self.elemento).keys():
             return dict(entidad=dict(self.elemento).get("entidad_nombre"),
                         elemento=dict(self.elemento).get("utr_nombre"))
-
-        if dict(self.elemento).get("document") == "ComponenteLeaf":
-            parent_id = dict(self.elemento).get("parent_id", "")
-            componente = ComponenteRoot.objects(public_id=parent_id).first()
-            if componente is None:
-                return dict(entidad=None, elemento=dict(self.elemento).get("name"))
-            return dict(entidad=componente.name, elemento=dict(self.elemento).get("name"))
+        # Caso para componentes sistema central:
+        comp_path = os.path.join(init.flask_path, "dto", "mongo_engine_handler", "Components")
+        if os.path.exists(comp_path):
+            from flask_app.dto.mongo_engine_handler.Components.Comp_Root import ComponenteRoot
+            if dict(self.elemento).get("document") == "ComponenteLeaf":
+                parent_id = dict(self.elemento).get("parent_id", "")
+                componente = ComponenteRoot.objects(public_id=parent_id).first()
+                if componente is None:
+                    return dict(entidad=None, elemento=dict(self.elemento).get("name"))
+                return dict(entidad=componente.name, elemento=dict(self.elemento).get("name"))
 
         return dict(entidad=None, elemento=None)
 

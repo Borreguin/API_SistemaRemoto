@@ -273,7 +273,7 @@ class TendenciaDiariaExcel(Resource):
 
     @staticmethod
     def get(formato, ini_date=None, end_date=None):
-        """ Entrega el cálculo en formato Excel/JSON realizado de manera diaria a las 00:00
+        """ Entrega la disponibilidad de datos en formato Excel/JSON realizado de manera diaria a las 00:00
             Si el cálculo no existe entonces <b>código 404</b>
             Formato:                excel, json
             Fecha inicial formato:  <b>yyyy-mm-dd</b>
@@ -291,7 +291,6 @@ class TendenciaDiariaExcel(Resource):
 
         dates = []
         values = []
-        log.info("Going to get each report")
         for ini, end in zip(date_range, date_range[1:]):
             final_report_v = SRFinalReportTemporal(fecha_inicio=ini, fecha_final=end)
             final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()

@@ -7,7 +7,7 @@ CAMBIOS EN ESTA VERSION
 config = dict()
 
 config["name"] = "settings"
-config["version"] = "0.3"
+config["version"] = "3"
 
 config["FLASK_SERVER_NAME"] = "localhost:7077"
 #Configuración de Debbugging

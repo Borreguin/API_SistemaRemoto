@@ -1,6 +1,8 @@
 /.idea/
 /.vscode
 /_db
+/_MongoDB/mongo_db
+/_MongoDB/logs
 /temp
 /logs
 /flask_app/settings/env/dev.py

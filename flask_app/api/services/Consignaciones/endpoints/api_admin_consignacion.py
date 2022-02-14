@@ -77,7 +77,7 @@ class ConsignacionAPI(Resource):
         if elemento is not None:
             consignaciones.elemento = detalle.pop("elemento", None)
         consignacion = Consignment(no_consignacion=detalle["no_consignacion"], fecha_inicio=ini_date,
-                                   fecha_final=end_date, detalle=detalle["detalle"])
+                                   fecha_final=end_date, detalle=detalle["detalle"], responsable=detalle['responsable'])
         # ingresando consignación y guardando si es exitoso:
         success, msg = consignaciones.insert_consignments(consignacion)
         if success:

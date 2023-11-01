@@ -44,13 +44,13 @@ mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""
 if not init.PRODUCTION_ENV or init.DEBUG:
     # pi server por defecto
-    pi_svr = pi.PIserver()
+    pi_svr = pi.create_pi_server()
 else:
     # seleccionando cualquiera disponible
     idx = randint(0, len(init.PISERVERS) - 1)
     print(f"PI aleatorio seleccionado: {init.PISERVERS[int(idx)]}")
     PiServerName = init.PISERVERS[int(idx)]
-    pi_svr = pi.PIserver(PiServerName)
+    pi_svr = pi.create_pi_server(PiServerName)
 
 print(f"PIServer Connection: {pi_svr.server}")
 report_ini_date = None
@@ -182,7 +182,7 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
         for tag, condition in zip(tag_list, condition_list):
             try:
                 # buscando la Tag en el servidor PI
-                pt = pi.PI_point(pi_svr, tag)
+                pt = pi.create_pi_point(pi_svr, tag)
                 if pt.pt is None:
                     fault_tags.append(tag)  # La tag no fue encontrada en el servidor PI
                     continue  # continue con la siguiente tag

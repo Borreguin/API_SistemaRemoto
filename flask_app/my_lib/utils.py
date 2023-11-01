@@ -288,8 +288,8 @@ def write_temporal_file(streamed_file, temp_path):
 
 
 def get_df_from_excel_streamed_file(streamed_file, temp_path):
-    if streamed_file.mimetype in 'application/xls, application/vnd.ms-excel,  application/xlsx' \
-                                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+    if streamed_file.mimetype in ['application/xls, application/vnd.ms-excel,  application/xlsx',
+                                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']:
         try:
             success, temp_file = write_temporal_file(streamed_file, temp_path)
             if not success:
@@ -321,6 +321,7 @@ def replace_edit_tags_in_node(nodo, idx, id_utr, tags_req):
                 return True, tags, f"{nodo.entidades[idx].utrs[ix]} TAGS: -editadas: {n_remove} " \
                              f"-añadidas: {len(tags_req) - n_remove}"
             return False, None, f"{nodo.entidades[idx].utrs[ix]} {msg}"
+    return False, None, f"No se realizo reemplazo para: {id_utr}"
 
 def check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date):
     success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)

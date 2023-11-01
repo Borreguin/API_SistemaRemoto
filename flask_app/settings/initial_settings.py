@@ -44,7 +44,7 @@ if PRODUCTION_ENV:
     DEBUG = False
 else:
     """ Developer environment """
-    from flask_app.settings.env.dev import dev
+    from flask_app.settings.env.dev_example import dev
     config.update(dev)
     DEBUG = config["DEBUG"]
 

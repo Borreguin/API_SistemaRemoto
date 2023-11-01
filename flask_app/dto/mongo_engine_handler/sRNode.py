@@ -237,7 +237,7 @@ class SRNode(Document):
         for att in attributes_node:
             self[att] = summary[att]
         id_entities_lcl = [e["id_entidad"] for e in self.entidades]
-        id_entities_new = [e["id_entidad"] for e in summary["entidades"]]
+        id_entities_new = [e["id_entidad"] for e in summary.get("entidades", [])]
         ids_to_delete = [id for id in id_entities_lcl if id not in id_entities_new]
         check = [e["entidad_tipo"] + e["entidad_nombre"] for e in summary["entidades"]]
         # check if there are repeated elements

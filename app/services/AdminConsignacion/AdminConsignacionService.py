@@ -6,8 +6,8 @@ from starlette.responses import FileResponse
 
 from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import DetalleConsignacionRequest, ConsignacionRequest, FormatOption
-from flask_app.dto.mongo_engine_handler.Info.Consignment import Consignments, Consignment
-from flask_app.my_lib.utils import check_range_yyyy_mm_dd_hh_mm_ss, set_max_age_to_response
+from app.db.v1.Info.Consignment import Consignments, Consignment
+from flask_app.my_lib.utils import check_range_yyyy_mm_dd_hh_mm_ss
 import pandas as pd
 
 

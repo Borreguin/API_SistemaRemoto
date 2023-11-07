@@ -16,7 +16,7 @@ from flask_app.api.services.restplus_config import api
 from flask_app.api.services.restplus_config import default_error_handler
 from flask_app.api.services.sRemoto import serializers as srl
 # importando clases para leer desde MongoDB
-from flask_app.dto.mongo_engine_handler.sRNode import *
+from app.db.v1.sRNode import *
 from flask_app.my_lib.utils import group_files, set_max_age_to_response
 
 # configurando logger y el servicio web

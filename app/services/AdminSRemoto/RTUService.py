@@ -4,7 +4,7 @@ from starlette import status
 
 from app.common.util import to_dict
 from app.schemas.RequestSchemas import RTURequest, RTURequestId
-from flask_app.dto.mongo_engine_handler.sRNode import SRNode, SRUTR
+from app.db.v1.sRNode import SRNode, SRUTR
 from flask_app.my_lib.utils import find_entity_in_node
 
 

@@ -305,7 +305,7 @@ def get_df_from_excel_streamed_file(streamed_file, temp_path):
 
 
 def replace_edit_tags_in_node(nodo, idx, id_utr, tags_req):
-    from flask_app.dto.mongo_engine_handler.sRNode import SRTag
+    from app.db.v1.sRNode import SRTag
     for ix, _utr in enumerate(nodo.entidades[idx].utrs):
         if _utr.id_utr == id_utr or _utr.utr_code == id_utr:
             tag_names = [t.pop("tag_name_original", None) for t in tags_req]

@@ -21,8 +21,8 @@ sys.path.append(project_path)
 
 import flask_app.settings.LogDefaultConfig
 from flask_app.dto.classes.utils import get_today, get_thread_by_name
-from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import lb_unidad_negocio, lb_empresa, \
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.SRFinalReport.sRFinalReportBase import lb_unidad_negocio, lb_empresa, \
     lb_utr_id, lb_utr, lb_dispo_promedio_utr, lb_protocolo, lb_indisponible_minutos_promedio
 from flask_app.my_lib.SendMail.send_mail import report_error, send_mail
 from flask_app.settings import initial_settings as init

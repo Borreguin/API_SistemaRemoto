@@ -26,19 +26,19 @@ sys.path.append(motor_path)
 sys.path.append(project_path)
 
 # import custom libraries:
-from flask_app.dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from flask_app.motor import log_node
 
 from flask_app.my_lib.PI_connection import pi_connect as pi
-from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
 import logging
 import threading as th
 from tqdm import tqdm
 from random import randint
 
 """ Import clases for MongoDB """
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import *
+from app.db.v1.SRNodeReport.sRNodeReportBase import *
 
 mongo_config = init.MONGOCLIENT_SETTINGS
 """ Variables globales"""

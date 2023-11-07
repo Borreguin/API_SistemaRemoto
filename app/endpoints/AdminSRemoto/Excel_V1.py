@@ -2,14 +2,14 @@ from fastapi import UploadFile, APIRouter
 from starlette.responses import Response, FileResponse, StreamingResponse
 
 from app.schemas.RequestSchemas import Option
-from app.services.AdminSRemoto.ExcelService import post_agrega_nodo_mediante_archivo_excel, \
+from app.services.AdminSRemoto.ExcelService_V1 import post_agrega_nodo_mediante_archivo_excel, \
     put_actualizar_nodo_usando_excel, get_descarga_excel_de_ultima_version_de_nodo
 
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
-def node_from_excel_endpoints(router: APIRouter):
+def v1_node_from_excel_endpoints(router: APIRouter):
     endpoint_uri = '/nodo/{tipo}/{nombre}/from-excel'
-    router.tags = ["admin-sRemoto - excel"]
+    router.tags = ["v1-admin-sRemoto - excel"]
 
     @router.post(endpoint_uri)
     async def agrega_nodo_mediante_archivo_excel(tipo: str, nombre: str, excel_file: UploadFile,

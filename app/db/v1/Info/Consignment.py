@@ -12,7 +12,7 @@ Consignación:
 """
 from typing import List
 
-from flask_app.dto.mongo_engine_handler.Info import *
+from app.db.v1.Info import *
 
 
 class Consignment(EmbeddedDocument):

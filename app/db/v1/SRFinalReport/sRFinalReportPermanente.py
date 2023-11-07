@@ -1,4 +1,4 @@
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import SRFinalReportBase
+from app.db.v1.SRFinalReport.sRFinalReportBase import SRFinalReportBase
 
 
 class SRFinalReportPermanente(SRFinalReportBase):

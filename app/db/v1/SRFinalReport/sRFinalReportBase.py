@@ -1,10 +1,10 @@
 import flask_app.settings.LogDefaultConfig
-from flask_app.dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
-from flask_app.dto.mongo_engine_handler.sRNode import *
+from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from app.db.v1.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
+from app.db.v1.sRNode import *
 import hashlib
 from flask_app.my_lib import utils as u
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from multiprocessing.pool import ThreadPool
 import queue
 

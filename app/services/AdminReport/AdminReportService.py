@@ -12,8 +12,8 @@ from app.schemas.RequestSchemas import ConfigReport, RoutineOptions
 from flask_app.dto.classes.StoppableThreadDailyReport import StoppableThreadDailyReport
 from flask_app.dto.classes.StoppableThreadMailReport import StoppableThreadMailReport
 from flask_app.dto.classes.utils import get_thread_by_name
-from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
-from flask_app.dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 from flask_app.motor.master_scripts.eng_sRmaster import run_nodes_and_summarize
 from flask_app.my_lib.utils import check_date_yyyy_mm_dd, get_dates_by_default
 

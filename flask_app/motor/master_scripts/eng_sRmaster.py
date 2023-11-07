@@ -24,17 +24,17 @@ import io, os
 import subprocess as sb
 import datetime as dt
 
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import SRNodeSummaryReport
-from flask_app.dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
-from flask_app.dto.mongo_engine_handler.sRNode import SRNode
+from app.db.v1.SRFinalReport.sRFinalReportBase import SRNodeSummaryReport
+from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from app.db.v1.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
+from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from app.db.v1.sRNode import SRNode
 from flask_app.motor import log_master
 from flask_app.settings import initial_settings as init
 from flask_app.motor.node_scripts.eng_sRnode import eng_results
 from flask_app.my_lib import utils as u
-from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
-from flask_app.dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 
 # general variables
 script_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,7 +45,7 @@ debug = init.DEBUG
 log = log_master
 
 """ Import clases for MongoDB """
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportPermanente import *
+from app.db.v1.SRFinalReport.sRFinalReportPermanente import *
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"

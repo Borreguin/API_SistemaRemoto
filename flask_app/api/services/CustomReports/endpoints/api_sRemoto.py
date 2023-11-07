@@ -16,7 +16,7 @@ import flask_app.settings.LogDefaultConfig
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.sRemoto import serializers as srl
 # importando el motor de cálculos:
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import *
+from app.db.v1.SRFinalReport.sRFinalReportBase import *
 from flask_app.motor.master_scripts.eng_sRmaster import *
 from flask import send_from_directory
 

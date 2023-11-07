@@ -19,9 +19,9 @@ from flask_app.dto.classes.utils import get_thread_by_name
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.CustomReports import serializers as srl
 # importando clases para leer desde MongoDB
-from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
-from flask_app.dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
-from flask_app.dto.mongo_engine_handler.sRNode import *
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
+from app.db.v1.sRNode import *
 import threading
 
 # configurando logger y el servicio web

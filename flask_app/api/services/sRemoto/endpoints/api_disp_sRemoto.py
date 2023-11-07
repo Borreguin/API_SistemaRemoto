@@ -19,7 +19,7 @@ from flask_app.api.services.sRemoto import serializers as srl
 from flask_app.motor.master_scripts.eng_sRmaster import *
 from flask import request
 # importando clases para leer desde MongoDB
-from flask_app.dto.mongo_engine_handler.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
 
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()

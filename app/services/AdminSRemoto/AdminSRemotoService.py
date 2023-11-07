@@ -6,8 +6,8 @@ from starlette import status
 
 from app.common.util import to_dict
 from app.schemas.RequestSchemas import *
-from app.utils.service_util import *
-from flask_app.dto.mongo_engine_handler.sRNode import SRNode, SREntity
+from app.utils.excel_util import *
+from app.db.v1.sRNode import SRNode, SREntity
 
 
 def put_activa_nodo(id_nodo: str = "ID del nodo a cambiar") -> Tuple[dict, int]:

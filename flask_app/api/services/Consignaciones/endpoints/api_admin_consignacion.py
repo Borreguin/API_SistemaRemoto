@@ -20,7 +20,7 @@ from flask_app.api.services.Consignaciones import serializers as srl
 from flask_app.api.services.restplus_config import api
 # importando clases para leer desde MongoDB
 # importando configuraciones iniciales
-from flask_app.dto.mongo_engine_handler.Info.Consignment import Consignments, Consignment
+from app.db.v1.Info.Consignment import Consignments, Consignment
 from flask_app.my_lib.utils import check_range_yyyy_mm_dd_hh_mm_ss, set_max_age_to_response
 from flask_app.settings import initial_settings as init
 

@@ -5,9 +5,9 @@ from starlette.responses import FileResponse
 from app.common import configure_logger
 from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import FormatOption
-from flask_app.dto.mongo_engine_handler.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportBase import *
-from flask_app.dto.mongo_engine_handler.SRFinalReport.sRFinalReportPermanente import SRFinalReportPermanente
+from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
+from app.db.v1.SRFinalReport.sRFinalReportBase import *
+from app.db.v1.SRFinalReport.sRFinalReportPermanente import SRFinalReportPermanente
 from flask_app.my_lib.utils import *
 
 log = configure_logger("api_sRemoto.log")

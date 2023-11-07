@@ -1,12 +1,12 @@
-from flask_app.dto.mongo_engine_handler import sRNode as DS
-from flask_app.dto.mongo_engine_handler.Info import Consignment as Cons
+from app.db.v1 import sRNode as DS
+from app.db.v1.Info import Consignment as Cons
 import random as r
 from mongoengine import *
 import datetime as dt
 
-from flask_app.dto.mongo_engine_handler.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportBase import SREntityDetails, SRUTRDetails, SRTagDetails
-from flask_app.dto.mongo_engine_handler.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
+from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
+from app.db.v1.SRNodeReport.sRNodeReportBase import SREntityDetails, SRUTRDetails, SRTagDetails
+from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from flask_app.settings import initial_settings as init
 from flask_app.my_lib.utils import isTemporal
 DEBUG = True

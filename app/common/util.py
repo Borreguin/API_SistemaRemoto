@@ -9,7 +9,7 @@ import os
 from fastapi import UploadFile
 
 from app import project_path
-from app.utils.service_util import is_excel_file
+from app.utils.excel_util import is_excel_file
 
 
 def get_hashed_text(plain_text: str) -> bytes:

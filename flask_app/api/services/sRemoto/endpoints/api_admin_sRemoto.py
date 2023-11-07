@@ -21,7 +21,7 @@ from flask_app.api.services.restplus_config import api
 from flask_app.api.services.sRemoto import serializers as srl
 from flask_app.api.services.sRemoto import parsers
 # importando clases para leer desde MongoDB
-from flask_app.dto.mongo_engine_handler.sRNode import *
+from app.db.v1.sRNode import *
 from random import randint
 
 # configurando logger y el servicio web

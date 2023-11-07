@@ -8,8 +8,8 @@ from starlette.responses import FileResponse
 
 from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import Option
-from app.utils.service_util import get_node_from_excel_file, save_excel_file_from_bytes
-from flask_app.dto.mongo_engine_handler.sRNode import SRNode, SRDataFramesFromDict
+from app.utils.excel_util import get_node_from_excel_file, save_excel_file_from_bytes
+from app.db.v1.sRNode import SRNode, SRDataFramesFromDict
 
 
 async def post_agrega_nodo_mediante_archivo_excel(tipo: str, nombre: str, excel_file: UploadFile) -> Tuple[dict, int]:

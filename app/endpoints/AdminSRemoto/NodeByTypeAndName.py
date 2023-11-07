@@ -4,7 +4,7 @@ from starlette.responses import Response
 import datetime as dt
 
 from app.schemas.RequestSchemas import NodeNewName
-from flask_app.dto.mongo_engine_handler.sRNode import SRNode
+from app.db.v1.sRNode import SRNode
 
 
 def node_type_and_name_endpoints(router: APIRouter):

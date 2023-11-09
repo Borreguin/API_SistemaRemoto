@@ -22,7 +22,7 @@ class V2DBMongoTester(unittest.TestCase):
         self.assertEqual(True, success)
 
     @connectTestDB
-    def test_create_node_with_entityties(self):
+    def test_create_node_with_entities(self):
         v2_node = create_new_node(with_entities)
         v2_node.entidades = [create_new_entity(with_entities + 1), create_new_entity(with_entities + 2)]
         success, msg = save_mongo_document_safely(v2_node)

@@ -11,7 +11,6 @@ class V2DBMongoTester(unittest.TestCase):
 
     def test_db_connection(self):
         is_connected = connect_to_test_db()
-        print(f"Connected: {is_connected}")
         self.assertEqual(is_connected, True)
 
     @connectTestDB

@@ -47,7 +47,6 @@ def connect_to_test_db() -> bool:
 
 def connectTestDB(func):
     def wrapper(*args, **kwargs):
-        print(">>>>>	Connecting to test database... ")
         connect_to_test_db()
         func(*args, **kwargs)
 
@@ -67,7 +66,7 @@ def create_new_node(instance) -> V2SRNode:
 def delete_node(instance) -> str:
     gen = create_fake_gen(instance)
     tipo, nombre = gen.node_type(), gen.first_name()
-    v2_node = V2SRNode.objects(tipo=tipo, nombre=nombre, document=V2_SR_NODE_LABEL).first()
+    v2_node = V2SRNode.find(V2SRNode, tipo, nombre)
     if isinstance(v2_node, V2SRNode):
         v2_node.delete()
         return "Deleted"

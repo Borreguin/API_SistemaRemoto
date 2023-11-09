@@ -41,3 +41,7 @@ class V2SRNode(Document):
             return False, f"SRNodeV2: no único para valores: {self.tipo} {self.nombre}"
         except Exception as e:
             return False, f"No able to save: {e}"
+
+    @staticmethod
+    def find(self, tipo: str, nombre: str):
+        return self.objects(tipo=tipo, nombre=nombre, document=V2_SR_NODE_LABEL).first()

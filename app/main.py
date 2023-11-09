@@ -32,7 +32,8 @@ def db_connection(n_try=1):
         return False
 
     try:
-        connect(db=settings.MONGO_DB, host=settings.MONGO_SERVER_IP, port=int(settings.MONGO_PORT), alias='default')
+        connect(db=settings.MONGO_DB, host=settings.MONGO_SERVER_IP, port=int(settings.MONGO_PORT),
+                alias='default', uuidRepresentation='standard')
         app_log.info('MongoDB: Connection accepted')
         return True
     except Exception as e:

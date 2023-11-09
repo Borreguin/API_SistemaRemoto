@@ -23,6 +23,8 @@ cl_bahia_nombre = "bahia_nombre"
 
 lb_bahia = "Bahía"
 
+default_filter_expression = 'TE.*#ME.*#*.ME#*.TE# DA.*#*.DA#*.INV#INV.*#TE#ME#DA#INV'
+
 tag_migration_columns = [cl_tag_name, cl_instalacion_ems_code, cl_nivel_voltaje, cl_bahia_code, cl_filter_tag]
 
 v1_main_sheet_columns = [cl_utr, cl_utr_nombre, cl_utr_tipo,

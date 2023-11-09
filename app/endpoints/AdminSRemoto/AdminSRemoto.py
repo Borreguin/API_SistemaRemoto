@@ -2,12 +2,13 @@ from fastapi import APIRouter
 from starlette.responses import Response
 
 from app.core.config import Settings
-from app.endpoints.AdminSRemoto.Excel_V1 import v1_node_from_excel_endpoints
-from app.endpoints.AdminSRemoto.Excel_V2 import v2_node_from_excel_endpoints
+from app.endpoints.AdminSRemoto.v1_Excel import v1_node_from_excel_endpoints
+from app.endpoints.AdminSRemoto.v2_Excel import v2_node_from_excel_endpoints
 from app.endpoints.AdminSRemoto.NodeById import node_id_endpoints
-from app.endpoints.AdminSRemoto.NodeByTypeAndName import node_type_and_name_endpoints
+from app.endpoints.AdminSRemoto.v1_NodeByTypeAndName import v1_node_type_and_name_endpoints
 from app.endpoints.AdminSRemoto.RTU import rtu_endpoints
 from app.endpoints.AdminSRemoto.Tags import tags_endpoints
+from app.endpoints.AdminSRemoto.v2_NodeByTypeAndName import v2_node_type_and_name_endpoints
 from app.services.AdminSRemoto.AdminSRemotoService import *
 
 router = APIRouter(
@@ -19,7 +20,8 @@ router = APIRouter(
 
 def create_grouped_endpoints(_router: APIRouter):
     node_id_endpoints(_router)
-    node_type_and_name_endpoints(_router)
+    v1_node_type_and_name_endpoints(_router)
+    v2_node_type_and_name_endpoints(_router)
     v1_node_from_excel_endpoints(_router)
     v2_node_from_excel_endpoints(_router)
     rtu_endpoints(_router)
@@ -46,6 +48,7 @@ def retorna_entidades_de_nodo(tipo: str = "Tipo nodo", nombre: str = "Nombre nod
     return resp
 
 
+@router.get('/nodos')
 @router.get('/nodos/')
 @router.get('/nodos/{filter_str}')
 def muestra_todos_los_nombres_nodos_existentes(filter_str=None, response: Response = Response()):

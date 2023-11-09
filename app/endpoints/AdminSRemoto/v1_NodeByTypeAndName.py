@@ -3,19 +3,20 @@ from starlette import status
 from starlette.responses import Response
 import datetime as dt
 
+from app.db.constants import V1_SR_NODE_LABEL
 from app.schemas.RequestSchemas import NodeNewName
 from app.db.v1.sRNode import SRNode
 
 
-def node_type_and_name_endpoints(router: APIRouter):
+def v1_node_type_and_name_endpoints(router: APIRouter):
     endpoint_uri = '/nodo/{tipo}/{nombre}'
-    router.tags = ["admin-sRemoto - by Tipo and Nombre"]
+    router.tags = ["v1-admin-sRemoto - by Tipo and Nombre"]
 
     @router.get(endpoint_uri)
     def busca_nodo_tipo_SRNode_en_base_de_datos(tipo: str = "Tipo de nodo",
                                                 nombre: str = "Nombre del nodo a buscar",
                                                 response: Response = Response()):
-        nodo = SRNode.objects(nombre=nombre, tipo=tipo).first()
+        nodo = SRNode.objects(nombre=nombre, tipo=tipo, document=V1_SR_NODE_LABEL).first()
         if nodo is None:
             response.status_code = status.HTTP_404_NOT_FOUND
             return nodo
@@ -25,7 +26,7 @@ def node_type_and_name_endpoints(router: APIRouter):
     def actualiza_nombre_de_nodo(tipo: str = "Tipo de nodo", nombre: str = "Nombre del nodo a cambiar",
                                  request_data: NodeNewName = NodeNewName(), response: Response = Response()):
 
-        nodo = SRNode.objects(nombre=nombre, tipo=tipo).first()
+        nodo = SRNode.objects(nombre=nombre, tipo=tipo, document=V1_SR_NODE_LABEL).first()
         if nodo is None:
             response.status_code = status.HTTP_404_NOT_FOUND
             return nodo

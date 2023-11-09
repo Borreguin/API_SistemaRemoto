@@ -32,13 +32,8 @@ def v1_node_from_excel_endpoints(router: APIRouter):
         resp, response.status_code = await put_actualizar_nodo_usando_excel(tipo, nombre, excel_file, option)
         return resp
 
-    @router.get(endpoint_uri, response_class=FileResponse)
+    @router.get(endpoint_uri)
     async def descarga_excel_de_ultima_version_de_nodo(nombre: str, tipo: str, response: Response = Response()):
         """ Descarga en formato excel la última versión del nodo """
-        headers = {
-            'Content-Disposition': 'attachment; filename="filename.xlsx"'
-        }
-        resp = get_descarga_excel_de_ultima_version_de_nodo(nombre, tipo)
-        #  filename=os.path.dirname(path)
-
+        resp, response.status_code = await get_descarga_excel_de_ultima_version_de_nodo(nombre, tipo)
         return resp

@@ -66,7 +66,7 @@ async def put_actualizar_nodo_usando_excel(tipo: str, nombre: str, excel_file: U
     return dict(success=True, nodo=nodo.to_summary(), msg=msg), status.HTTP_200_OK
 
 
-def get_descarga_excel_de_ultima_version_de_nodo(nombre: str, tipo: str):
+async def get_descarga_excel_de_ultima_version_de_nodo(nombre: str, tipo: str):
     node = SRNode.objects(nombre=nombre, tipo=tipo).as_pymongo().exclude('id')
     if node.count() == 0:
         return dict(success=False, msg=f"No existe el nodo en la base de datos"), status.HTTP_404_NOT_FOUND
@@ -79,9 +79,6 @@ def get_descarga_excel_de_ultima_version_de_nodo(nombre: str, tipo: str):
     with pd.ExcelWriter(path) as writer:
         df_main.to_excel(writer, sheet_name="main")
         df_tags.to_excel(writer, sheet_name="tags")
-    # if os.path.exists(path):
-    #     resp = send_from_directory(os.path.dirname(path), file_name, as_attachment=False)
-    #     return set_max_age_to_response(resp, 5)
     return FileResponse(path=path, filename=file_name, media_type='application/octet-stream',
-                        content_disposition_type="attachment")
+                        content_disposition_type="attachment"), status.HTTP_200_OK
 

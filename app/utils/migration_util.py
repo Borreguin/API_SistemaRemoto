@@ -150,7 +150,9 @@ def migration_process_df_tag(df_tag: pd.DataFrame) -> pd.DataFrame:
         df_filter_group = filter_bahia_code(df_group, df_filter_group)
         # Add detected values to the final dataframe
         df_filter = pd.concat([df_filter, df_filter_group], ignore_index=True)
-    return df_filter
+    df_filter[cl_activado] = 'x'
+    df_filter[cl_filter_expression] = default_filter_expression
+    return df_filter[v2_tags_sheet_columns]
 
 
 def migration_process_df_main(df_main: pd.DataFrame) -> pd.DataFrame:

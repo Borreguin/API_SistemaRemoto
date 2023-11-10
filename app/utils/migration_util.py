@@ -166,7 +166,7 @@ def migration_process_df_bahia(df_tags: pd.DataFrame) -> pd.DataFrame:
     df_result = pd.DataFrame(columns=v2_bahias_sheet_columns)
     group_by = [cl_instalacion_ems_code, cl_nivel_voltaje, cl_bahia_code]
     for (ems_code, voltage, bahia_code), df_group in df_tags.groupby(by=group_by):
-        row = {cl_instalacion_ems_code: ems_code, cl_bahia_code: bahia_code, cl_bahia_tipo: lb_bahia,
+        row = {cl_instalacion_ems_code: ems_code, cl_bahia_code: bahia_code,
                cl_bahia_nombre: bahia_code, cl_nivel_voltaje: voltage, cl_activado: 'x'}
         df_aux = pd.DataFrame(data=row, index=[0])
         df_result = pd.concat([df_result, df_aux], ignore_index=True)

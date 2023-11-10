@@ -39,5 +39,4 @@ v2_main_sheet_columns = [cl_entidad_tipo, cl_entidad_nombre, cl_instalacion_ems_
                          cl_instalacion_nombre,
                          cl_protocolo, cl_latitud, cl_longitud, cl_activado]
 
-v2_bahias_sheet_columns = [cl_instalacion_ems_code, cl_bahia_code, cl_nivel_voltaje,
-                           cl_bahia_tipo, cl_bahia_nombre, cl_activado]
+v2_bahias_sheet_columns = [cl_instalacion_ems_code, cl_bahia_code, cl_nivel_voltaje, cl_bahia_nombre, cl_activado]

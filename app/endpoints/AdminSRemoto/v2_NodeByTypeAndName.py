@@ -16,7 +16,7 @@ def v2_node_type_and_name_endpoints(router: APIRouter):
     def v2_busca_nodo_tipo_SRNode_en_base_de_datos(tipo: str = "Tipo de nodo",
                                                    nombre: str = "Nombre del nodo a buscar",
                                                    response: Response = Response()):
-        nodo = V2SRNode.objects(nombre=nombre, tipo=tipo, document=V2_SR_NODE_LABEL).first()
+        nodo = V2SRNode.find(nombre=nombre, tipo=tipo)
         if nodo is None:
             response.status_code = status.HTTP_404_NOT_FOUND
             return nodo
@@ -24,9 +24,9 @@ def v2_node_type_and_name_endpoints(router: APIRouter):
 
     @router.put(endpoint_uri)
     def v2_actualiza_nombre_de_nodo(tipo: str = "Tipo de nodo", nombre: str = "Nombre del nodo a cambiar",
-                                 request_data: NodeNewName = NodeNewName(), response: Response = Response()):
+                                    request_data: NodeNewName = NodeNewName(), response: Response = Response()):
 
-        nodo = V2SRNode.objects(nombre=nombre, tipo=tipo, document=V2_SR_NODE_LABEL).first()
+        nodo = V2SRNode.find(nombre=nombre, tipo=tipo)
         if nodo is None:
             response.status_code = status.HTTP_404_NOT_FOUND
             return nodo

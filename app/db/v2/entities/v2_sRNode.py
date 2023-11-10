@@ -43,5 +43,7 @@ class V2SRNode(Document):
             return False, f"No able to save: {e}"
 
     @staticmethod
-    def find(self, tipo: str, nombre: str):
-        return self.objects(tipo=tipo, nombre=nombre, document=V2_SR_NODE_LABEL).first()
+    def find(tipo: str, nombre: str):
+        return V2SRNode.objects(tipo=tipo, nombre=nombre, document=V2_SR_NODE_LABEL).first()
+
+

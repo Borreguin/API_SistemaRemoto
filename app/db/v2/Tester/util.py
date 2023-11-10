@@ -66,7 +66,7 @@ def create_new_node(instance) -> V2SRNode:
 def delete_node(instance) -> str:
     gen = create_fake_gen(instance)
     tipo, nombre = gen.node_type(), gen.first_name()
-    v2_node = V2SRNode.find(V2SRNode, tipo, nombre)
+    v2_node = V2SRNode.find(tipo, nombre)
     if isinstance(v2_node, V2SRNode):
         v2_node.delete()
         return "Deleted"

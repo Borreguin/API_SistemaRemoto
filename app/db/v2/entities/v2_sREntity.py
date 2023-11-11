@@ -10,7 +10,7 @@ class V2SREntity(EmbeddedDocument):
     entidad_nombre = StringField(required=True)
     entidad_tipo = StringField(required=True)
     activado = BooleanField(default=True)
-    installations = ListField(LazyReferenceField(V2SRInstallation))
+    instalaciones = ListField(LazyReferenceField(V2SRInstallation))
 
     def __init__(self, entidad_tipo: str = None, entidad_nombre: str = None, *args, **values):
         super().__init__(*args, **values)
@@ -23,4 +23,4 @@ class V2SREntity(EmbeddedDocument):
             self.id_entidad = hashlib.md5(id.encode()).hexdigest()
 
     def __str__(self):
-        return f"({self.entidad_tipo}) {self.entidad_nombre}: [{str(len(self.installations))} installations]"
+        return f"({self.entidad_tipo}) {self.entidad_nombre}: [{str(len(self.instalaciones))} instalaciones]"

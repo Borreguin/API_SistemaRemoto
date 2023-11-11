@@ -1,9 +1,12 @@
+from typing import Union, Tuple, Any
+
 from faker import Faker
 from faker.providers import DynamicProvider
 from mongoengine import connect
 from app.core.config import settings
-from app.db.constants import V2_SR_NODE_LABEL
+from app.db.v2.entities.v2_sRBahia import V2SRBahia
 from app.db.v2.entities.v2_sREntity import V2SREntity
+from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.entities.v2_sRNode import V2SRNode
 
 MONGO_TESTER_DB = "DB_DISP_EMS_TEST"
@@ -53,6 +56,21 @@ def connectTestDB(func):
     return wrapper
 
 
+def search_node(tipo: str, nombre: str) -> Union[tuple[bool, None], tuple[bool, V2SRNode]]:
+    v2_node = V2SRNode.find(tipo, nombre)
+    if v2_node is None:
+        print(f"Node not found: {tipo} {nombre}")
+        return False, None
+    return True, v2_node
+
+
+def save_node_safely(v2_node: V2SRNode) -> bool:
+    success, msg = v2_node.save_safely()
+    if not success:
+        print(msg)
+    return success
+
+
 def create_new_entity(instance) -> V2SREntity:
     fake_gen = create_fake_gen(instance)
     return V2SREntity(fake_gen.entity_type(), fake_gen.first_name())
@@ -60,14 +78,64 @@ def create_new_entity(instance) -> V2SREntity:
 
 def create_new_node(instance) -> V2SRNode:
     fake_gen = create_fake_gen(instance)
-    return V2SRNode(fake_gen.node_type(), fake_gen.first_name())
+    node_type, node_name = fake_gen.node_type(), fake_gen.first_name()
+    print(f"Creating node: {node_type} {node_name}")
+    return V2SRNode(node_type, node_name)
 
 
-def delete_node(instance) -> str:
+def create_new_bahia(instance) -> V2SRBahia:
+    fake_gen = create_fake_gen(instance)
+    return V2SRBahia(fake_gen.first_name(), fake_gen.unique.random_int(min=13, max=500), fake_gen.last_name())
+
+
+def create_new_installation(instance) -> V2SRInstallation:
+    fake_gen = create_fake_gen(instance)
+    installation_type, installation_name = fake_gen.installation_type(), fake_gen.first_name()
+    ems_code = installation_type + installation_name
+    v2_installation = V2SRInstallation(ems_code, installation_type, installation_name)
+    success, msg = v2_installation.save_safely()
+    print(msg) if not success else print(f"Created installation: {v2_installation}")
+    return v2_installation
+
+
+def create_new_installation_with_bahias(instance, n_bahias: int) -> V2SRInstallation:
+    v2_installation = create_new_installation(instance)
+    v2_installation.bahias = [create_new_bahia(f"{n}_{instance}") for n in range(n_bahias)]
+    v2_installation.save_safely()
+    print(f"Add bahias: {v2_installation}")
+    return v2_installation
+
+
+def create_new_entity_with_installations(instance, n_installations: int) -> V2SREntity:
+    v2_entity = create_new_entity(instance)
+    for n in range(n_installations):
+        installation = create_new_installation(instance + v2_entity.entidad_nombre + f"{n}")
+        success, msg = installation.save_safely()
+        if success:
+            v2_entity.instalaciones.append(installation)
+    return v2_entity
+
+
+def create_new_entity_with_installations_and_bahias(instance, n_installations: int, n_bahias: int) -> V2SREntity:
+    v2_entity = create_new_entity(instance)
+    for n in range(n_installations):
+        instance = f"{n}_{instance}_{v2_entity.id_entidad}"
+        installation = create_new_installation_with_bahias(instance, n_bahias)
+        success, msg = installation.save_safely()
+        if not success:
+            print(msg)
+        v2_entity.instalaciones.append(installation)
+    print(f"New entity: {v2_entity}")
+    return v2_entity
+
+
+def delete_node(instance) -> bool:
     gen = create_fake_gen(instance)
     tipo, nombre = gen.node_type(), gen.first_name()
     v2_node = V2SRNode.find(tipo, nombre)
     if isinstance(v2_node, V2SRNode):
         v2_node.delete()
-        return "Deleted"
-    return "No deleted"
+        print(f"Deleted node: {tipo} {nombre}")
+        return True
+    print(f"No deleted node: {tipo} {nombre}")
+    return False

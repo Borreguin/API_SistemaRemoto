@@ -33,11 +33,11 @@ class V2SRNode(Document):
         return (f"[({self.tipo}) {self.nombre}] "
                 f"entidades: {[str(e) for e in self.entidades] if self.entidades is not None else 0}")
 
-    def save_safely(self):
+    def save_safely(self, *args, **kwargs):
         try:
-            super().save()
+            super().save(*args, **kwargs)
             return True, f"SRNodeV2: Saved successfully"
-        except NotUniqueError as e:
+        except NotUniqueError:
             return False, f"SRNodeV2: no único para valores: {self.tipo} {self.nombre}"
         except Exception as e:
             return False, f"No able to save: {e}"

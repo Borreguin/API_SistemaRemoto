@@ -7,8 +7,10 @@ empty_nodes = "empty node"
 node_with_entities = "empty node with entities"
 nodes_with_installations = "node with installations"
 node_with_installations_and_bahias = "node installations bahias"
+node_with_bahia_and_tags = "node with bahias and tags"
 
-cases = [empty_nodes, node_with_entities, nodes_with_installations, node_with_installations_and_bahias]
+cases = [empty_nodes, node_with_entities, nodes_with_installations, node_with_installations_and_bahias,
+         node_with_bahia_and_tags]
 
 
 class V2DBMongoTester(unittest.TestCase):
@@ -57,6 +59,17 @@ class V2DBMongoTester(unittest.TestCase):
         success, node = search_node(v2_node.tipo, v2_node.nombre)
         self.assertEqual(True, success,
                          f"No new node was created with empty installation: {node_with_installations_and_bahias}")
+
+    @connectTestDB
+    def test_create_node_with_bahias_and_tags(self):
+        v2_node = create_new_node(node_with_bahia_and_tags)
+        new_entity1 = create_new_entity_with_bahias_and_tags("1" + node_with_bahia_and_tags, 1, 2)
+        new_entity2 = create_new_entity_with_bahias_and_tags("2" + node_with_bahia_and_tags, 2, 3)
+        v2_node.entidades = [new_entity1, new_entity2]
+        save_node_safely(v2_node)
+        success, node = search_node(v2_node.tipo, v2_node.nombre)
+        self.assertEqual(True, success,
+                         f"No new node was created with empty installation: {node_with_bahia_and_tags}")
 
     @connectTestDB
     def test_delete_nodes(self):

@@ -1,4 +1,5 @@
 import datetime as dt
+import hashlib
 
 from mongoengine import Document, StringField, ReferenceField, BooleanField, FloatField, ListField, \
     EmbeddedDocumentField, DateTimeField, NotUniqueError
@@ -9,6 +10,7 @@ from app.db.v2.entities.v2_sRBahia import V2SRBahia
 
 
 class V2SRInstallation(Document):
+    instalacion_id = StringField(required=True, unique=True, default=None)
     instalacion_ems_code = StringField(required=True, unique=True, default=None)
     instalacion_nombre = StringField(required=True)
     instalacion_tipo = StringField(required=True)
@@ -31,6 +33,10 @@ class V2SRInstallation(Document):
             self.instalacion_nombre = instalacion_nombre
         if instalacion_ems_code is not None:
             self.instalacion_ems_code = instalacion_ems_code
+        if self.instalacion_id is None:
+            id = self.instalacion_ems_code if self.instalacion_ems_code is not None \
+                else self.instalacion_tipo + self.instalacion_nombre
+            self.instalacion_id = hashlib.md5(id.encode()).hexdigest()
 
     def __str__(self):
         return f"({self.instalacion_tipo}) {self.instalacion_nombre}: [{str(len(self.bahias))} bahias]"

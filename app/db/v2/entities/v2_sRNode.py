@@ -42,6 +42,14 @@ class V2SRNode(Document):
         except Exception as e:
             return False, f"No able to save: {e}"
 
+    def delete_deeply(self, *args, **kwargs):
+        if self.entidades is not None:
+            for entidad in self.entidades:
+                if entidad.instalaciones is not None:
+                    for instalacion in entidad.instalaciones:
+                        instalacion.fetch().delete()
+        self.delete(*args, **kwargs)
+
     @staticmethod
     def find(tipo: str, nombre: str):
         return V2SRNode.objects(tipo=tipo, nombre=nombre, document=V2_SR_NODE_LABEL).first()

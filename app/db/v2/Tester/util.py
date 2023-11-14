@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Any
+from typing import Union, Tuple, Any, List
 
 from faker import Faker
 from faker.providers import DynamicProvider
@@ -8,6 +8,7 @@ from app.db.v2.entities.v2_sRBahia import V2SRBahia
 from app.db.v2.entities.v2_sREntity import V2SREntity
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.entities.v2_sRNode import V2SRNode
+from app.db.v2.entities.v2_sRTag import V2SRTag
 
 MONGO_TESTER_DB = "DB_DISP_EMS_TEST"
 
@@ -102,7 +103,7 @@ def create_new_installation_with_bahias(instance, n_bahias: int) -> V2SRInstalla
     v2_installation = create_new_installation(instance)
     v2_installation.bahias = [create_new_bahia(f"{n}_{instance}") for n in range(n_bahias)]
     v2_installation.save_safely()
-    print(f"Add bahias: {v2_installation}")
+    print(f"Add bahias: {[b for b in v2_installation.bahias]}")
     return v2_installation
 
 
@@ -129,12 +130,45 @@ def create_new_entity_with_installations_and_bahias(instance, n_installations: i
     return v2_entity
 
 
+def create_new_installation_with_bahias_and_tags(instance, n_bahias: int, n_tags: int) -> V2SRInstallation:
+    v2_installation = create_new_installation(instance)
+    v2_installation.bahias = create_bahias_with_tags(instance, n_bahias, n_tags)
+    v2_installation.save_safely()
+    print(f"Add bahias: {[b for b in v2_installation.bahias]}")
+    return v2_installation
+
+
+def create_bahias_with_tags(instance, n_bahias: int, n_tags: int) -> list[V2SRBahia]:
+    bahias = []
+    for n in range(n_bahias):
+        bahia = create_new_bahia(f"{n}-{instance}")
+        bahia.tags = [create_new_tag(instance + f"{n}_{bahia.bahia_code}") for n in range(n_tags)]
+        bahias.append(bahia)
+    return bahias
+
+
+def create_new_tag(instance) -> V2SRTag:
+    fake_gen = create_fake_gen(instance)
+    return V2SRTag(fake_gen.first_name())
+
+
+def create_new_entity_with_bahias_and_tags(instance, n_bahias: int, n_tags: int) -> V2SREntity:
+    v2_entity = create_new_entity(instance)
+    installation = create_new_installation_with_bahias_and_tags(instance, n_bahias, n_tags)
+    success, msg = installation.save_safely()
+    if not success:
+        print(msg)
+    print(f"New installation: {installation}")
+    v2_entity.instalaciones.append(installation)
+    return v2_entity
+
+
 def delete_node(instance) -> bool:
     gen = create_fake_gen(instance)
     tipo, nombre = gen.node_type(), gen.first_name()
     v2_node = V2SRNode.find(tipo, nombre)
     if isinstance(v2_node, V2SRNode):
-        v2_node.delete()
+        v2_node.delete_deeply()
         print(f"Deleted node: {tipo} {nombre}")
         return True
     print(f"No deleted node: {tipo} {nombre}")

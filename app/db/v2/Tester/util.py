@@ -86,7 +86,7 @@ def create_new_node(instance) -> V2SRNode:
 
 def create_new_bahia(instance) -> V2SRBahia:
     fake_gen = create_fake_gen(instance)
-    return V2SRBahia(fake_gen.first_name(), fake_gen.unique.random_int(min=13, max=500), fake_gen.last_name())
+    return V2SRBahia(fake_gen.first_name(), fake_gen.last_name(), fake_gen.unique.random_int(min=13, max=500))
 
 
 def create_new_installation(instance) -> V2SRInstallation:

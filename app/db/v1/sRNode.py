@@ -113,7 +113,7 @@ class SRUTR(EmbeddedDocument):
 
 
 class SREntity(EmbeddedDocument):
-    id_entidad = StringField(required=True, unique=True, default=None)
+    id_entidad = StringField(required=True, unique=True, default=None, sparse=True)
     entidad_nombre = StringField(required=True)
     entidad_tipo = StringField(required=True)
     activado = BooleanField(default=True)
@@ -201,7 +201,7 @@ class SRNode(Document):
     nombre = StringField(required=True)
     tipo = StringField(required=True)
     actualizado = DateTimeField(default=dt.datetime.now())
-    entidades = ListField(EmbeddedDocumentField(SREntity))
+    entidades = ListField(EmbeddedDocumentField(SREntity), default=[])
     activado = BooleanField(default=True)
     document = StringField(required=True, default="SRNode")
     meta = {"collection": "CONFG|Nodos"}
@@ -211,6 +211,15 @@ class SRNode(Document):
         if self.id_node is None:
             id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() + self.document
             self.id_node = hashlib.md5(id.encode()).hexdigest()
+
+    def save_safely(self, *args, **kwargs):
+        try:
+            super().save(*args, **kwargs)
+            return True, f"SRNode: Saved successfully"
+        except NotUniqueError:
+            return False, f"SRNode: no único para valores: {self.tipo} {self.nombre}"
+        except Exception as e:
+            return False, f"No able to save: {e}"
 
     def add_or_replace_entities(self, entity_list: list):
         # check si todas las entidades son de tipo SREntity
@@ -229,36 +238,6 @@ class SRNode(Document):
         self.entidades = [unique[k] for k in unique.keys()]
         n_final = len(self.entidades)
         return True, f"Entidades: -remplazadas: [{n_total - n_final}] -añadidas: [{n_final - n_initial}]"
-
-    def update_summary_info(self, summary: dict):
-        # attributos a actualizar:
-        attributes_node = ["nombre", "tipo", "activado"]
-        attributes_entity = ['entidad_nombre', 'entidad_tipo', 'activado']
-        for att in attributes_node:
-            self[att] = summary[att]
-        id_entities_lcl = [e["id_entidad"] for e in self.entidades]
-        id_entities_new = [e["id_entidad"] for e in summary.get("entidades", [])]
-        ids_to_delete = [id for id in id_entities_lcl if id not in id_entities_new]
-        check = [e["entidad_tipo"] + e["entidad_nombre"] for e in summary["entidades"]]
-        # check if there are repeated elements
-        if len(check) > len(set(check)):
-            return False, "Existen elementos repetidos dentro del nodo"
-        # delete those that are not in list coming from user interface
-        [self.delete_entity_by_id(id) for id in ids_to_delete]
-        # creación de nuevas entidades y actualización de valores
-        new_entities = list()
-        for i, entity in enumerate(summary["entidades"]):
-            if entity["id_entidad"] not in id_entities_lcl:
-                e = SREntity(entidad_tipo=entity["entidad_tipo"], entidad_nombre=entity["entidad_nombre"])
-            else:
-                success, e = self.search_entity_by_id(entity["id_entidad"])
-                if not success:
-                    continue
-            for att in attributes_entity:
-                e[att] = summary["entidades"][i][att]
-            new_entities.append(e)
-        self.entidades = new_entities
-        return True, "Todos lo cambios fueron hechos"
 
     def delete_entity(self, name_delete):
         new_entities = [e for e in self.entidades if name_delete != e.entidad_nombre]
@@ -283,8 +262,8 @@ class SRNode(Document):
     def search_entity_by_id(self, id_entidad: str):
         check = [i for i, e in enumerate(self.entidades) if id_entidad == e.id_entidad]
         if len(check) > 0:
-            return True, self.entidades[check[0]]
-        return False, f"No existe la entidad [{id_entidad}] en nodo [{self.nombre}]"
+            return True, "Entidad encontrada" , self.entidades[check[0]]
+        return False, f"No existe la entidad [{id_entidad}] en nodo [{self.nombre}]", None
 
     def delete_all(self):
         for e in self.entidades:

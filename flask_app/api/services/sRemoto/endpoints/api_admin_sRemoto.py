@@ -14,6 +14,8 @@ import os
 from flask_restplus import Resource
 from flask import request, send_from_directory
 import re
+
+from app.db.util import update_summary_node_info
 # importando configuraciones iniciales
 from flask_app.my_lib.utils import set_max_age_to_response, find_entity_in_node, check_if_all_are_there, \
     get_df_from_excel_streamed_file, replace_edit_tags_in_node
@@ -363,7 +365,7 @@ class SRNodeIDAPI(Resource):
         node = SRNode.objects(id_node=id_node).first()
         if node is None:
             return dict(success=False, nodo=None, msg="No se encontró el nodo"), 404
-        success, msg = node.update_summary_info(request_data)
+        success, msg, node = update_summary_node_info(node, request_data)
         if not success:
             return dict(success=False, msg=msg), 400
         node.save()
@@ -376,7 +378,7 @@ class SRNodeIDAPI(Resource):
         if nodo is not None:
             return dict(success=False, msg="El nodo ya existe, no puede ser creado"), 400
         nodo = SRNode(nombre=request_data["nombre"], tipo=request_data["tipo"], activado=request_data["activado"])
-        success, msg = nodo.update_summary_info(request_data)
+        success, msg, nodo = update_summary_node_info(nodo, request_data)
         if not success:
             return dict(success=False, nodo=None, msg=msg), 400
         try:

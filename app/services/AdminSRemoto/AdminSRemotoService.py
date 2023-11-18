@@ -5,6 +5,7 @@ from typing import Tuple
 from starlette import status
 
 from app.common.util import to_dict
+from app.db.util import update_summary_node_info, node_query, create_node
 from app.schemas.RequestSchemas import *
 from app.utils.excel_util import *
 from app.db.v1.sRNode import SRNode, SREntity
@@ -28,19 +29,19 @@ def put_desactiva_nodo(id_nodo: str = "ID del nodo a cambiar") -> Tuple[dict, in
     return dict(success=True, nodo=nodo.to_dict(), msg="Nodo desactivado"), status.HTTP_200_OK
 
 
-def delete_elimina_nodo_usando_ID_como_referencia(id: str) -> Tuple[dict, int]:
-    node = SRNode.objects(id_node=id).first()
+def delete_elimina_nodo_usando_ID_como_referencia(id: str, version=None) -> Tuple[dict, int]:
+    node = node_query(id, version)
     if node is None:
         return dict(success=False, nodo=None, msg="No se encontró el nodo"), status.HTTP_404_NOT_FOUND
     node.delete()
     return dict(success=True, nodo=node.to_dict(), msg="Nodo eliminado"), status.HTTP_200_OK
 
 
-def put_actualiza_cambios_menores_en_nodo(id: str, request_data: BasicNodeInfoRequest) -> Tuple[dict, int]:
-    node = SRNode.objects(id_node=id).first()
+def put_actualiza_cambios_menores_en_nodo(id: str, request_data: BasicNodeInfoRequest, version=None) -> Tuple[dict, int]:
+    node = node_query(id, version)
     if node is None:
         return dict(success=False, nodo=None, msg=f"No se encontró el nodo {id}"), status.HTTP_404_NOT_FOUND
-    success, msg = node.update_summary_info(to_dict(request_data))
+    success, msg, node = update_summary_node_info(node, to_dict(request_data))
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     node.save()
@@ -48,23 +49,17 @@ def put_actualiza_cambios_menores_en_nodo(id: str, request_data: BasicNodeInfoRe
                 msg=f"Se han guardado los cambios para nodo {id}"), status.HTTP_200_OK
 
 
-def post_crea_nuevo_nodo_usando_ID(id, request_data: BasicNodeInfoRequest) -> Tuple[dict, int]:
-    nodo = SRNode.objects(id_node=id).first()
-    if nodo is not None:
+def post_crea_nuevo_nodo_usando_ID(id, request_data: BasicNodeInfoRequest, version=None) -> Tuple[dict, int]:
+    node = node_query(id, version)
+    if node is not None:
         return dict(success=False, msg="El nodo ya existe, no puede ser creado"), status.HTTP_400_BAD_REQUEST
-    nodo = SRNode(nombre=request_data.nombre, tipo=request_data.tipo, activado=request_data.activado)
-    success, msg = nodo.update_summary_info(to_dict(request_data))
+
+    new_nodo = create_node(request_data.tipo, request_data.nombre, request_data.activado, version)
+    success, msg, new_nodo = update_summary_node_info(new_nodo, to_dict(request_data))
     if not success:
         return dict(success=False, nodo=None, msg=msg), status.HTTP_400_BAD_REQUEST
-    try:
-        nodo.save()
-    except Exception as e:
-        # problema al existir entidad nula en un nodo ya existente
-        if "entidades.id_entidad_1 dup key" in str(e):
-            entity = SREntity(entidad_nombre="Nombre " + str(randint(0, 1000)), entidad_tipo="Empresa")
-            nodo.add_or_replace_entities([entity])
-            nodo.save()
-    return dict(success=True, nodo=nodo.to_summary(), msg="Nodo creado"), status.HTTP_200_OK
+    success, msg = new_nodo.save_safely()
+    return dict(success=success, nodo=new_nodo.to_summary(), msg=msg), status.HTTP_200_OK
 
 
 def get_retorna_entidades_de_nodo(tipo: str, nombre: str, entidad_tipo: str, entidad_nombre: str):

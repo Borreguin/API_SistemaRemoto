@@ -10,7 +10,7 @@ class V2SRBahia(EmbeddedDocument):
     tags = ListField(EmbeddedDocumentField(V2SRTag))
     activado = BooleanField(default=True)
 
-    def __init__(self, bahia_code: str = None, voltaje: str = None, bahia_nombre: str = None, *args, **values):
+    def __init__(self, bahia_code: str = None, bahia_nombre: str = None, voltaje: str = None, *args, **values):
         super().__init__(*args, **values)
         if bahia_code is not None:
             self.bahia_code = bahia_code
@@ -21,3 +21,7 @@ class V2SRBahia(EmbeddedDocument):
 
     def __str__(self):
         return f"{self.bahia_nombre}: ({self.voltaje} kV) nTags: {len(self.tags) if self.tags is not None else 0}"
+
+    def to_summary(self):
+        return dict(bahia_code=self.bahia_code, bahia_nombre=self.bahia_nombre, voltaje=self.voltaje,
+                    n_tags=len(self.tags) if self.tags is not None else 0)

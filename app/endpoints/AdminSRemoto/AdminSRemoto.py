@@ -4,10 +4,11 @@ from starlette.responses import Response
 from app.core.config import Settings
 from app.endpoints.AdminSRemoto.v1_Excel import v1_node_from_excel_endpoints
 from app.endpoints.AdminSRemoto.v2_Excel import v2_node_from_excel_endpoints
-from app.endpoints.AdminSRemoto.NodeById import node_id_endpoints
+from app.endpoints.AdminSRemoto.v1_NodeById import v1_node_id_endpoints
 from app.endpoints.AdminSRemoto.v1_NodeByTypeAndName import v1_node_type_and_name_endpoints
 from app.endpoints.AdminSRemoto.RTU import rtu_endpoints
 from app.endpoints.AdminSRemoto.Tags import tags_endpoints
+from app.endpoints.AdminSRemoto.v2_NodeById import v2_node_id_endpoints
 from app.endpoints.AdminSRemoto.v2_NodeByTypeAndName import v2_node_type_and_name_endpoints
 from app.services.AdminSRemoto.AdminSRemotoService import *
 
@@ -19,7 +20,8 @@ router = APIRouter(
 
 
 def create_grouped_endpoints(_router: APIRouter):
-    node_id_endpoints(_router)
+    v1_node_id_endpoints(_router)
+    v2_node_id_endpoints(_router)
     v1_node_type_and_name_endpoints(_router)
     v2_node_type_and_name_endpoints(_router)
     v1_node_from_excel_endpoints(_router)

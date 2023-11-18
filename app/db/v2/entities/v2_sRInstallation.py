@@ -41,6 +41,15 @@ class V2SRInstallation(Document):
     def __str__(self):
         return f"({self.instalacion_tipo}) {self.instalacion_nombre}: [{str(len(self.bahias))} bahias]"
 
+    def to_summary(self):
+        n_tags = 0
+        if self.bahias is not None:
+            for bahia in self.bahias:
+                n_tags += len(bahia.tags) if bahia.tags is not None else 0
+        return dict(instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
+                    instalacion_nombre=self.instalacion_nombre, instalacion_tipo=self.instalacion_tipo,
+                    n_bahias=len(self.bahias) if self.bahias is not None else 0, n_tags=n_tags)
+
     def save_safely(self, *args, **kwargs):
         try:
             super().save(*args, **kwargs)
@@ -49,3 +58,8 @@ class V2SRInstallation(Document):
             return False, f"SRInstallationV2: no único para valores: {self.instalacion_ems_code}"
         except Exception as e:
             return False, f"No able to save: {e}"
+    @staticmethod
+    def find_by_ems_code(instalacion_ems_code: str) -> 'V2SRInstallation':
+        instalacion = V2SRInstallation.objects(instalacion_ems_code=instalacion_ems_code)
+        return instalacion.first() if len(instalacion) > 0 else None
+

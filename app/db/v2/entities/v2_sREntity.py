@@ -2,6 +2,7 @@ import hashlib
 
 from mongoengine import EmbeddedDocument, StringField, BooleanField, LazyReferenceField, ListField
 
+from app.db.constants import lb_n_tags, lb_n_bahias
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 
 
@@ -24,3 +25,16 @@ class V2SREntity(EmbeddedDocument):
 
     def __str__(self):
         return f"({self.entidad_tipo}) {self.entidad_nombre}: [{str(len(self.instalaciones))} instalaciones]"
+
+    def to_summary(self):
+        n_tags = 0
+        n_bahias = 0
+        if self.instalaciones is not None:
+            for instalacion in self.instalaciones:
+                values_dict = instalacion.fetch().to_summary()
+                n_tags += values_dict[lb_n_tags]
+                n_bahias += values_dict[lb_n_bahias]
+
+        return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
+                    n_instalaciones=len(self.instalaciones) if self.instalaciones is not None else 0, n_bahias=n_bahias,
+                    n_tags=n_tags)

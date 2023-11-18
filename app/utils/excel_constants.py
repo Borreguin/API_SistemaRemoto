@@ -20,6 +20,8 @@ cl_instalacion_nombre = "instalacion_nombre"
 cl_instalacion_tipo = "instalacion_tipo"
 cl_bahia_tipo = "bahia_tipo"
 cl_bahia_nombre = "bahia_nombre"
+cl_activado_bahia = "activado_bahia"
+cl_activado_tag = "activado_tag"
 
 lb_bahia = "Bahía"
 
@@ -40,3 +42,11 @@ v2_main_sheet_columns = [cl_entidad_tipo, cl_entidad_nombre, cl_instalacion_ems_
                          cl_protocolo, cl_latitud, cl_longitud, cl_activado]
 
 v2_bahias_sheet_columns = [cl_instalacion_ems_code, cl_bahia_code, cl_nivel_voltaje, cl_bahia_nombre, cl_activado]
+
+v2_entidad_properties = [cl_entidad_tipo, cl_entidad_nombre, cl_activado]
+
+v2_instalacion_properties = [cl_instalacion_ems_code, cl_instalacion_tipo, cl_instalacion_nombre,
+                             cl_protocolo, cl_latitud, cl_longitud, cl_activado]
+
+v2_tag_properties = [cl_tag_name, cl_filter_expression, cl_activado]
+v2_tag_dict_values = [cl_tag_name, cl_filter_expression, cl_activado_tag]

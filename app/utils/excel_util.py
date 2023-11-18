@@ -1,11 +1,12 @@
 import datetime as dt
 import os
 from random import randint
-from typing import Union, List
+from typing import Union, List, Tuple, Any
 
 import pandas as pd
 from fastapi import UploadFile
-from pandas import DataFrame
+from pandas import DataFrame, Series
+from pandas.core.generic import NDFrame
 
 from app.common import error_log
 from app.utils.excel_constants import *
@@ -41,6 +42,32 @@ def v1_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFram
     except Exception as e:
         return False, pd.DataFrame(), pd.DataFrame(), f'Not able to read the file, {e}'
 
+def v2_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFrame, DataFrame, DataFrame, str]:
+    try:
+        df_main = pd.read_excel(file_path, sheet_name="main", engine='openpyxl')
+        missing_columns = get_missing_columns(df_main, v2_main_sheet_columns)
+        if len(missing_columns) > 0:
+            return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
+                    f"Hoja main: Las siguientes columnas estan faltando: {missing_columns}")
+        df_bahia = pd.read_excel(file_path, sheet_name="bahias", engine='openpyxl')
+        missing_columns = get_missing_columns(df_bahia, v2_bahias_sheet_columns)
+        if len(missing_columns) > 0:
+            return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
+                    f"Hoja bahia: Las siguientes columnas estan faltando: {missing_columns}")
+        df_tags = pd.read_excel(file_path, sheet_name="tags", engine='openpyxl')
+        missing_columns = get_missing_columns(df_tags, v2_tags_sheet_columns)
+        if len(missing_columns) > 0:
+            return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
+                    f"Hoja tags: Las siguientes columnas estan faltando: {missing_columns}")
+        return True, df_main, df_bahia, df_tags, "File was read correctly"
+    except Exception as e:
+        return False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), f'Not able to read the file, {e}'
+
+def filter_active_rows(df_main: pd.DataFrame, df_bahia: pd.DataFrame, df_tags: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    df_bahia = df_bahia[df_bahia[cl_activado] != '']
+    df_tags = df_tags[df_tags[cl_activado] != '']
+    df_main = df_main[df_main[cl_activado] != '']
+    return df_main, df_bahia, df_tags
 
 async def get_node_from_excel_file(tipo: str, nombre: str, excel_file: UploadFile) \
         -> Union[tuple[None, str], tuple[SRNode, str]]:

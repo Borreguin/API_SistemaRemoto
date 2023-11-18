@@ -8,19 +8,19 @@ from app.db.v2.entities.v2_sRNode import V2SRNode
 
 def node_query(id: str, version=None) -> SRNode | V2SRNode | None:
     if version is None:
-        query = SRNode.objects(id_node=id, version=V1_SR_NODE_LABEL)
+        query = SRNode.objects(id_node=id, document=V1_SR_NODE_LABEL)
         return None if query.count() == 0 else query.first()
     if version == V2_SR_NODE_LABEL:
-        query = V2SRNode.objects(id_node=id, version=version)
+        query = V2SRNode.objects(id_node=id, document=version)
         return None if query.count() == 0 else query.first()
     return None
 
 def find_node_by_name_and_type(tipo: str, nombre: str, version=None) -> SRNode | V2SRNode | None:
     if version is None:
-        query = SRNode.objects(nombre=nombre, tipo=tipo, version=V1_SR_NODE_LABEL)
+        query = SRNode.objects(nombre=nombre, tipo=tipo, document=V1_SR_NODE_LABEL)
         return None if query.count() == 0 else query.first()
     if version == V2_SR_NODE_LABEL:
-        query = V2SRNode.objects(nombre=nombre, tipo=tipo, version=version)
+        query = V2SRNode.objects(nombre=nombre, tipo=tipo, document=version)
         return None if query.count() == 0 else query.first()
     return None
 

@@ -15,12 +15,14 @@ regex_bahia_code = re.compile("\\w{1,12}")
 max_voltage_detection = 500
 min_voltage_detection = 10
 max_bahia_len = 7
+min_instalacion_ems_code_len = 6
 voltages_final = []
 first = 0
 last = -1
 
 default_voltage_levels = [500, 230, 138, 69, 34.5, 34, 24.16, 13.8, 13, 6.6, 4.6, 4.2, 4.16, 4.1, 0.62, 0.48]
 end_token_bahia = ['_SC\\.', '_TIE', '_TE_', '_ALA\\.', '_IT\\.', '_I\\.', '_V\\.', '_P\\.', '_Q\\.', '_HERTZ', '_BUC',
+                   '_A\\.P\\.', '_ALA\\.', '_LTC\\.', '_D\\.'
                    '_CON', '_IT\\.L-C', '\\.L-C', '_FLG', '_DIS', '_INDS', '_FAL', '_CAUD', '_LIM', '\\.LTC', '_PAR',
                    '_SMD', '_SME', '_NIVEL', '_PORC', '_MODO', '_FREC', '_SPC', '#', '']
 bahia_between_tokens = ['#([\\w*|\\s*|-]{3,})#']
@@ -98,13 +100,17 @@ def filter_instalacion_ems_code(df_group: pd.DataFrame, df_filter: pd.DataFrame)
 
 
 def spot_instalacion_ems_code(instalacion_ems_code: str, tag: str):
-    if instalacion_ems_code in tag and len(instalacion_ems_code) > 0:
-        return True, instalacion_ems_code, tag.replace(instalacion_ems_code, "#", 1)
-    spotted, ems_code, filter_tag = detect_code_by_regex_list(tag, [regex_ems_code_1, regex_ems_code_2])
+    to_filter_with = get_first_half(tag)
+    spotted, ems_code, filter_tag = detect_code_by_regex_list(to_filter_with, [regex_ems_code_1, regex_ems_code_2])
+    if 0 < len(instalacion_ems_code) <= min_instalacion_ems_code_len and len(ems_code) > len(instalacion_ems_code):
+        if ems_code in to_filter_with:
+            return True, instalacion_ems_code, tag.replace(ems_code, "#", 1)
+        elif instalacion_ems_code in to_filter_with:
+            return True, instalacion_ems_code, tag.replace(instalacion_ems_code, "#", 1)
     if spotted and len(instalacion_ems_code) > 0:
-        return True, instalacion_ems_code, filter_tag
+        return True, instalacion_ems_code, tag.replace(instalacion_ems_code, "#", 1)
     if spotted:
-        return True, ems_code, filter_tag
+        return True, ems_code, tag.replace(ems_code, "#", 1)
     return False, None, None
 
 

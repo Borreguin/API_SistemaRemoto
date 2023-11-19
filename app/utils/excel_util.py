@@ -34,6 +34,7 @@ def v1_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFram
             return (False, pd.DataFrame(), pd.DataFrame(),
                     f"Hoja main: Las siguientes columnas estan faltando: {missing_columns}")
         df_tags = pd.read_excel(file_path, sheet_name="tags", engine='openpyxl')
+        df_tags.drop_duplicates(subset=[cl_tag_name], inplace=True)
         missing_columns = get_missing_columns(df_tags, v1_tags_sheet_columns)
         if len(missing_columns) > 0:
             return (False, pd.DataFrame(), pd.DataFrame(),
@@ -75,6 +76,7 @@ def v2_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFram
         df_tags = df_tags.fillna('')
         df_tags = unify_nivel_voltaje_for_column(df_tags, cl_nivel_voltaje)
         missing_columns = get_missing_columns(df_tags, v2_tags_sheet_columns)
+        df_tags.drop_duplicates(subset=[cl_tag_name], inplace=True)
         if len(missing_columns) > 0:
             return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
                     f"Hoja tags: Las siguientes columnas estan faltando: {missing_columns}")

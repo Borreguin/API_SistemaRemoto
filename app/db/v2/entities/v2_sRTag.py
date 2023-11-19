@@ -1,12 +1,13 @@
-from mongoengine import EmbeddedDocument, StringField, BooleanField
+from mongoengine import EmbeddedDocument, StringField, BooleanField, DateTimeField
 
 from app.utils.excel_constants import default_filter_expression
-
+import datetime as dt
 
 class V2SRTag(EmbeddedDocument):
     tag_name = StringField(required=True)
     filter_expression = StringField(required=True, default=default_filter_expression)
     activado = BooleanField(default=True)
+    created = DateTimeField(default=dt.datetime.now())
 
     def __init__(self, tag_name: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)

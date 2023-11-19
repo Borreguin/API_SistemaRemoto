@@ -1,5 +1,6 @@
 V1_SR_NODE_LABEL = "SRNode"
 V2_SR_NODE_LABEL = "SRNode_v2"
+V2_SR_ENTITY_LABEL = "SREntity_v2"
 
 SR_NODE_COLLECTION = "CONFG|Nodos"
 SR_INSTALLATION_COLLECTION = "CONFG|Instalaciones"
@@ -19,3 +20,4 @@ attr_entidades = "entidades"
 
 lb_n_tags = "n_tags"
 lb_n_bahias = "n_bahias"
+lb_n_instalaciones = "n_instalaciones"

@@ -213,13 +213,9 @@ class SRNode(Document):
             self.id_node = hashlib.md5(id.encode()).hexdigest()
 
     def save_safely(self, *args, **kwargs):
-        try:
-            super().save(*args, **kwargs)
-            return True, f"SRNode: Saved successfully"
-        except NotUniqueError:
-            return False, f"SRNode: no único para valores: {self.tipo} {self.nombre}"
-        except Exception as e:
-            return False, f"No able to save: {e}"
+        from app.db.util import save_mongo_document_safely
+        return save_mongo_document_safely(self, *args, **kwargs)
+
 
     def add_or_replace_entities(self, entity_list: list):
         # check si todas las entidades son de tipo SREntity
@@ -283,7 +279,7 @@ class SRNode(Document):
         return utrs
 
     def __str__(self):
-        return f"[({self.tipo}) {self.nombre}] entidades: {[str(e) for e in self.entidades]}"
+        return f"v1SRNode [({self.tipo}) {self.nombre}] entidades: {[str(e) for e in self.entidades]}"
 
     def to_DataFrame(self):
         cl_activado = "activado"

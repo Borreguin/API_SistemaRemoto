@@ -41,6 +41,13 @@ class V2SRInstallation(Document):
     def __str__(self):
         return f"({self.instalacion_tipo}) {self.instalacion_nombre}: [{str(len(self.bahias))} bahias]"
 
+    def to_dict(self):
+        return dict(instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
+                    instalacion_nombre=self.instalacion_nombre, instalacion_tipo=self.instalacion_tipo,
+                    consignaciones=self.consignaciones.id if self.consignaciones is not None else None,
+                    activado=self.activado, protocolo=self.protocolo, longitud=self.longitud, latitud=self.latitud,
+                    bahias=[b.to_dict() for b in self.bahias] if self.bahias is not None else [])
+
     def to_summary(self):
         n_tags = 0
         if self.bahias is not None:
@@ -51,13 +58,9 @@ class V2SRInstallation(Document):
                     n_bahias=len(self.bahias) if self.bahias is not None else 0, n_tags=n_tags)
 
     def save_safely(self, *args, **kwargs):
-        try:
-            super().save(*args, **kwargs)
-            return True, f"SRInstallationV2: Saved successfully"
-        except NotUniqueError:
-            return False, f"SRInstallationV2: no único para valores: {self.instalacion_ems_code}"
-        except Exception as e:
-            return False, f"No able to save: {e}"
+        from app.db.util import save_mongo_document_safely
+        return save_mongo_document_safely(self)
+
     @staticmethod
     def find_by_ems_code(instalacion_ems_code: str) -> 'V2SRInstallation':
         instalacion = V2SRInstallation.objects(instalacion_ems_code=instalacion_ems_code)

@@ -11,8 +11,8 @@ def v1_node_from_excel_endpoints(router: APIRouter):
     endpoint_uri = '/nodo/{tipo}/{nombre}/from-excel'
     router.tags = ["v1-admin-sRemoto - excel"]
 
-    @router.post(endpoint_uri)
-    async def agrega_nodo_mediante_archivo_excel(tipo: str, nombre: str, excel_file: UploadFile,
+    @router.post(endpoint_uri, deprecated=True)
+    async def v1_agrega_nodo_mediante_archivo_excel(tipo: str, nombre: str, excel_file: UploadFile,
                                                  response: Response = Response()):
         resp, response.status_code = await post_agrega_nodo_mediante_archivo_excel(tipo, nombre, excel_file)
         return resp

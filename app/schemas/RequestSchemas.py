@@ -23,7 +23,7 @@ class BasicNodeInfoRequest(BaseModel):
     nombre: str
     tipo: str
     activado: bool
-    entidades: List[EntityInfoRequest]
+    entidades: Optional[List[EntityInfoRequest]]
 
 
 class NodeNewName(BaseModel):

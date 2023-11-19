@@ -1,6 +1,12 @@
-from mongoengine import EmbeddedDocument, StringField, FloatField, BooleanField, ListField, EmbeddedDocumentField
+from __future__ import annotations
+from mongoengine import EmbeddedDocument, StringField, FloatField, BooleanField, ListField, EmbeddedDocumentField, \
+    DateTimeField
+
 
 from app.db.v2.entities.v2_sRTag import V2SRTag
+import datetime as dt
+
+from app.utils.excel_util import convert_to_float
 
 
 class V2SRBahia(EmbeddedDocument):
@@ -9,18 +15,23 @@ class V2SRBahia(EmbeddedDocument):
     bahia_nombre = StringField(required=True)
     tags = ListField(EmbeddedDocumentField(V2SRTag))
     activado = BooleanField(default=True)
+    created = DateTimeField(default=dt.datetime.now())
 
-    def __init__(self, bahia_code: str = None, bahia_nombre: str = None, voltaje: str = None, *args, **values):
+    def __init__(self, bahia_code: str = None, bahia_nombre: str = None, voltaje: str | float = None, *args, **values):
         super().__init__(*args, **values)
         if bahia_code is not None:
             self.bahia_code = bahia_code
         if voltaje is not None:
-            self.voltaje = voltaje
+            self.voltaje = convert_to_float(voltaje)
         if bahia_nombre is not None:
             self.bahia_nombre = bahia_nombre
 
     def __str__(self):
         return f"{self.bahia_nombre}: ({self.voltaje} kV) nTags: {len(self.tags) if self.tags is not None else 0}"
+
+    def to_dict(self):
+        return dict(bahia_code=self.bahia_code, bahia_nombre=self.bahia_nombre, voltaje=self.voltaje,
+                    tags=[t.to_dict() for t in self.tags] if self.tags is not None else [])
 
     def to_summary(self):
         return dict(bahia_code=self.bahia_code, bahia_nombre=self.bahia_nombre, voltaje=self.voltaje,

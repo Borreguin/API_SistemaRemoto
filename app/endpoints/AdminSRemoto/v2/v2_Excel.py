@@ -21,7 +21,7 @@ def v2_node_from_excel_endpoints(router: APIRouter):
     @router.post(endpoint_tipo_nombre_uri)
     async def v2_agrega_nodo_mediante_archivo_excel(tipo: str, nombre: str, excel_file: UploadFile,
                                                  response: Response = Response()):
-        """ Permite añadir un nodo mediante un archivo excel \n
+        """ v2 Permite añadir un nodo mediante un archivo excel \n
             Si el nodo ha sido ingresado correctamente, entonces el código es 200 \n
             Si el nodo ya existe entonces error 409 \n
         """
@@ -40,6 +40,8 @@ def v2_node_from_excel_endpoints(router: APIRouter):
                REEMPLAZAR: \n
                El nodo completo es sustituido de acuerdo a lo especificado en el archivo
         """
+        if option is None:
+            option = Option.EDIT
         resp, response.status_code = await put_actualizar_nodo_usando_excel(tipo, nombre, excel_file, option)
         return resp
     #

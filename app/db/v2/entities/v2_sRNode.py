@@ -3,14 +3,13 @@ import hashlib
 import traceback
 
 import pandas as pd
-from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField, \
-    NotUniqueError
+from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField
 import datetime as dt
 
 from app.common import error_log
-from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION
+from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION, lb_n_bahias, lb_n_tags, lb_n_instalaciones
 from app.db.v2.entities.v2_sREntity import V2SREntity
-from app.db.v2.util import get_entities_and_installations_from_dataframe, get_bahias_and_tags_from_dataframe
+from app.db.v2.util import get_or_replace_entities_and_installations_from_dataframe, get_or_replace_bahias_and_tags_from_dataframe
 
 
 class V2SRNode(Document):
@@ -31,34 +30,41 @@ class V2SRNode(Document):
             self.nombre = nombre
 
         if self.id_node is None:
-            id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() + self.document
-            self.id_node = hashlib.md5(id.encode()).hexdigest()
+            self.update_node_id()
+
+    def update_node_id(self):
+        id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() + self.document
+        self.id_node = hashlib.md5(id.encode()).hexdigest()
 
     def __str__(self):
-        return (f"[({self.tipo}) {self.nombre}] "
+        return (f"v2SRNode [({self.tipo}) {self.nombre}] "
                 f"entidades: {[str(e) for e in self.entidades] if self.entidades is not None else 0}")
+
+    def to_dict(self):
+        return dict(_id=str(self.pk), id_node=self.id_node, nombre=self.nombre, tipo=self.tipo, actualizado=self.actualizado,
+                    entidades=[e.to_dict() for e in self.entidades] if self.entidades is not None else [],
+                    activado=self.activado)
 
     def to_summary(self):
         n_entidades, n_instalaciones, n_bahias, n_tags = 0, 0, 0, 0
         for entidad in self.entidades if self.entidades is not None else []:
             values = entidad.to_summary()
             n_entidades += 1
-            n_instalaciones += values['n_instalaciones']
-            n_bahias += values['n_bahias']
-            n_tags += values['n_tags']
-        return dict(document= V2_SR_NODE_LABEL,id_node=self.id_node, nombre=self.nombre, tipo=self.tipo,
+            n_instalaciones += values[lb_n_instalaciones]
+            n_bahias += values[lb_n_bahias]
+            n_tags += values[lb_n_tags]
+        return dict(_id=str(self.pk), document= V2_SR_NODE_LABEL,id_node=self.id_node, nombre=self.nombre, tipo=self.tipo,
                     actualizado=self.actualizado, activado=self.activado, n_entidades=n_entidades,
                     n_instalaciones=n_instalaciones, n_bahias=n_bahias, n_tags=n_tags)
 
+    def save(self, *args, **kwargs):
+        self.update_node_id()
+        return super().save(*args, **kwargs)
 
     def save_safely(self, *args, **kwargs):
-        try:
-            super().save(*args, **kwargs)
-            return True, f"SRNodeV2: Saved successfully"
-        except NotUniqueError:
-            return False, f"SRNodeV2: no único para valores: {self.tipo} {self.nombre}"
-        except Exception as e:
-            return False, f"No able to save: {e}"
+        from app.db.util import save_mongo_document_safely
+        self.update_node_id()
+        return save_mongo_document_safely(self, *args, **kwargs)
 
     def delete_deeply(self, *args, **kwargs):
         if self.entidades is not None:
@@ -72,11 +78,11 @@ class V2SRNode(Document):
         try:
             if self.entidades is not None:
                 for entidad in self.entidades:
+                    entidad.update_entity_id()
                     if entidad.instalaciones is not None:
                         for instalacion in entidad.instalaciones:
                             instalacion.fetch().save_safely(*args, **kwargs)
-            self.save_safely(*args, **kwargs)
-            return True, f"SRNodeV2: Saved deeply successfully"
+            return self.save_safely(*args, **kwargs)
         except Exception as e:
             return False, f"No able to save: {e}"
 
@@ -98,21 +104,31 @@ class V2SRNode(Document):
         return True, 'Node found', node
 
 
-    def create_node_from_dataframes(self, df_main: pd.DataFrame, df_bahia: pd.DataFrame, df_tags: pd.DataFrame) -> tuple[bool, str, 'V2SRNode']:
+    def create_or_edit_node_from_dataframes(self, df_main: pd.DataFrame, df_bahia: pd.DataFrame, df_tags: pd.DataFrame,
+                                            replace=False, edit=False) -> tuple[bool, str, 'V2SRNode']:
         msg = f"Node created from dataframes"
         try:
-            self.entidades = get_entities_and_installations_from_dataframe(df_main)
+            (success_entities, msg_entities, self.entidades) = (
+                get_or_replace_entities_and_installations_from_dataframe(df_main, replace=replace)
+            )
+            if not success_entities:
+                msg += f"\n{msg_entities}"
+            new_entidades = []
             for entidad in self.entidades:
                 new_instalaciones = []
                 for instalacion in entidad.instalaciones:
                     instalacion = instalacion.fetch()
-                    success_bahias, msg_bahia, new_installation = get_bahias_and_tags_from_dataframe(instalacion, df_bahia, df_tags)
+                    success_bahias, partially_success, msg_bahia, new_installation = (
+                        get_or_replace_bahias_and_tags_from_dataframe(instalacion, df_bahia, df_tags, replace=replace, edit=edit)
+                    )
                     success_save, msg_save =  new_installation.save_safely()
-                    if success_bahias and success_save:
+                    if (success_bahias or partially_success) and success_save:
                         new_instalaciones.append(new_installation)
                     else:
                         msg += f"\n{msg_bahia}\n{msg_save}"
                 entidad.instalaciones = new_instalaciones
+                new_entidades.append(entidad)
+            self.entidades = new_entidades
             success = True
         except Exception as e:
             msg = f"No able to create node from dataframes: {e}"
@@ -123,7 +139,7 @@ class V2SRNode(Document):
         return success, msg, self
 
     def delete_entity_by_id(self, id_entidad):
-        new_entities = [e for e in self.entidades if id_entidad != e.id_entidad]
+        new_entities = [e for e in self.entidades if self.entidades is not None and id_entidad != e.id_entidad]
         if len(new_entities) == len(self.entidades):
             return False, f"No existe la entidad [{id_entidad}] en el nodo [{self.nombre}]"
         self.entidades = new_entities

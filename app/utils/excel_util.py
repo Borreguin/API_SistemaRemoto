@@ -1,3 +1,4 @@
+from __future__ import annotations
 import datetime as dt
 import os
 from random import randint
@@ -5,8 +6,7 @@ from typing import Union, List, Tuple, Any
 
 import pandas as pd
 from fastapi import UploadFile
-from pandas import DataFrame, Series
-from pandas.core.generic import NDFrame
+from pandas import DataFrame
 
 from app.common import error_log
 from app.utils.excel_constants import *
@@ -42,6 +42,21 @@ def v1_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFram
     except Exception as e:
         return False, pd.DataFrame(), pd.DataFrame(), f'Not able to read the file, {e}'
 
+def unify_nivel_voltaje_for_column(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    df[column] = df[column].apply(lambda x: unify_nivel_voltaje(x))
+    return df
+
+def unify_nivel_voltaje(x) -> str:
+    try:
+        value = float(x)
+        value = round(value, 2)
+    except ValueError:
+        if ',' in x:
+            value = x.replace(",", ".")
+            return unify_nivel_voltaje(value)
+        value = None
+    return str(value)
+
 def v2_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFrame, DataFrame, DataFrame, str]:
     try:
         df_main = pd.read_excel(file_path, sheet_name="main", engine='openpyxl')
@@ -50,11 +65,15 @@ def v2_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFram
             return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
                     f"Hoja main: Las siguientes columnas estan faltando: {missing_columns}")
         df_bahia = pd.read_excel(file_path, sheet_name="bahias", engine='openpyxl')
+        df_bahia = df_bahia.fillna('')
+        df_bahia = unify_nivel_voltaje_for_column(df_bahia, cl_nivel_voltaje)
         missing_columns = get_missing_columns(df_bahia, v2_bahias_sheet_columns)
         if len(missing_columns) > 0:
             return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
                     f"Hoja bahia: Las siguientes columnas estan faltando: {missing_columns}")
         df_tags = pd.read_excel(file_path, sheet_name="tags", engine='openpyxl')
+        df_tags = df_tags.fillna('')
+        df_tags = unify_nivel_voltaje_for_column(df_tags, cl_nivel_voltaje)
         missing_columns = get_missing_columns(df_tags, v2_tags_sheet_columns)
         if len(missing_columns) > 0:
             return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
@@ -130,3 +149,12 @@ def all_columns_in_dataframe(df: pd.DataFrame, columns: List[str]) -> bool:
 
 def get_missing_columns(df: pd.DataFrame, columns: List[str]) -> List[str]:
     return [c for c in columns if not c in list(df.columns)]
+
+def convert_to_float(value: str | float) -> float | None:
+    try:
+        return float(value)
+    except ValueError:
+        if isinstance(value, str) and ',' in value:
+            value = value.replace(",", ".")
+            return convert_to_float(value)
+        return None

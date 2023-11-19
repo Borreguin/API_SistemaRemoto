@@ -1,32 +1,27 @@
+from __future__ import annotations
+
 import math
 import re
-from typing import Tuple
+from typing import Dict
 
 from starlette import status
 
 from app.common.util import to_dict
-from app.db.util import update_summary_node_info, node_query, create_node
-from app.schemas.RequestSchemas import *
+from app.db.constants import V1_SR_NODE_LABEL
+from app.db.util import node_query, find_node_by_name_and_type, update_summary_node_info, create_node
+from app.schemas.RequestSchemas import BasicNodeInfoRequest
 from app.utils.excel_util import *
-from app.db.v1.sRNode import SRNode, SREntity
 
 
-def put_activa_nodo(id_nodo: str = "ID del nodo a cambiar") -> Tuple[dict, int]:
-    nodo = SRNode.objects(id_node=id_nodo).first()
+def put_activa_desactiva_nodo(id_nodo: str = "ID del nodo a cambiar", activado=True, version:str=None) -> Tuple[dict, int]:
+    nodo = node_query(id_nodo, version)
     if nodo is None:
         return dict(success=False, nodo=None, msg="No encontrado"), status.HTTP_404_NOT_FOUND
-    nodo.actualizado, nodo.activado = dt.datetime.now(), True
-    nodo.save()
-    return dict(success=True, nodo=nodo.to_dict(), msg="Nodo activado"), status.HTTP_200_OK
-
-
-def put_desactiva_nodo(id_nodo: str = "ID del nodo a cambiar") -> Tuple[dict, int]:
-    nodo = SRNode.objects(id_node=id_nodo).first()
-    if nodo is None:
-        return dict(success=False, nodo=None, msg="No encontrado"), status.HTTP_404_NOT_FOUND
-    nodo.actualizado, nodo.activado = dt.datetime.now(), False
-    nodo.save()
-    return dict(success=True, nodo=nodo.to_dict(), msg="Nodo desactivado"), status.HTTP_200_OK
+    nodo.actualizado, nodo.activado = dt.datetime.now(), activado
+    msg_active = "Nodo activado" if activado else "Nodo desactivado"
+    success, msg = nodo.save_safely()
+    return (dict(success=success, nodo=nodo.to_dict(), msg=msg_active if success else "No able to activate"),
+            status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST)
 
 
 def delete_elimina_nodo_usando_ID_como_referencia(id: str, version=None) -> Tuple[dict, int]:
@@ -44,9 +39,9 @@ def put_actualiza_cambios_menores_en_nodo(id: str, request_data: BasicNodeInfoRe
     success, msg, node = update_summary_node_info(node, to_dict(request_data))
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    node.save()
-    return dict(success=True, nodo=node.to_summary(),
-                msg=f"Se han guardado los cambios para nodo {id}"), status.HTTP_200_OK
+    success, msg = node.save_safely()
+    return dict(success=success, nodo=node.to_summary(),
+                msg=msg), status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST
 
 
 def post_crea_nuevo_nodo_usando_ID(id, request_data: BasicNodeInfoRequest, version=None) -> Tuple[dict, int]:
@@ -59,56 +54,27 @@ def post_crea_nuevo_nodo_usando_ID(id, request_data: BasicNodeInfoRequest, versi
     if not success:
         return dict(success=False, nodo=None, msg=msg), status.HTTP_400_BAD_REQUEST
     success, msg = new_nodo.save_safely()
-    return dict(success=success, nodo=new_nodo.to_summary(), msg=msg), status.HTTP_200_OK
+    return dict(success=success, nodo=new_nodo.to_summary(), msg=msg), status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST
 
 
-def get_retorna_entidades_de_nodo(tipo: str, nombre: str, entidad_tipo: str, entidad_nombre: str):
-    nodo = SRNode.objects(nombre=nombre, tipo=tipo).first()
+def get_retorna_entidades_de_nodo(tipo: str, nombre: str, entidad_tipo: str, entidad_nombre: str, version=None) -> Tuple[dict | None, int]:
+    nodo = find_node_by_name_and_type(nombre=nombre, tipo=tipo, version=version)
     if nodo is None:
-        return nodo, status.HTTP_404_NOT_FOUND
+        return None, status.HTTP_404_NOT_FOUND
     for entidad in nodo.entidades:
         if entidad.entidad_tipo == entidad_tipo and entidad.entidad_nombre == entidad_nombre:
             return entidad.to_dict(), status.HTTP_200_OK
     return None, status.HTTP_404_NOT_FOUND
 
 
-def get_muestra_todos_los_nombres_nodos_existentes(filter_str=None):
-
-    nodes = SRNode.objects().as_pymongo().exclude('id')
+def get_muestra_todos_los_nombres_nodos_existentes(filter_str=None, version=None) -> Tuple[dict, int]:
+    if version is None:
+        version = V1_SR_NODE_LABEL
+    nodes = SRNode.objects().as_pymongo()
     if nodes.count() == 0:
         return dict(success=False, msg=f"No hay nodos en la base de datos"), status.HTTP_404_NOT_FOUND
     if filter_str is None or len(filter_str) == 0:
-        # creando un resumen rápido de los nodos:
-        _nodes = list()
-        for ix, node in enumerate(nodes):
-            n_tags = 0
-            entidades = list()
-            if "entidades" not in node.keys():
-                continue
-            for entidad in node["entidades"]:
-                if "utrs" in entidad.keys():
-                    entidad["utrs"] = sorted(entidad["utrs"], key=lambda i: i['utr_nombre'])
-                    n_rtu = len(entidad["utrs"])
-                    n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
-                    n_tags += n_tag_inside
-                    for utr in entidad["utrs"]:
-                        utr.pop("consignaciones", None)
-                        utr.pop("tags", None)
-                        utr['longitude'] = utr['longitude'] \
-                            if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
-                        utr['latitude'] = utr['latitude'] \
-                            if 'latitude' in utr.keys() and not math.isnan(utr['latitude']) else 0
-                else:
-                    n_rtu = 0
-                    n_tag_inside = 0
-                entidad["n_utrs"] = n_rtu
-                entidad["n_tags"] = n_tag_inside
-                entidades.append(entidad)
-            # creando el resumen del nodo
-            node["actualizado"] = str(node["actualizado"])
-            node["entidades"] = entidades
-            _nodes.append(node)
-        # to_show = [n.to_summary() for n in nodes]
+        _nodes = get_details_from_dict(nodes, version)
         return dict(success=True, nodos=_nodes, msg=f"Se han obtenido {len(_nodes)} nodos"), status.HTTP_200_OK
     filter_str = str(filter_str).replace("*", ".*")
     regex = re.compile(filter_str, re.IGNORECASE)
@@ -116,3 +82,41 @@ def get_muestra_todos_los_nombres_nodos_existentes(filter_str=None):
     to_show = [n.to_summary() for n in nodes]
     return dict(success=True, nodos=to_show, msg=f"Se han obtenido {len(to_show)} nodos"), status.HTTP_200_OK
 
+def get_details_from_dict(nodes: dict, version:str=None) -> List[Dict]:
+    # creando un resumen rápido de los nodos:
+    _nodes = list()
+    for ix, node in enumerate(nodes):
+        if node["document"] != version or "entidades" not in node.keys():
+            continue
+        n_tags, entidades, node["_id"] = 0, list(), str(node["_id"])
+        for entidad in node["entidades"]:
+            if version == V1_SR_NODE_LABEL:
+                new_entity, n_tags = get_rtu_details(entidad, n_tags)
+            else:
+                new_entity = entidad
+            entidades.append(new_entity)
+        # creando el resumen del nodo
+        node["actualizado"] = str(node["actualizado"])
+        node["entidades"] = entidades
+        _nodes.append(node)
+    return _nodes
+
+def get_rtu_details(entidad:dict, n_tags) -> Tuple[dict, int]:
+    if "utrs" in entidad.keys():
+        entidad["utrs"] = sorted(entidad["utrs"], key=lambda i: i['utr_nombre'])
+        n_rtu = len(entidad["utrs"])
+        n_tag_inside = sum([len(rtu["tags"]) for rtu in entidad["utrs"]])
+        n_tags += n_tag_inside
+        for utr in entidad["utrs"]:
+            utr.pop("consignaciones", None)
+            utr.pop("tags", None)
+            utr['longitude'] = utr['longitude'] \
+                if 'longitude' in utr.keys() and not math.isnan(utr['longitude']) else 0
+            utr['latitude'] = utr['latitude'] \
+                if 'latitude' in utr.keys() and not math.isnan(utr['latitude']) else 0
+    else:
+        n_rtu = 0
+        n_tag_inside = 0
+    entidad["n_utrs"] = n_rtu
+    entidad["n_tags"] = n_tag_inside
+    return entidad, n_tags

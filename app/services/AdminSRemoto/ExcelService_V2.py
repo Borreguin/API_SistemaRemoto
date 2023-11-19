@@ -32,7 +32,8 @@ async def post_v2_genera_archivo_para_nueva_version(upload_file: UploadFile):
     return dict(success=False, msg=f'No able to create file {new_file_name}'), status.HTTP_500_INTERNAL_SERVER_ERROR
 
 async def v2_agrega_nodo_mediante_archivo_excel_service(tipo: str, nombre: str, upload_file: UploadFile,
-                                                        replace=False, create_if_not_exists=False) -> Tuple[dict, int]:
+                                                        replace=False, create_if_not_exists=False,
+                                                        edit=False) -> Tuple[dict, int]:
     success, temp_file = await write_temporal_file_from_upload_file(upload_file)
     if not success:
         return dict(success=False, msg="No fue posible guardar el archivo temporal"), status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -41,22 +42,23 @@ async def v2_agrega_nodo_mediante_archivo_excel_service(tipo: str, nombre: str, 
     if not success:
         return dict(success=success, msg=msg), status.HTTP_400_BAD_REQUEST
 
-    df_main, df_bahia, df_tags = filter_active_rows(df_main, df_bahia, df_tags)
-    if len(df_main.index) == 0:
-        return dict(success=False, msg="No hay nodos activos en el archivo"), status.HTTP_400_BAD_REQUEST
+    if not replace:
+        df_main, df_bahia, df_tags = filter_active_rows(df_main, df_bahia, df_tags)
+        if len(df_main.index) == 0:
+            return dict(success=False, msg="No hay nodos activos en el archivo"), status.HTTP_400_BAD_REQUEST
 
     success, msg, node = V2SRNode.find_or_create_if_not_exists_node(tipo, nombre, create_if_not_exists)
     will_continue = msg == 'Node created' or replace
     if not success or not will_continue:
         msg = 'El nodo no puede ser reemplazado, ya existe' if msg == 'Node found' else msg
-        return dict(success=success, msg=msg), status.HTTP_409_CONFLICT
+        return dict(success=False, msg=msg), status.HTTP_409_CONFLICT
 
-    success, msg, new_node = node.create_node_from_dataframes(df_main, df_bahia, df_tags)
+    success, msg, new_node = node.create_or_edit_node_from_dataframes(df_main, df_bahia, df_tags, replace=replace, edit=edit)
+
     if not success:
-        new_node.delete_deeply()
         return dict(success=success, msg=msg), status.HTTP_400_BAD_REQUEST
 
-    success, msg = new_node.save_deeply()
+    success, msg = new_node.save_safely()
     if not success:
         return dict(success=success, msg=msg), status.HTTP_400_BAD_REQUEST
 
@@ -65,4 +67,9 @@ async def v2_agrega_nodo_mediante_archivo_excel_service(tipo: str, nombre: str, 
 async def put_actualizar_nodo_usando_excel(tipo: str, nombre: str, upload_file: UploadFile,
                                            option: Option) -> Tuple[dict, int]:
     if option == option.REEMPLAZAR:
-        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file, replace=True)
+        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file, replace=True,
+                                                                   create_if_not_exists=False)
+    if option == option.EDIT:
+        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file, replace=False,
+                                                                   create_if_not_exists=False)
+    return dict(success=False, msg=f"Opción no válida"), status.HTTP_400_BAD_REQUEST

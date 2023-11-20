@@ -21,8 +21,8 @@ first = 0
 last = -1
 
 default_voltage_levels = [500, 230, 138, 69, 34.5, 34, 24.16, 13.8, 13, 6.6, 4.6, 4.2, 4.16, 4.1, 0.62, 0.48]
-end_token_bahia = ['_SC\\.', '_TIE', '_TE_', '_ALA\\.', '_IT\\.', '_I\\.', '_V\\.', '_P\\.', '_Q\\.', '_HERTZ', '_BUC',
-                   '_A\\.P\\.', '_ALA\\.', '_LTC\\.', '_D\\.'
+end_token_bahia = ['_SC\\.', '_TIE', '_TE_', '_ALA\\.', '_IT\\.', '_I\\.', '_V\\.', '_P\\.', '_Q\\.','_D\\.FAL',
+                   '_HERTZ', '_BUC', '_A\\.P\\.', '_ALA\\.', '_LTC\\.',
                    '_CON', '_IT\\.L-C', '\\.L-C', '_FLG', '_DIS', '_INDS', '_FAL', '_CAUD', '_LIM', '\\.LTC', '_PAR',
                    '_SMD', '_SME', '_NIVEL', '_PORC', '_MODO', '_FREC', '_SPC', '#', '']
 bahia_between_tokens = ['#([\\w*|\\s*|-]{3,})#']
@@ -158,6 +158,7 @@ def migration_process_df_tag(df_tag: pd.DataFrame) -> pd.DataFrame:
         df_filter = pd.concat([df_filter, df_filter_group], ignore_index=True)
     df_filter[cl_activado] = 'x'
     df_filter[cl_filter_expression] = default_filter_expression
+    df_filter.drop_duplicates(subset=[cl_tag_name], inplace=True)
     return df_filter[v2_tags_sheet_columns]
 
 
@@ -171,6 +172,7 @@ def migration_process_df_main(df_main: pd.DataFrame) -> pd.DataFrame:
 def migration_process_df_bahia(df_tags: pd.DataFrame) -> pd.DataFrame:
     df_result = pd.DataFrame(columns=v2_bahias_sheet_columns)
     group_by = [cl_instalacion_ems_code, cl_nivel_voltaje, cl_bahia_code]
+    df_tags.fillna('', inplace=True)
     for (ems_code, voltage, bahia_code), df_group in df_tags.groupby(by=group_by):
         row = {cl_instalacion_ems_code: ems_code, cl_bahia_code: bahia_code,
                cl_bahia_nombre: bahia_code, cl_nivel_voltaje: voltage, cl_activado: 'x'}

@@ -1,5 +1,6 @@
 import datetime as dt
 import hashlib
+import math
 
 from mongoengine import Document, StringField, ReferenceField, BooleanField, FloatField, ListField, \
     EmbeddedDocumentField, DateTimeField, NotUniqueError
@@ -45,7 +46,9 @@ class V2SRInstallation(Document):
         return dict(instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
                     instalacion_nombre=self.instalacion_nombre, instalacion_tipo=self.instalacion_tipo,
                     consignaciones=self.consignaciones.id if self.consignaciones is not None else None,
-                    activado=self.activado, protocolo=self.protocolo, longitud=self.longitud, latitud=self.latitud,
+                    activado=self.activado, protocolo=self.protocolo,
+                    longitud=0 if math.isnan(self.longitud) else self.longitud,
+                    latitud=0 if math.isnan(self.latitud) else self.latitud,
                     bahias=[b.to_dict() for b in self.bahias] if self.bahias is not None else [])
 
     def to_summary(self):

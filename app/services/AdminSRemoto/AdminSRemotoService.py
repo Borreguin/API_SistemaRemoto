@@ -7,7 +7,7 @@ from typing import Dict
 from starlette import status
 
 from app.common.util import to_dict
-from app.db.constants import V1_SR_NODE_LABEL
+from app.db.constants import V1_SR_NODE_LABEL, V2_SR_NODE_LABEL
 from app.db.util import node_query, find_node_by_name_and_type, update_summary_node_info, create_node
 from app.schemas.RequestSchemas import BasicNodeInfoRequest
 from app.utils.excel_util import *
@@ -28,7 +28,10 @@ def delete_elimina_nodo_usando_ID_como_referencia(id: str, version=None) -> Tupl
     node = node_query(id, version)
     if node is None:
         return dict(success=False, nodo=None, msg="No se encontró el nodo"), status.HTTP_404_NOT_FOUND
-    node.delete()
+    if version == V1_SR_NODE_LABEL:
+        node.delete()
+    else:
+        node.delete_deeply()
     return dict(success=True, nodo=node.to_dict(), msg="Nodo eliminado"), status.HTTP_200_OK
 
 
@@ -88,12 +91,13 @@ def get_details_from_dict(nodes: dict, version:str=None) -> List[Dict]:
     for ix, node in enumerate(nodes):
         if node["document"] != version or "entidades" not in node.keys():
             continue
-        n_tags, entidades, node["_id"] = 0, list(), str(node["_id"])
+        n_installations, n_tags, entidades, node["_id"] = 0, 0, list(), str(node["_id"])
         for entidad in node["entidades"]:
+            new_entity = dict()
             if version == V1_SR_NODE_LABEL:
                 new_entity, n_tags = get_rtu_details(entidad, n_tags)
-            else:
-                new_entity = entidad
+            if version == V2_SR_NODE_LABEL:
+                new_entity, n_installations = get_installations_details(entidad, n_installations)
             entidades.append(new_entity)
         # creando el resumen del nodo
         node["actualizado"] = str(node["actualizado"])
@@ -120,3 +124,13 @@ def get_rtu_details(entidad:dict, n_tags) -> Tuple[dict, int]:
     entidad["n_utrs"] = n_rtu
     entidad["n_tags"] = n_tag_inside
     return entidad, n_tags
+
+def get_installations_details(entidad, n_installations):
+    inner_installations = 0
+    if "instalaciones" in entidad.keys():
+        inner_installations = len(entidad["instalaciones"])
+        entidad.pop("instalaciones", None)
+
+    entidad["n_installations"] = inner_installations
+    entidad["created"] = str(entidad["created"])
+    return entidad, n_installations + inner_installations

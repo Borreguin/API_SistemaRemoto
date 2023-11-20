@@ -152,11 +152,11 @@ def all_columns_in_dataframe(df: pd.DataFrame, columns: List[str]) -> bool:
 def get_missing_columns(df: pd.DataFrame, columns: List[str]) -> List[str]:
     return [c for c in columns if not c in list(df.columns)]
 
-def convert_to_float(value: str | float) -> float | None:
+def convert_to_float(value: str | float) -> float:
     try:
         return float(value)
     except ValueError:
         if isinstance(value, str) and ',' in value:
             value = value.replace(",", ".")
             return convert_to_float(value)
-        return None
+        return 0

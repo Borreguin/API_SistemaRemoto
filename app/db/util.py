@@ -73,7 +73,7 @@ def update_summary_node_info(node: SRNode | V2SRNode, summary: dict, replace = T
         setattr(node, att, summary[att])
     node.update_node_id()
     to_change = summary.get(attr_entidades, None)
-    if to_change is None or len(to_change) == 0:
+    if to_change is None:
         return True, "Todos lo cambios fueron hechos", node
 
     id_entities_lcl = [e[attr_id_entidad] for e in node.entidades]
@@ -100,6 +100,7 @@ def update_summary_node_info(node: SRNode | V2SRNode, summary: dict, replace = T
                 continue
         for att in attributes_entity:
             setattr(e, att, summary[attr_entidades][i][att])
+            e.update_entity_id()
         new_entities.append(e)
     node.entidades = new_entities
     return True, "Todos lo cambios fueron hechos", node
@@ -111,7 +112,9 @@ def save_mongo_document_safely(document: Document, *args, **kwargs) -> tuple[boo
         return True, 'Document saved successfully'
     except NotUniqueError as e:
         dup_key, collection = find_collection_and_dup_key(f'{e}')
-        if isinstance(document, SRNode) or isinstance(document, V2SRNode):
+        document_type = getattr(document, 'document', None)
+        if (isinstance(document, SRNode) or isinstance(document, V2SRNode)
+                or document_type == V1_SR_NODE_LABEL or document_type == V2_SR_NODE_LABEL):
             return msg_error_not_unique_node(document, e)
 
         return False, f"No unique key for: {dup_key} in {collection}"

@@ -37,12 +37,12 @@ def delete_elimina_nodo_usando_ID_como_referencia(id: str, version=None) -> Tupl
 
 def put_actualiza_cambios_menores_en_nodo(id: str, request_data: BasicNodeInfoRequest, version=None) -> Tuple[dict, int]:
     node = node_query(id, version)
+    is_new = id == 'null'
+    if node is None and is_new:
+        node = create_node(request_data.tipo, request_data.nombre, request_data.activado, version)
     if node is None:
         return dict(success=False, nodo=None, msg=f"No se encontró el nodo {id}"), status.HTTP_404_NOT_FOUND
-    request_dict = to_dict(request_data)
-    entidades = request_dict.get('entidades', [])
-    replace = True if entidades is not None and len(entidades) > 0 else False
-    success, msg, node = update_summary_node_info(node, to_dict(request_data), replace=replace)
+    success, msg, node = update_summary_node_info(node, to_dict(request_data), replace=not is_new)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     success, msg = node.save_safely()

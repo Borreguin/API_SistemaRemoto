@@ -47,13 +47,16 @@ class V2SRNode(Document):
 
     def to_summary(self):
         n_entidades, n_instalaciones, n_bahias, n_tags = 0, 0, 0, 0
+        entidades = list()
         for entidad in self.entidades if self.entidades is not None else []:
             values = entidad.to_summary()
             n_entidades += 1
             n_instalaciones += values[lb_n_instalaciones]
             n_bahias += values[lb_n_bahias]
             n_tags += values[lb_n_tags]
-        return dict(_id=str(self.pk), document= V2_SR_NODE_LABEL,id_node=self.id_node, nombre=self.nombre, tipo=self.tipo,
+            entidades.append(values)
+        return dict(_id=str(self.pk), document= V2_SR_NODE_LABEL,id_node=self.id_node, nombre=self.nombre,
+                    tipo=self.tipo, entidades=entidades,
                     actualizado=self.actualizado, activado=self.activado, n_entidades=n_entidades,
                     n_instalaciones=n_instalaciones, n_bahias=n_bahias, n_tags=n_tags)
 

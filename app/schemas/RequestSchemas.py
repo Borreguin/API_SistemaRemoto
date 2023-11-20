@@ -8,21 +8,21 @@ class EntityInfoRequest(BaseModel):
     id_entidad: str
     entidad_nombre: str
     entidad_tipo: str
-    activado: bool
+    activado: Optional[bool]
 
 
 class NodeInfoRequest(BaseModel):
     id_node: Optional[str]
     nombre: str
     tipo: str
-    activado: bool
+    activado: Optional[bool]
     entidades: List[EntityInfoRequest]
 
 
 class BasicNodeInfoRequest(BaseModel):
     nombre: str
     tipo: str
-    activado: bool
+    activado: Optional[bool]
     entidades: Optional[List[EntityInfoRequest]]
 
 

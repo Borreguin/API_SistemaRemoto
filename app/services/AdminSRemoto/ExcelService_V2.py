@@ -75,5 +75,5 @@ async def put_actualizar_nodo_usando_excel(tipo: str, nombre: str, upload_file: 
         return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file,
                                                                    replace=False,
                                                                    edit=True,
-                                                                   create_if_not_exists=False)
+                                                                   create_if_not_exists=True)
     return dict(success=False, msg=f"Opción no válida"), status.HTTP_400_BAD_REQUEST

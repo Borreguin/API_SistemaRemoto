@@ -39,7 +39,10 @@ def put_actualiza_cambios_menores_en_nodo(id: str, request_data: BasicNodeInfoRe
     node = node_query(id, version)
     if node is None:
         return dict(success=False, nodo=None, msg=f"No se encontró el nodo {id}"), status.HTTP_404_NOT_FOUND
-    success, msg, node = update_summary_node_info(node, to_dict(request_data))
+    request_dict = to_dict(request_data)
+    entidades = request_dict.get('entidades', [])
+    replace = True if entidades is not None and len(entidades) > 0 else False
+    success, msg, node = update_summary_node_info(node, to_dict(request_data), replace=replace)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     success, msg = node.save_safely()
@@ -89,9 +92,14 @@ def get_details_from_dict(nodes: dict, version:str=None) -> List[Dict]:
     # creando un resumen rápido de los nodos:
     _nodes = list()
     for ix, node in enumerate(nodes):
-        if node["document"] != version or "entidades" not in node.keys():
+        if node["document"] != version:
             continue
         n_installations, n_tags, entidades, node["_id"] = 0, 0, list(), str(node["_id"])
+        if "entidades" not in node.keys():
+            node["entidades"] = list()
+            _nodes.append(node)
+            continue
+
         for entidad in node["entidades"]:
             new_entity = dict()
             if version == V1_SR_NODE_LABEL:

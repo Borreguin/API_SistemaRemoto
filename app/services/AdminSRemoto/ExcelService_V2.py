@@ -48,10 +48,11 @@ async def v2_agrega_nodo_mediante_archivo_excel_service(tipo: str, nombre: str, 
             return dict(success=False, msg="No hay nodos activos en el archivo"), status.HTTP_400_BAD_REQUEST
 
     success, msg, node = V2SRNode.find_or_create_if_not_exists_node(tipo, nombre, create_if_not_exists)
-    will_continue = msg == 'Node created' or replace
-    if not success or not will_continue:
+    will_continue = msg == 'Node created' or replace or edit
+    if not success or not will_continue or node is None:
         msg = 'El nodo no puede ser reemplazado, ya existe' if msg == 'Node found' else msg
-        return dict(success=False, msg=msg), status.HTTP_409_CONFLICT
+        msg = 'El nodo no existe' if node is None else msg
+        return dict(success=False, msg=msg), status.HTTP_404_NOT_FOUND if node is None else status.HTTP_409_CONFLICT
 
     success, msg, new_node = node.create_or_edit_node_from_dataframes(df_main, df_bahia, df_tags, replace=replace, edit=edit)
 
@@ -67,9 +68,12 @@ async def v2_agrega_nodo_mediante_archivo_excel_service(tipo: str, nombre: str, 
 async def put_actualizar_nodo_usando_excel(tipo: str, nombre: str, upload_file: UploadFile,
                                            option: Option) -> Tuple[dict, int]:
     if option == option.REEMPLAZAR:
-        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file, replace=True,
+        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file,
+                                                                   replace=True,
                                                                    create_if_not_exists=False)
     if option == option.EDIT:
-        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file, replace=False,
+        return await v2_agrega_nodo_mediante_archivo_excel_service(tipo, nombre, upload_file,
+                                                                   replace=False,
+                                                                   edit=True,
                                                                    create_if_not_exists=False)
     return dict(success=False, msg=f"Opción no válida"), status.HTTP_400_BAD_REQUEST

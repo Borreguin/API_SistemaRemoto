@@ -19,7 +19,7 @@ def v1_admin_sremoto_endpoints(router: APIRouter):
         resp, response.status_code = put_activa_desactiva_nodo(id_nodo, activado=False, version=V1_SR_NODE_LABEL)
         return resp
 
-    @router.get('/nodo/{tipo}/{nombre}/{entidad_tipo}/{entidad_nombre}')
+    @router.get('/nodo/{tipo}/{nombre}/{entidad_tipo}/{entidad_nombre}', deprecated=True)
     def v1_retorna_entidades_de_nodo(tipo: str = "Tipo nodo", nombre: str = "Nombre nodo",
                                   entidad_tipo: str = "Entidad tipo",
                                   entidad_nombre: str = "Entidad nombre", response: Response = Response()):

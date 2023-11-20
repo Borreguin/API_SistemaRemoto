@@ -67,20 +67,26 @@ def create_instalation(instalacion_values: dict):
     success, msg = instalacion.save_safely()
     return success, msg, instalacion
 
-def update_summary_node_info(node: SRNode | V2SRNode, summary: dict) -> tuple[bool, str, SRNode | V2SRNode]:
+def update_summary_node_info(node: SRNode | V2SRNode, summary: dict, replace = True) -> tuple[bool, str, SRNode | V2SRNode]:
+    entidades = node.entidades if node.entidades is not None else list()
     for att in attributes_node:
         setattr(node, att, summary[att])
     node.update_node_id()
+    to_change = summary.get(attr_entidades, None)
+    if to_change is None or len(to_change) == 0:
+        return True, "Todos lo cambios fueron hechos", node
+
     id_entities_lcl = [e[attr_id_entidad] for e in node.entidades]
-    entidades = summary.get(attr_entidades) if isinstance(summary.get(attr_entidades, []), list) else list()
-    id_entities_new = [e[attr_id_entidad] for e in entidades]
-    ids_to_delete = [id for id in id_entities_lcl if id not in id_entities_new]
-    check = [e[attr_entidad_tipo] + e[attr_entidad_nombre] for e in entidades]
-    # check if there are repeated elements
-    if len(check) > len(set(check)):
-        return False, "Existen elementos repetidos dentro del nodo", node
-    # delete those that are not in list coming from user interface
-    [node.delete_entity_by_id(id) for id in ids_to_delete]
+    if replace:
+        entidades = summary.get(attr_entidades) if isinstance(summary.get(attr_entidades, []), list) else list()
+        id_entities_new = [e[attr_id_entidad] for e in entidades]
+        ids_to_delete = [id for id in id_entities_lcl if id not in id_entities_new]
+        check = [e[attr_entidad_tipo] + e[attr_entidad_nombre] for e in entidades]
+        # check if there are repeated elements
+        if len(check) > len(set(check)):
+            return False, "Existen elementos repetidos dentro del nodo", node
+        # delete those that are not in list coming from user interface
+        [node.delete_entity_by_id(id) for id in ids_to_delete]
     # creación de nuevas entidades y actualización de valores
     new_entities = list()
     for i, entity in enumerate(entidades):

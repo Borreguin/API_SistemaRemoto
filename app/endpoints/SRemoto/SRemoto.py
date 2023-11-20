@@ -10,7 +10,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-disponibilidad_excel_uri = '/disponibilidad/<string:formato>/<string:ini_date>/<string:end_date>'
+disponibilidad_excel_uri = '/disponibilidad/{formato}/{ini_date}/{end_date}'
 
 
 @router.get(disponibilidad_excel_uri)
@@ -27,12 +27,12 @@ def descarga_calculo_en_excel(formato: FormatOption, ini_date: str = "yyyy-mm-dd
     return resp
 
 
-indisponibilidad__format_uri = '/indisponibilidad/tags/<string:formato>'
+indisponibilidad__format_uri = '/indisponibilidad/tags/{formato}'
 
 
 @router.get(indisponibilidad__format_uri)
-@router.get(indisponibilidad__format_uri + '/<string:ini_date>/<string:end_date>')
-@router.get(indisponibilidad__format_uri + '/<string:ini_date>/<string:end_date>/<string:umbral>')
+@router.get(indisponibilidad__format_uri + '/{ini_date}/{end_date}')
+@router.get(indisponibilidad__format_uri + '/{ini_date}/{end_date}/{umbral}')
 def obtiene_listado_tags_con_indisponibilidad_mayor_igual_a_umbral(formato: FormatOption, ini_date: str = None,
                                                                    end_date: str = None,
                                                                    umbral=None, response: Response = Response()):
@@ -51,11 +51,11 @@ def obtiene_listado_tags_con_indisponibilidad_mayor_igual_a_umbral(formato: Form
     return resp
 
 
-disponibilidad_diaria_uri = '/disponibilidad/diaria/<string:formato>'
+disponibilidad_diaria_uri = '/disponibilidad/diaria/{formato}'
 
 
 @router.get(disponibilidad_diaria_uri)
-@router.get(disponibilidad_diaria_uri + '/<string:ini_date>/<string:end_date>')
+@router.get(disponibilidad_diaria_uri + '/{ini_date}/{end_date}')
 def obtiene_calculo_diario(formato: FormatOption, ini_date=None, end_date=None, response: Response = Response()):
     """
     Entrega el cálculo en formato Excel/JSON realizado de manera diaria a las 00:00 \n
@@ -68,7 +68,7 @@ def obtiene_calculo_diario(formato: FormatOption, ini_date=None, end_date=None, 
     return resp
 
 
-tendencia_diaria_uri = '/tendencia/diaria/<string:formato>/<string:ini_date>/<string:end_date>'
+tendencia_diaria_uri = '/tendencia/diaria/{formato}/{ini_date}/{end_date}'
 
 
 @router.get(tendencia_diaria_uri)

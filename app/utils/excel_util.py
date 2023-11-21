@@ -61,6 +61,7 @@ def unify_nivel_voltaje(x) -> str:
 def v2_get_main_and_tags_from_excel_file(file_path: str) -> tuple[bool, DataFrame, DataFrame, DataFrame, str]:
     try:
         df_main = pd.read_excel(file_path, sheet_name="main", engine='openpyxl')
+        df_main = df_main.fillna('')
         missing_columns = get_missing_columns(df_main, v2_main_sheet_columns)
         if len(missing_columns) > 0:
             return (False, pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),

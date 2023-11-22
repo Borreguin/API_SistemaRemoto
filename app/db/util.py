@@ -68,7 +68,7 @@ def create_instalation(instalacion_values: dict):
     return success, msg, instalacion
 
 def update_summary_node_info(node: SRNode | V2SRNode, summary: dict, replace = True) -> tuple[bool, str, SRNode | V2SRNode]:
-    entidades = node.entidades if node.entidades is not None else list()
+
     for att in attributes_node:
         setattr(node, att, summary[att])
     node.update_node_id()
@@ -89,7 +89,8 @@ def update_summary_node_info(node: SRNode | V2SRNode, summary: dict, replace = T
         [node.delete_entity_by_id(id) for id in ids_to_delete]
     # creación de nuevas entidades y actualización de valores
     new_entities = list()
-    for i, entity in enumerate(entidades):
+    old_entidades = node.entidades if node.entidades is not None else list()
+    for i, entity in enumerate(old_entidades):
         if entity[attr_id_entidad] not in id_entities_lcl and isinstance(node, SRNode):
             e = SREntity(entidad_tipo=entity[attr_entidad_tipo], entidad_nombre=entity[attr_entidad_nombre])
         elif entity[attr_id_entidad] not in id_entities_lcl and isinstance(node, V2SRNode):

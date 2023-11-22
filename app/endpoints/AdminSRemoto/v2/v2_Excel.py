@@ -8,7 +8,6 @@ from app.services.AdminSRemoto.ExcelService_V2 import *
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>
 def v2_node_from_excel_endpoints(router: APIRouter):
     router.tags = ["v2-admin-sRemoto - excel"]
-
     endpoint_update = '/v2/upgrade/from-excel'
 
     @router.post(endpoint_update)

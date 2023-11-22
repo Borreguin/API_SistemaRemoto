@@ -3,11 +3,12 @@ import hashlib
 import traceback
 
 import pandas as pd
-from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField
+from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField, IntField
 import datetime as dt
 
 from app.common import error_log
-from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION, lb_n_bahias, lb_n_tags, lb_n_instalaciones
+from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION, lb_n_bahias, lb_n_tags, lb_n_instalaciones, \
+    lb_n_entidades
 from app.db.v2.entities.v2_sREntity import V2SREntity
 from app.db.v2.util import get_or_replace_entities_and_installations_from_dataframe, get_or_replace_bahias_and_tags_from_dataframe
 
@@ -20,6 +21,10 @@ class V2SRNode(Document):
     entidades = ListField(EmbeddedDocumentField(V2SREntity), default=[])
     activado = BooleanField(default=True)
     document = StringField(required=True, default=V2_SR_NODE_LABEL)
+    n_tags = IntField(default=0)
+    n_bahias = IntField(default=0)
+    n_instalaciones = IntField(default=0)
+    n_entidades = IntField(default=0)
     meta = {"collection": SR_NODE_COLLECTION}
 
     def __init__(self, tipo: str = None, nombre: str = None, *args, **values):
@@ -36,6 +41,14 @@ class V2SRNode(Document):
         id = str(self.nombre).lower().strip() + str(self.tipo).lower().strip() + self.document
         self.id_node = hashlib.md5(id.encode()).hexdigest()
 
+    def update_summary(self):
+        summary = self.to_summary()
+        self.n_tags = summary[lb_n_tags]
+        self.n_bahias = summary[lb_n_bahias]
+        self.n_instalaciones = summary[lb_n_instalaciones]
+        self.n_entidades = summary[lb_n_entidades]
+        [e.update_summary() for e in self.entidades if self.entidades is not None]
+
     def __str__(self):
         return (f"v2SRNode [({self.tipo}) {self.nombre}] "
                 f"entidades: {[str(e) for e in self.entidades] if self.entidades is not None else 0}")
@@ -43,7 +56,7 @@ class V2SRNode(Document):
     def to_dict(self):
         return dict(_id=str(self.pk), id_node=self.id_node, nombre=self.nombre, tipo=self.tipo, actualizado=self.actualizado,
                     entidades=[e.to_dict() for e in self.entidades] if self.entidades is not None else [],
-                    activado=self.activado)
+                    activado=self.activado, n_tags=self.n_tags, n_bahias=self.n_bahias, n_instalaciones=self.n_instalaciones)
 
     def to_summary(self):
         n_entidades, n_instalaciones, n_bahias, n_tags = 0, 0, 0, 0
@@ -62,11 +75,13 @@ class V2SRNode(Document):
 
     def save(self, *args, **kwargs):
         self.update_node_id()
+        self.update_summary()
         return super().save(*args, **kwargs)
 
     def save_safely(self, *args, **kwargs):
         from app.db.util import save_mongo_document_safely
         self.update_node_id()
+        self.update_summary()
         return save_mongo_document_safely(self, *args, **kwargs)
 
     def delete_deeply(self, *args, **kwargs):

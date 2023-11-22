@@ -8,6 +8,7 @@ from app import project_path
 
 def load_environmental_variables():
     environment = os.getenv('ENV', 'dev')
+    print(f">>>>>\tEnvironment: {environment}")
     if environment == 'prod':
         env_path = os.path.join(project_path, 'app', 'core', 'env', 'prod.env')
     else:

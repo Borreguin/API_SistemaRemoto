@@ -63,6 +63,9 @@ async def v2_agrega_nodo_mediante_archivo_excel_service(tipo: str, nombre: str, 
     if not success:
         return dict(success=success, msg=msg), status.HTTP_400_BAD_REQUEST
 
+    # Guardar como archivo Excel con versionamiento
+    destination = os.path.join(local_repositories.S_REMOTO_EXCEL, upload_file.filename)
+    save_excel_file_from_bytes(destination=destination, stream_excel_file=await upload_file.read())
     return dict(success=True, msg=msg, nodo=new_node.to_summary()), status.HTTP_200_OK
 
 async def put_actualizar_nodo_usando_excel(tipo: str, nombre: str, upload_file: UploadFile,

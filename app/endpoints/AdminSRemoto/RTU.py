@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from starlette.responses import Response
 
-from app.services.AdminSRemoto.RTUService import *
+from app.services.AdminSRemoto.v1.RTUService import *
 
 
 def rtu_endpoints(router: APIRouter):

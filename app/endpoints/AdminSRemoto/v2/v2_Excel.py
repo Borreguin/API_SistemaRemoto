@@ -1,8 +1,7 @@
 from fastapi import APIRouter
 from starlette.responses import Response
 
-from app.schemas.RequestSchemas import Option
-from app.services.AdminSRemoto.ExcelService_V2 import *
+from app.services.AdminSRemoto.v2.ExcelService_v2 import *
 
 
 # se puede consultar este servicio como: /url?nid=<cualquier_valor_random>

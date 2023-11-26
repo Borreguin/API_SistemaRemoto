@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from starlette.responses import Response
 
-from app.services.AdminSRemoto.AdminSRemotoService import *
+from app.services.AdminSRemoto.CommonV1AndV2.AdminSRemotoService import *
 
 
 def v1_node_id_endpoints(router: APIRouter):

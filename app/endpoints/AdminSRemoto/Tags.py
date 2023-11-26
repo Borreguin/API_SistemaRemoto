@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.services.AdminSRemoto.TagsService import *
+from app.services.AdminSRemoto.v1.TagsService import *
 from starlette.responses import Response
 
 

@@ -46,8 +46,8 @@ def find_node_by_name_and_type(tipo: str, nombre: str, version=None) -> SRNode |
     return None
 
 def find_node_by_id_entidad(id_entidad: str) -> SRNode | V2SRNode | None:
-    query_sr_node = SRNode.objects(entidades__id_entidad=id_entidad)
-    query_v2_sr_node = V2SRNode.objects(entidades__id_entidad=id_entidad)
+    query_sr_node = SRNode.objects(entidades__id_entidad=id_entidad, document=V1_SR_NODE_LABEL)
+    query_v2_sr_node = V2SRNode.objects(entidades__id_entidad=id_entidad, document=V2_SR_NODE_LABEL)
     if query_sr_node.count() > 0:
         return query_sr_node.first()
     if query_v2_sr_node.count() > 0:

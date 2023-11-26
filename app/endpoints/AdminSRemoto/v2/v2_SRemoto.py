@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from starlette.responses import Response
 
 from app.db.constants import V2_SR_NODE_LABEL
-from app.services.AdminSRemoto.AdminSRemotoService import put_activa_desactiva_nodo, get_retorna_entidades_de_nodo, \
+from app.services.AdminSRemoto.CommonV1AndV2.AdminSRemotoService import put_activa_desactiva_nodo, get_retorna_entidades_de_nodo, \
     get_muestra_todos_los_nombres_nodos_existentes
 
 

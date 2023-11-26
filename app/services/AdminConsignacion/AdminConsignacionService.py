@@ -7,7 +7,7 @@ from starlette.responses import FileResponse
 from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import DetalleConsignacionRequest, ConsignacionRequest, FormatOption
 from app.db.v1.Info.Consignment import Consignments, Consignment
-from flask_app.my_lib.utils import check_range_yyyy_mm_dd_hh_mm_ss
+from app.utils.utils import check_range_yyyy_mm_dd_hh_mm_ss
 import pandas as pd
 
 

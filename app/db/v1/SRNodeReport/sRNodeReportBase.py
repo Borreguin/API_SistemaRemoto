@@ -1,5 +1,5 @@
 from app.db.v1.sRNode import *
-from flask_app.my_lib import utils as u
+from app.utils import utils as u
 
 
 class SRTagDetails(EmbeddedDocument):

@@ -5,7 +5,7 @@ from starlette import status
 from app.common.util import to_dict
 from app.schemas.RequestSchemas import RTURequest, RTURequestId
 from app.db.v1.sRNode import SRNode, SRUTR
-from flask_app.my_lib.utils import find_entity_in_node
+from app.utils.utils import find_entity_in_node
 
 
 def get_lista_RTU_de_entidad(id_nodo: str = "id nodo", id_entidad: str = "id entidad"):

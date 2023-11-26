@@ -8,7 +8,7 @@ from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from app.db.v1.SRNodeReport.sRNodeReportBase import SREntityDetails, SRUTRDetails, SRTagDetails
 from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from flask_app.settings import initial_settings as init
-from flask_app.my_lib.utils import isTemporal
+from app.utils.utils import isTemporal
 DEBUG = True
 
 d_n = dt.datetime.now()

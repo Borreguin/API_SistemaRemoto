@@ -17,7 +17,7 @@ import re
 
 from app.db.util import update_summary_node_info
 # importando configuraciones iniciales
-from flask_app.my_lib.utils import set_max_age_to_response, find_entity_in_node, check_if_all_are_there, \
+from app.utils.utils import set_max_age_to_response, find_entity_in_node, check_if_all_are_there, \
     get_df_from_excel_streamed_file, replace_edit_tags_in_node
 from flask_app.api.services.restplus_config import api
 from flask_app.api.services.sRemoto import serializers as srl

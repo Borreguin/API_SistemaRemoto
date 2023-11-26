@@ -23,7 +23,7 @@ from flask import send_from_directory
 # for running as threading process:
 from multiprocessing.pool import ThreadPool
 
-from flask_app.my_lib.utils import set_max_age_to_response
+from app.utils.utils import set_max_age_to_response
 
 ser_from = srl.sRemotoSerializers(api)
 api = ser_from.add_serializers()

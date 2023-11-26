@@ -8,7 +8,7 @@ from app.schemas.RequestSchemas import FormatOption
 from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 from app.db.v1.SRFinalReport.sRFinalReportBase import *
 from app.db.v1.SRFinalReport.sRFinalReportPermanente import SRFinalReportPermanente
-from flask_app.my_lib.utils import *
+from app.utils.utils import *
 
 log = configure_logger("api_sRemoto.log")
 

@@ -20,7 +20,7 @@ import flask_app.settings.LogDefaultConfig
 from flask_app.dto.classes.utils import get_today, get_thread_by_name
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from flask_app.settings import initial_settings as init
-from flask_app.my_lib.utils import get_dates_by_default
+from app.utils.utils import get_dates_by_default
 import requests
 
 host = "localhost"

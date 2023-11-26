@@ -1,59 +1,15 @@
-import flask_app.settings.LogDefaultConfig
-from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from app.db.v1.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase
 from app.db.v1.sRNode import *
 import hashlib
+
+from app.db.v2.v2SRFinalReport import V2SRNodeSummaryReport
 from app.utils import utils as u
 from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from multiprocessing.pool import ThreadPool
 import queue
 
-lb_fecha_ini = "Fecha inicial"
-lb_fecha_fin = "Fecha final"
-lb_empresa = "Empresa"
-lb_unidad_negocio = "Unidad de Negocio"
-lb_utr = "UTR"
-lb_utr_id = "UTR ID"
-lb_protocolo = "Protocolo"
-lb_dispo_ponderada_empresa = "Disponibilidad ponderada Empresa"
-lb_dispo_ponderada_unidad = "Disponibilidad ponderada Unidad de Negocio"
-lb_dispo_promedio_utr = "Disponibilidad promedio UTR"
-lb_no_seniales = "No. señales"
-lb_falladas = "Falladas"
-lb_latitud = "Latitud"
-lb_longitud = "Longitud"
-lb_tag_name = "tag_name"
-lb_indisponible_minutos = "indisponible_minutos"
-lb_indisponible_minutos_promedio = "indisponible_minutos_promedio"
-lb_periodo_evaluacion = "Periodo evaluación"
-details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb_utr, lb_protocolo,
-                   lb_dispo_ponderada_empresa,
-                   lb_dispo_ponderada_unidad, lb_dispo_promedio_utr, lb_no_seniales, lb_latitud,
-                   lb_longitud]
 
-log = flask_app.settings.LogDefaultConfig.LogDefaultConfig("sRFinalReportBase.log").logger
-
-
-class SRNodeSummaryReport(EmbeddedDocument):
-    id_report = StringField(required=True)
-    nombre = StringField(required=True)
-    tipo = StringField(required=True)
-    # el valor -1 es aceptado en el caso de que la disponibilidad no este definida
-    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
-    procesamiento = DictField(required=True, default=dict())
-    novedades = DictField(required=True, default=dict())
-    tiempo_calculo_segundos = FloatField(required=False)
-    actualizado = DateTimeField(default=dt.datetime.now())
-
-    def to_dict(self):
-        return dict(id_report=self.id_report, nombre=self.nombre, tipo=self.tipo,
-                    disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
-                    procesamiento=self.procesamiento, novedades=self.novedades,
-                    tiempo_calculo_segundos=self.tiempo_calculo_segundos,
-                    actualizado=str(self.actualizado))
-
-
-class SRFinalReportBase(Document):
+class V2SRFinalReportBase(Document):
     id_report = StringField(required=True, unique=True)
     tipo = StringField(required=True, default="Reporte Sistema Remoto")
     fecha_inicio = DateTimeField(required=True)
@@ -62,7 +18,7 @@ class SRFinalReportBase(Document):
     # el valor -1 es aceptado en el caso de que la disponibilidad no este definida
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)
-    reportes_nodos = ListField(EmbeddedDocumentField(SRNodeSummaryReport))
+    reportes_nodos = ListField(EmbeddedDocumentField(V2SRNodeSummaryReport))
     reportes_nodos_detalle = ListField(ReferenceField(SRNodeDetailsBase, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
     procesamiento = DictField(default=dict(numero_tags_total=0, numero_utrs_procesadas=0,

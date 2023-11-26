@@ -25,7 +25,7 @@ from app.db.v1.sRNode import *
 import threading
 
 # configurando logger y el servicio web
-import flask_app.my_lib.utils as u
+import app.utils.utils as u
 from flask_app.motor.master_scripts.eng_sRmaster import run_nodes_and_summarize
 
 ns = api.namespace('admin-report', description='Administración/Configuración de reportes')

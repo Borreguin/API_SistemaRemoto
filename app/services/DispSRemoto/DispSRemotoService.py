@@ -5,7 +5,7 @@ from starlette import status
 from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import NodeRequest, NodesRequest
 from flask_app.motor.master_scripts.eng_sRmaster import *
-from flask_app.my_lib.utils import check_date_yyyy_mm_dd_hh_mm_ss, is_active, save_in_file, isTemporal
+from app.utils.utils import check_date_yyyy_mm_dd_hh_mm_ss, is_active, save_in_file, isTemporal
 import datetime as dt
 
 

@@ -6,7 +6,7 @@ from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import TagListRequest, DeletedTagList, EditedListTagRequest
 from app.utils.excel_util import is_excel_file
 from app.db.v1.sRNode import SRNode, SRTag
-from flask_app.my_lib.utils import find_entity_in_node, replace_edit_tags_in_node, check_if_all_are_there
+from app.utils.utils import find_entity_in_node, replace_edit_tags_in_node, check_if_all_are_there
 
 
 def get_obtiene_lista_tags(id_nodo: str = "id nodo", id_entidad: str = "id entidad", id_utr: str = "id utr"):

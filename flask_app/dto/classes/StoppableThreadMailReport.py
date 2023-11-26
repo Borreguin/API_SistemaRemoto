@@ -28,7 +28,7 @@ from flask_app.my_lib.SendMail.send_mail import report_error, send_mail
 from flask_app.settings import initial_settings as init
 import pandas as pd
 import requests
-from flask_app.my_lib.utils import get_dates_by_default, get_block, replace_block, save_html
+from app.utils.utils import get_dates_by_default, get_block, replace_block, save_html
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import seaborn as sns

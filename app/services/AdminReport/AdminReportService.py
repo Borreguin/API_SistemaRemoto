@@ -15,7 +15,7 @@ from flask_app.dto.classes.utils import get_thread_by_name
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 from flask_app.motor.master_scripts.eng_sRmaster import run_nodes_and_summarize
-from flask_app.my_lib.utils import check_date_yyyy_mm_dd, get_dates_by_default
+from app.utils.utils import check_date_yyyy_mm_dd, get_dates_by_default
 
 
 def put_configuracion_para_ejecucion_reporte(id_report: str, request_data: ConfigReport):

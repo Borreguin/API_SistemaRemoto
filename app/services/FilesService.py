@@ -6,7 +6,7 @@ from starlette.responses import FileResponse
 
 from app.core.repositories import local_repositories
 from app.schemas.RequestSchemas import GroupedOption
-from flask_app.my_lib.utils import group_files, set_max_age_to_response
+from app.utils.utils import group_files
 
 
 def get_obtiene_lista_archivos_en_repositorio(repo: str, agrupado: GroupedOption, filtrado=""):

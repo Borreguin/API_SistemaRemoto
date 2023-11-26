@@ -1,5 +1,5 @@
 from flask_restplus import reqparse
-from flask_app.my_lib import utils as u
+from app.utils import utils as u
 import werkzeug
 from flask_app.settings.initial_settings import SUPPORTED_FORMAT_DATES as fmt_time_list
 from flask_app.settings.initial_settings import DEFAULT_DATE_FORMAT as fmt_time_default

@@ -255,7 +255,7 @@ class SRNode(Document):
             return True, self.entidades[check[0]]
         return False, f"No existe entity_list [{entidad_nombre}] en nodo [{self.nombre}]"
 
-    def search_entity_by_id(self, id_entidad: str):
+    def search_entity_by_id(self, id_entidad: str) -> tuple[bool, str, SREntity|None]:
         check = [i for i, e in enumerate(self.entidades) if id_entidad == e.id_entidad]
         if len(check) > 0:
             return True, "Entidad encontrada" , self.entidades[check[0]]

@@ -6,15 +6,22 @@ from bson import ObjectId
 from mongoengine import Document, NotUniqueError
 
 from app.db.constants import attributes_node, attr_id_entidad, attr_entidades, attr_entidad_tipo, attr_entidad_nombre, \
-    attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL
+    attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL, V2_SR_INSTALLATION_LABEL
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v1.sRNode import SRNode, SREntity
 from app.db.v2.entities.v2_sREntity import V2SREntity
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.util import find_collection_and_dup_key
+from app.db.v2.v2SRNodeReport.v2_sRNodeReportBase import V2SRNodeDetailsBase
 
 regexNoUniqueEntity = 'entidades.id_entidad: [\\|\s]*"([a-z0-9]*)[\\|\s]*"'
 regexNoUniqueNode = 'id_node: [\\|\s]*"([a-z0-9]*)[\\|\s]*"'
+
+
+def get_all_v2_nodes(active=True) -> list[V2SRNode]:
+    query = V2SRNode.objects(document=V2_SR_NODE_LABEL, activado=active)
+    return [] if query.count() == 0 else query.all()
 
 def node_query(id: str, version=None) -> SRNode | V2SRNode | None:
     if version is None or version == V1_SR_NODE_LABEL:
@@ -53,6 +60,32 @@ def find_node_by_id_entidad(id_entidad: str) -> SRNode | V2SRNode | None:
     if query_v2_sr_node.count() > 0:
         return query_v2_sr_node.first()
     return None
+
+def find_installation_by_id(id_installation: str) -> V2SRInstallation | None:
+    valid_id = valid_object_id(id_installation)
+    if valid_id is None:
+        return None
+    query = V2SRInstallation.objects(id=valid_id, document=V2_SR_INSTALLATION_LABEL)
+    if query.count() > 0:
+        return query.first()
+    return None
+
+def get_v2_node_report_by_id(id_report: str, create=False) -> V2SRNodeDetailsBase | None:
+    query = V2SRNodeDetailsBase.objects(id_report=id_report)
+    if query.count() > 0 and create:
+        query.first().delete()
+    elif query.count() == 0:
+        return V2SRNodeDetailsBase(id_report=id_report).save()
+    return query.first()
+
+def get_temporal_report(id_report, create=False):
+    query = TemporalProcessingStateReport.objects(id_report=id_report)
+    if query.count() > 0 and create:
+        query.first().delete()
+    elif query.count() == 0:
+        return TemporalProcessingStateReport(id_report=id_report).save()
+    return query.first()
+
 
 
 def create_node(tipo:str, nombre: str, activado: bool, version=None) -> SRNode | V2SRNode | None:

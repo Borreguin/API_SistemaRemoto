@@ -135,3 +135,13 @@ class GroupedOption(str, Enum):
 class RoutineOptions(str, Enum):
     RUTINA_DIARIA = 'rutina_de_reporte_diario'
     RUTINA_CORREO = 'rutina_correo_electronico'
+
+
+class InstallationRequest(BaseModel):
+    instalacion_ems_code: str = "Código EMS de la instalación"
+    instalacion_tipo: str = "Tipo de instalación"
+    instalacion_nombre: str = "Nombre de instalación"
+    activado: bool = True
+    protocolo: str = "Protocolo"
+    longitud: float = 0
+    latitud: float = 0

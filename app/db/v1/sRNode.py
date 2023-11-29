@@ -6,8 +6,8 @@
     Object mapper for SRNodes
 
 """
+from __future__ import annotations
 import math
-
 from app.db.v1.Info.Consignment import *
 import datetime as dt
 import pandas as pd
@@ -213,7 +213,7 @@ class SRNode(Document):
             self.id_node = hashlib.md5(id.encode()).hexdigest()
 
     def save_safely(self, *args, **kwargs):
-        from app.db.util import save_mongo_document_safely
+        from app.db.db_util import save_mongo_document_safely
         return save_mongo_document_safely(self, *args, **kwargs)
 
 
@@ -255,7 +255,7 @@ class SRNode(Document):
             return True, self.entidades[check[0]]
         return False, f"No existe entity_list [{entidad_nombre}] en nodo [{self.nombre}]"
 
-    def search_entity_by_id(self, id_entidad: str) -> tuple[bool, str, SREntity|None]:
+    def search_entity_by_id(self, id_entidad: str) -> tuple[bool, str, None] | tuple[bool, str, SREntity]:
         check = [i for i, e in enumerate(self.entidades) if id_entidad == e.id_entidad]
         if len(check) > 0:
             return True, "Entidad encontrada" , self.entidades[check[0]]

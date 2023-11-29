@@ -4,7 +4,7 @@ from starlette.responses import Response
 import datetime as dt
 
 from app.db.constants import V1_SR_NODE_LABEL
-from app.db.util import find_node_by_name_and_type
+from app.db.db_util import find_node_by_name_and_type
 from app.schemas.RequestSchemas import NodeNewName
 
 

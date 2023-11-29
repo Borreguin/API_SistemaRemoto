@@ -11,7 +11,7 @@ from app.common import error_log
 from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION, lb_n_bahias, lb_n_tags, lb_n_instalaciones, \
     lb_n_entidades
 from app.db.v2.entities.v2_sREntity import V2SREntity
-from app.db.v2.util import get_or_replace_entities_and_installations_from_dataframe, get_or_replace_bahias_and_tags_from_dataframe
+from app.db.v2.v2_util import get_or_replace_entities_and_installations_from_dataframe, get_or_replace_bahias_and_tags_from_dataframe
 
 
 class V2SRNode(Document):
@@ -80,7 +80,7 @@ class V2SRNode(Document):
         return super().save(*args, **kwargs)
 
     def save_safely(self, *args, **kwargs):
-        from app.db.util import save_mongo_document_safely
+        from app.db.db_util import save_mongo_document_safely
         self.update_node_id()
         self.update_summary()
         return save_mongo_document_safely(self, *args, **kwargs)

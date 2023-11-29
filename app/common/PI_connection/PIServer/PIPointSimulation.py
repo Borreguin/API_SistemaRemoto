@@ -1,5 +1,5 @@
-from flask_app.my_lib.PI_connection import pi_label
-from flask_app.my_lib.PI_connection.PIServer.PIPointBase import PIPointBase
+from app.common.PI_connection import pi_label
+from app.common.PI_connection.PIServer.PIPointBase import PIPointBase
 
 
 class PIPointSimulation(PIPointBase):

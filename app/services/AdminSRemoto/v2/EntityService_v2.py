@@ -2,7 +2,7 @@ from typing import Tuple
 
 from starlette import status
 
-from app.db.util import find_node_by_id_entidad
+from app.db.db_util import find_node_by_id_entidad
 
 
 def get_entity_by_id(entity_id: str) -> Tuple[dict, int]:

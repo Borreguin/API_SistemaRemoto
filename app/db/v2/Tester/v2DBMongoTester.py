@@ -1,7 +1,6 @@
 import unittest
 
 from app.db.v2.Tester.util import *
-from app.db.v2.util import save_mongo_document_safely
 
 empty_nodes = "empty node"
 node_with_entities = "empty node with entities"

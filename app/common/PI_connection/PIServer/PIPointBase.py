@@ -1,4 +1,4 @@
-from flask_app.my_lib.PI_connection.PIServer.PIServerBase import PIServerBase
+from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
 
 
 class PIPointBase:

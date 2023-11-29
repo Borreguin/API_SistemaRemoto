@@ -12,8 +12,10 @@ from app.db.v1.sRNode import SRNode, SREntity
 from app.db.v2.entities.v2_sREntity import V2SREntity
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.entities.v2_sRNode import V2SRNode
-from app.db.v2.util import find_collection_and_dup_key
+from app.db.v2.v2_util import find_collection_and_dup_key
 from app.db.v2.v2SRNodeReport.v2_sRNodeReportBase import V2SRNodeDetailsBase
+from app.db.v2.v2SRNodeReport.v2_sRNodeReportPermanente import V2SRNodeDetailsPermanente
+from app.db.v2.v2SRNodeReport.v2_sRNodeReportTemporal import V2SRNodeDetailsTemporal
 
 regexNoUniqueEntity = 'entidades.id_entidad: [\\|\s]*"([a-z0-9]*)[\\|\s]*"'
 regexNoUniqueNode = 'id_node: [\\|\s]*"([a-z0-9]*)[\\|\s]*"'
@@ -70,13 +72,14 @@ def find_installation_by_id(id_installation: str) -> V2SRInstallation | None:
         return query.first()
     return None
 
-def get_v2_node_report_by_id(id_report: str, create=False) -> V2SRNodeDetailsBase | None:
-    query = V2SRNodeDetailsBase.objects(id_report=id_report)
-    if query.count() > 0 and create:
-        query.first().delete()
-    elif query.count() == 0:
-        return V2SRNodeDetailsBase(id_report=id_report).save()
-    return query.first()
+def get_v2_node_report_by_id(id_report: str, permanent_report=False) -> V2SRNodeDetailsBase | None:
+    if permanent_report:
+        query = V2SRNodeDetailsPermanente.objects(id_report=id_report)
+    else:
+        query = V2SRNodeDetailsTemporal.objects(id_report=id_report)
+    if query.count() > 0:
+        return query.first()
+    return None
 
 def get_temporal_report(id_report, create=False):
     query = TemporalProcessingStateReport.objects(id_report=id_report)
@@ -86,6 +89,11 @@ def get_temporal_report(id_report, create=False):
         return TemporalProcessingStateReport(id_report=id_report).save()
     return query.first()
 
+def get_temporal_status(id_report) -> TemporalProcessingStateReport | None:
+    query = TemporalProcessingStateReport.objects(id_report=id_report)
+    if query.count() > 0:
+        return query.first()
+    return None
 
 
 def create_node(tipo:str, nombre: str, activado: bool, version=None) -> SRNode | V2SRNode | None:

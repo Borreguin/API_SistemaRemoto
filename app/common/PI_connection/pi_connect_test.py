@@ -1,5 +1,5 @@
-from flask_app.my_lib.PI_connection.PIServer.PIPointWindows import create_time_range, create_span
-from flask_app.my_lib.PI_connection.pi_connect import create_pi_server, create_pi_point
+from app.common.PI_connection.PIServer.PIPointWindows import create_time_range, create_span
+from app.common.PI_connection.pi_connect import create_pi_server, create_pi_point
 
 
 def test():

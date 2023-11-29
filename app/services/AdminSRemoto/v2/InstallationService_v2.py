@@ -3,7 +3,7 @@ from typing import Tuple
 from starlette import status
 
 from app.common.util import to_dict
-from app.db.util import find_node_by_id_entidad, find_installation_by_id
+from app.db.db_util import find_node_by_id_entidad, find_installation_by_id
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.schemas.RequestSchemas import InstallationRequest
 

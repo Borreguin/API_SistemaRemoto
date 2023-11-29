@@ -22,7 +22,7 @@ if sys.platform == 'win32':
         from OSIsoft.AF.Data import *
         from OSIsoft.AF.Time import *
         from OSIsoft.AF.UnitsOfMeasure import *
-
+        print(f"{pi_label} import all AF libraries")
         simulation = False
     else:
         print(f"{pi_label} There is no AF path: {AF_PATH}, mode: simulation")

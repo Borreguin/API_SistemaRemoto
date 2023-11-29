@@ -1,4 +1,14 @@
-from app.common.PI_connection.PIServer.PIPointWindows import create_time_range, create_span
+import os
+import sys
+
+# To include the project path in the Operating System path:
+script_path = os.path.dirname(os.path.abspath(__file__))
+pi_connect_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_path = os.path.dirname(os.path.dirname(pi_connect_path))
+print(">>>>>\tAdding project path...", project_path)
+sys.path.append(project_path)
+
+from app.common.PI_connection.pi_util import create_time_range, create_span
 from app.common.PI_connection.pi_connect import create_pi_server, create_pi_point
 
 

@@ -43,7 +43,7 @@ class V2SRInstallation(Document):
         return f"({self.instalacion_tipo}) {self.instalacion_nombre}: [{str(len(self.bahias))} bahias]"
 
     def to_dict(self):
-        return dict(instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
+        return dict(_id=str(self.pk),instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
                     instalacion_nombre=self.instalacion_nombre, instalacion_tipo=self.instalacion_tipo,
                     consignaciones=self.consignaciones.id if self.consignaciones is not None else None,
                     activado=self.activado, protocolo=self.protocolo,

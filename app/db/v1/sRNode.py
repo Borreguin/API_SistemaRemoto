@@ -6,6 +6,8 @@
     Object mapper for SRNodes
 
 """
+from __future__ import annotations
+
 import math
 
 from app.db.v1.Info.Consignment import *

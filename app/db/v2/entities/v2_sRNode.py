@@ -1,6 +1,7 @@
 from __future__ import annotations
 import hashlib
 import traceback
+from typing import Tuple, List
 
 import pandas as pd
 from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField, IntField
@@ -121,6 +122,29 @@ class V2SRNode(Document):
             return True, 'Node created', node
         return True, 'Node found', node
 
+    def replace_or_edit_new_entities(self,
+                                     df_bahia: pd.DataFrame,
+                                     df_tags: pd.DataFrame,
+                                     replace: bool,
+                                     edit:bool) -> tuple[list[V2SREntity], str]:
+        new_entidades = []
+        msg = ""
+        for entidad in self.entidades:
+            new_instalaciones = []
+            for instalacion in entidad.instalaciones:
+                instalacion = instalacion.fetch()
+                success_bahias, partially_success, msg_bahia, new_installation = (
+                    get_or_replace_bahias_and_tags_from_dataframe(
+                        instalacion, df_bahia, df_tags, replace=replace,edit=edit)
+                )
+                success_save, msg_save = new_installation.save_safely()
+                if (success_bahias or partially_success) and success_save:
+                    new_instalaciones.append(new_installation)
+                else:
+                    msg += f"\n{msg_bahia}\n{msg_save}"
+            entidad.instalaciones = new_instalaciones
+            new_entidades.append(entidad)
+        return new_entidades, msg
 
     def create_or_edit_node_from_dataframes(self, df_main: pd.DataFrame, df_bahia: pd.DataFrame, df_tags: pd.DataFrame,
                                             replace=False, edit=False) -> tuple[bool, str, 'V2SRNode']:
@@ -131,22 +155,9 @@ class V2SRNode(Document):
             )
             if not success_entities:
                 msg += f"\n{msg_entities}"
-            new_entidades = []
-            for entidad in self.entidades:
-                new_instalaciones = []
-                for instalacion in entidad.instalaciones:
-                    instalacion = instalacion.fetch()
-                    success_bahias, partially_success, msg_bahia, new_installation = (
-                        get_or_replace_bahias_and_tags_from_dataframe(instalacion, df_bahia, df_tags, replace=replace, edit=edit)
-                    )
-                    success_save, msg_save =  new_installation.save_safely()
-                    if (success_bahias or partially_success) and success_save:
-                        new_instalaciones.append(new_installation)
-                    else:
-                        msg += f"\n{msg_bahia}\n{msg_save}"
-                entidad.instalaciones = new_instalaciones
-                new_entidades.append(entidad)
-            self.entidades = new_entidades
+
+            self.entidades, entities_msg = self.replace_or_edit_new_entities(df_bahia, df_tags, replace, edit)
+            msg += f"\n{entities_msg}" if entities_msg != "" else ""
             success = True
         except Exception as e:
             msg = f"No able to create node from dataframes: {e}"
@@ -169,3 +180,10 @@ class V2SRNode(Document):
         if len(check) > 0:
             return True, "Entidad encontrada" , self.entidades[check[0]]
         return False, f"No existe la entidad [{id_entidad}] en nodo [{self.nombre}]", None
+
+    def replace_entity_by_id(self, id_entidad: str, new_entity: V2SREntity) -> tuple[bool, str]:
+        check = [i for i, e in enumerate(self.entidades) if id_entidad == e.id_entidad]
+        if len(check) > 0:
+            self.entidades[check[0]] = new_entity
+            return True, "Entidad reemplazada"
+        return False, f"No existe la entidad [{id_entidad}] en nodo [{self.nombre}]"

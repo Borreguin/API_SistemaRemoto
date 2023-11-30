@@ -1,8 +1,21 @@
-from app.common.PI_connection.PIServer.PIUtilBase import PIUtilBase
+import os, sys
 import pandas as pd
 from datetime import datetime, timedelta
+from PIServer.PIUtilBase import PIUtilBase
+# AF Client modules
+import clr
 
-from app.common.PI_connection.pi_util import start_and_end_time_of
+pi_label = "PI-connect ->"
+AF_PATH = os.path.abspath(os.path.join(os.sep, "Program Files (x86)", "PIPC", "AF", "PublicAssemblies", "4.0"))
+sys.path.append(AF_PATH)
+print(f"{pi_label} add AF path: {AF_PATH}")
+clr.AddReference('OSIsoft.AFSDK')
+from OSIsoft.AF import *
+from OSIsoft.AF.PI import *
+from OSIsoft.AF.Asset import *
+from OSIsoft.AF.Data import *
+from OSIsoft.AF.Time import *
+from OSIsoft.AF.UnitsOfMeasure import *
 
 
 class PIUtilWindows(PIUtilBase):
@@ -91,7 +104,7 @@ class PIUtilWindows(PIUtilBase):
         """
         start, end = start_and_end_time_of(time_range)
         return datetime.strptime(start, "%Y-%m-%d %H:%M:%S"), \
-            datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+               datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
 
     @staticmethod
     def create_span(delta_time):

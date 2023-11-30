@@ -1,9 +1,25 @@
+import sys, os
 from datetime import datetime
 import pandas as pd
 
-from app.common.PI_connection.PIServer.PIPointBase import PIPointBase
-from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
-from app.common.PI_connection.pi_util import to_df, datetime_start_and_time_of, create_span
+from PIServer.PIPointBase import PIPointBase
+from PIServer.PIServerBase import PIServerBase
+from pi_util import to_df, datetime_start_and_time_of, create_span
+
+pi_label = "PI-connect ->"
+AF_PATH = os.path.abspath(os.path.join(os.sep, "Program Files (x86)", "PIPC", "AF", "PublicAssemblies", "4.0"))
+
+# AF Client modules
+sys.path.append(AF_PATH)
+print(f"{pi_label} add AF path: {AF_PATH}")
+import clr
+clr.AddReference('OSIsoft.AFSDK')
+from OSIsoft.AF import *
+from OSIsoft.AF.PI import *
+from OSIsoft.AF.Asset import *
+from OSIsoft.AF.Data import *
+from OSIsoft.AF.Time import *
+from OSIsoft.AF.UnitsOfMeasure import *
 
 
 class PIPointWindows(PIPointBase):
@@ -58,7 +74,7 @@ class PIPointWindows(PIPointBase):
             values = to_df(values, self.tag_name, numeric)
         return values
 
-    def recorded_values(self, time_range, AFBoundary=AFBoundaryType.Interpolated, filterExpression=None,
+    def recorded_values(self, time_range, AFBoundary=None, filterExpression=None,
                         as_df=True, numeric=True):
         """
         recorded values for a tag
@@ -72,6 +88,8 @@ class PIPointWindows(PIPointBase):
         :return: OSIsoft.AF.Asset.AFValues
         """
         values = None
+        if AFBoundary is None:
+            AFBoundary = AFBoundaryType.Interpolated
         if isinstance(AFBoundary, int):
             if not AFBoundary >= 0 and AFBoundary <= 3:
                 AFBoundary = 0

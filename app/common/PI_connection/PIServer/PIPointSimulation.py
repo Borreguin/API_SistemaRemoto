@@ -1,6 +1,5 @@
-from app.common.PI_connection import pi_label
-from app.common.PI_connection.PIServer.PIPointBase import PIPointBase
-
+from PIServer.PIPointBase import PIPointBase
+pi_label = "PI-connect ->"
 
 class PIPointSimulation(PIPointBase):
 

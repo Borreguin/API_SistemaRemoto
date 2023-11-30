@@ -2,17 +2,16 @@ import os
 import sys
 
 # To include the project path in the Operating System path:
+from pi_connect import create_pi_server, create_pi_point
+from pi_util import create_time_range, create_span
+
 script_path = os.path.dirname(os.path.abspath(__file__))
 pi_connect_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-project_path = os.path.dirname(os.path.dirname(pi_connect_path))
-print(">>>>>\tAdding project path...", project_path)
-sys.path.append(project_path)
-
-from app.common.PI_connection.pi_util import create_time_range, create_span
-from app.common.PI_connection.pi_connect import create_pi_server, create_pi_point
+print(">>>>>\tAdding project path...", pi_connect_path)
+sys.path.append(pi_connect_path)
 
 
-def test():
+def main():
     # import matplotlib.pyplot as plt
     pi_svr = create_pi_server()
 
@@ -24,7 +23,7 @@ def test():
     span = create_span("1h 30m")
 
     df1 = pt.interpolated(time_range, span)
-    df2 = pt.plot_values(time_range, status.HTTP_200_OK)
+    df2 = pt.plot_values(time_range, 200)
     df_raw = pt.recorded_values(time_range)
     [print(df) for df in (df1, df2, df_raw)]
     value1 = pt.snapshot()
@@ -64,7 +63,7 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    main()
 
 # piServers = PIServers()
 # piServer = piServers.DefaultPIServer

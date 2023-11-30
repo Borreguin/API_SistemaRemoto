@@ -1,5 +1,4 @@
-from app.common.PI_connection.PIServer.PIUtilBase import PIUtilBase
-
+from PIServer.PIUtilBase import PIUtilBase
 
 class PIUtilSimulation(PIUtilBase):
 

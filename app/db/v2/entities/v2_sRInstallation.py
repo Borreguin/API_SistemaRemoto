@@ -5,7 +5,7 @@ import math
 from mongoengine import Document, StringField, ReferenceField, BooleanField, FloatField, ListField, \
     EmbeddedDocumentField, DateTimeField, NotUniqueError
 
-from app.db.constants import SR_INSTALLATION_COLLECTION, V2_SR_INSTALLATION_LABEL
+from app.db.constants import SR_INSTALLATION_COLLECTION, V2_SR_INSTALLATION_LABEL, attributes_editable_installation
 from app.db.v1.Info.Consignment import Consignments
 from app.db.v2.entities.v2_sRBahia import V2SRBahia
 
@@ -68,4 +68,9 @@ class V2SRInstallation(Document):
     def find_by_ems_code(instalacion_ems_code: str) -> 'V2SRInstallation':
         instalacion = V2SRInstallation.objects(instalacion_ems_code=instalacion_ems_code)
         return instalacion.first() if len(instalacion) > 0 else None
+
+    def update_from_dict(self, values:dict):
+        for attribute in attributes_editable_installation:
+            if attribute in values.keys():
+                setattr(self, attribute, values[attribute])
 

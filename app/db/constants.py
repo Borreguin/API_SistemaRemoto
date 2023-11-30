@@ -19,6 +19,20 @@ attributes_entity = [attr_entidad_nombre, attr_entidad_tipo, attr_entidad_activa
 attr_id_entidad = "id_entidad"
 attr_entidades = "entidades"
 
+attr_instalacion_ems_code = 'instalacion_ems_code'
+attr_instalacion_nombre = 'instalacion_nombre'
+attr_instalacion_tipo = 'instalacion_tipo'
+attr_consignaciones = 'consignaciones'
+attr_activado = 'activado'
+attr_protocolo = 'protocolo'
+attr_longitud = 'longitud'
+attr_latitud = 'latitud'
+attr_bahias = 'bahias'
+attr_actualizado = 'actualizado'
+
+attributes_editable_installation = [attr_instalacion_ems_code, attr_instalacion_nombre, attr_instalacion_tipo,
+                                    attr_activado, attr_protocolo, attr_longitud, attr_latitud]
+
 lb_n_tags = "n_tags"
 lb_n_bahias = "n_bahias"
 lb_n_instalaciones = "n_instalaciones"

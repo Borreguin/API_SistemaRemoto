@@ -25,4 +25,9 @@ def post_installation(entidad_id:str, request_data: InstallationRequest):
     if not success:
         return dict(success=False, instalacion=None, msg=msg), status.HTTP_404_NOT_FOUND
     success, msg = nodo.save_deeply()
-    return dict(success=success, instalacion=new_installation.to_dict(), msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+    return (dict(success=success, instalacion=new_installation.to_dict(), msg=msg),
+            status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED)
+
+
+# installation.update_from_dict(to_dict(request_data))
+# installation.save_safely()

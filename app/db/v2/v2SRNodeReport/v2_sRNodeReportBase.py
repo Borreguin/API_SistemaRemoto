@@ -3,7 +3,7 @@ from mongoengine import Document, StringField, LazyReferenceField, IntField, Dat
 
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRNodeReport.Details.v2_sREntityReportDetails import V2SREntityDetails
-from app.utils import utils as u
+from app.db.v2.v2SRNodeReport.report_util import get_report_id
 import datetime as dt
 
 class V2SRNodeDetailsBase(Document):
@@ -30,9 +30,9 @@ class V2SRNodeDetailsBase(Document):
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.nombre is not None and self.tipo is not None:
-            id = u.get_id([self.nombre, self.tipo, self.fecha_inicio.strftime('%d-%m-%Y %H:%M'),
-                           self.fecha_final.strftime('%d-%m-%Y %H:%M')])
-            self.id_report = id
+            self.id_report = get_report_id(self.tipo, self.nombre,
+                                           self.fecha_inicio.strftime('%d-%m-%Y %H:%M'),
+                                           self.fecha_final.strftime('%d-%m-%Y %H:%M'))
 
     def __str__(self):
         return f"({self.tipo}, {self.nombre}):[ent:{len(self.reportes_entidades)}, tags:{self.numero_tags_total}]"
@@ -67,7 +67,7 @@ class V2SRNodeDetailsBase(Document):
         # ordenar los reportes por valor de disponibilidad
         self.reportes_entidades = sorted(self.reportes_entidades, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
         for ix, entidad in enumerate(self.reportes_entidades):
-            reportes_utrs = sorted(entidad.reportes_utrs, key=lambda k: k["disponibilidad_promedio_porcentage"])
+            reportes_utrs = sorted(entidad.reportes_installations, key=lambda k: k["disponibilidad_promedio_porcentage"])
             self.reportes_entidades[ix].reportes_utrs = reportes_utrs
 
     def to_dict(self):
@@ -88,7 +88,7 @@ class V2SRNodeDetailsBase(Document):
         novedades=dict(tags_fallidas=self.tags_fallidas, utr_fallidas=self.utr_fallidas,
                     entidades_fallidas=self.entidades_fallidas)
         n_entidades = len(self.reportes_entidades)
-        n_rtus = sum([len(e.reportes_utrs) for e in self.reportes_entidades])
+        n_rtus = sum([len(e.reportes_installations) for e in self.reportes_entidades])
         procesamiento=dict(numero_tags_total=self.numero_tags_total, numero_utrs_procesadas=n_rtus,
                            numero_entidades_procesadas=n_entidades)
         return dict(id_report=self.id_report, nombre=self.nombre, tipo=self.tipo,

@@ -1,4 +1,4 @@
-from flask_app.my_lib.PI_connection.PIServer.PIServerBase import PIServerBase
+from PIServer.PIServerBase import PIServerBase
 
 
 class PIPointBase:
@@ -13,7 +13,7 @@ class PIPointBase:
     def plot_values(self, time_range, n_samples, as_df=True, numeric=True):
         pass
 
-    def recorded_values(self, time_range, AFBoundary, filterExpression=None, as_df=True, numeric=True):
+    def recorded_values(self, time_range, AFBoundary=None, filterExpression=None, as_df=True, numeric=True):
         pass
 
     def summaries(self, time_range, span, AFSummaryTypes, AFCalculationBasis, AFTimestampCalculation):

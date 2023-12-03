@@ -79,7 +79,7 @@ def get_or_replace_entities_and_installations_from_dataframe(df_main: pd.DataFra
     return total_success, msg + check_msg if not total_success else msg, entities
 
 def create_or_replace_installation(instalacion_values: dict, replace=False, edit=False) -> tuple[bool, str, V2SRInstallation]:
-    from app.db.util import create_instalation
+    from app.db.db_util import create_instalation
     instalacion = V2SRInstallation.find_by_ems_code(instalacion_values[cl_instalacion_ems_code])
     # if exists and not replace
     replace = replace or edit

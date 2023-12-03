@@ -30,7 +30,7 @@ from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
 from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from flask_app.motor import log_node
 
-from flask_app.my_lib.PI_connection import pi_connect as pi
+from app.common.PI_connection import pi_connect as pi
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 import logging
 import threading as th

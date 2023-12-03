@@ -5,7 +5,7 @@ import math
 from mongoengine import Document, StringField, ReferenceField, BooleanField, FloatField, ListField, \
     EmbeddedDocumentField, DateTimeField, NotUniqueError
 
-from app.db.constants import SR_INSTALLATION_COLLECTION
+from app.db.constants import SR_INSTALLATION_COLLECTION, V2_SR_INSTALLATION_LABEL, attributes_editable_installation
 from app.db.v1.Info.Consignment import Consignments
 from app.db.v2.entities.v2_sRBahia import V2SRBahia
 
@@ -22,7 +22,7 @@ class V2SRInstallation(Document):
     latitud = FloatField(required=False, default=0)
     bahias = ListField(EmbeddedDocumentField(V2SRBahia))
     actualizado = DateTimeField(default=dt.datetime.now())
-    document = StringField(required=True, default="SRInstallationV2")
+    document = StringField(required=True, default=V2_SR_INSTALLATION_LABEL)
     meta = {"collection": SR_INSTALLATION_COLLECTION}
 
     def __init__(self, instalacion_ems_code: str = None, instalacion_tipo: str = None, instalacion_nombre: str = None,
@@ -35,8 +35,8 @@ class V2SRInstallation(Document):
         if instalacion_ems_code is not None:
             self.instalacion_ems_code = instalacion_ems_code
         if self.instalacion_id is None:
-            id = self.instalacion_ems_code if self.instalacion_ems_code is not None \
-                else self.instalacion_tipo + self.instalacion_nombre
+            id = self.instalacion_ems_code.lower() if self.instalacion_ems_code is not None \
+                else self.instalacion_tipo.lower() + self.instalacion_nombre.lower()
             self.instalacion_id = hashlib.md5(id.encode()).hexdigest()
 
     def __str__(self):
@@ -61,11 +61,16 @@ class V2SRInstallation(Document):
                     n_bahias=len(self.bahias) if self.bahias is not None else 0, n_tags=n_tags)
 
     def save_safely(self, *args, **kwargs):
-        from app.db.util import save_mongo_document_safely
+        from app.db.db_util import save_mongo_document_safely
         return save_mongo_document_safely(self)
 
     @staticmethod
     def find_by_ems_code(instalacion_ems_code: str) -> 'V2SRInstallation':
         instalacion = V2SRInstallation.objects(instalacion_ems_code=instalacion_ems_code)
         return instalacion.first() if len(instalacion) > 0 else None
+
+    def update_from_dict(self, values:dict):
+        for attribute in attributes_editable_installation:
+            if attribute in values.keys():
+                setattr(self, attribute, values[attribute])
 

@@ -8,7 +8,7 @@ from starlette import status
 
 from app.common.util import to_dict
 from app.db.constants import V1_SR_NODE_LABEL, V2_SR_NODE_LABEL
-from app.db.util import node_query, find_node_by_name_and_type, update_summary_node_info, create_node
+from app.db.db_util import node_query, find_node_by_name_and_type, update_summary_node_info, create_node
 from app.schemas.RequestSchemas import BasicNodeInfoRequest
 from app.utils.excel_util import *
 

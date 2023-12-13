@@ -11,8 +11,8 @@ import datetime as dt
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRFinalReport import V2SRNodeSummaryReport
 from app.db.v2.v2SRFinalReport.constants import *
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportBase import V2SRNodeDetailsBase
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportTemporal import V2SRNodeDetailsTemporal
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsBase import V2SRNodeDetailsBase
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
 from app.utils import utils as u
 from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from multiprocessing.pool import ThreadPool

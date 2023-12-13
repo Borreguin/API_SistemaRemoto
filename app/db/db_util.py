@@ -1,21 +1,25 @@
 from __future__ import annotations
 
 import re
+from typing import List
 
 from bson import ObjectId
 from mongoengine import Document, NotUniqueError
+import datetime as dt
 
 from app.db.constants import attributes_node, attr_id_entidad, attr_entidades, attr_entidad_tipo, attr_entidad_nombre, \
     attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL, V2_SR_INSTALLATION_LABEL
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v1.sRNode import SRNode, SREntity
+from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
+from app.db.v2.entities.v2_sRConsignments import V2SRConsignments
 from app.db.v2.entities.v2_sREntity import V2SREntity
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2_util import find_collection_and_dup_key
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportBase import V2SRNodeDetailsBase
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportPermanente import V2SRNodeDetailsPermanente
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportTemporal import V2SRNodeDetailsTemporal
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsBase import V2SRNodeDetailsBase
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
 
 regexNoUniqueEntity = 'entidades.id_entidad: [\\|\s]*"([a-z0-9]*)[\\|\s]*"'
 regexNoUniqueNode = 'id_node: [\\|\s]*"([a-z0-9]*)[\\|\s]*"'
@@ -74,17 +78,18 @@ def find_installation_by_id(id_installation: str) -> V2SRInstallation | None:
 
 def get_v2_node_report_by_id(id_report: str, permanent_report=False) -> V2SRNodeDetailsBase | None:
     if permanent_report:
-        query = V2SRNodeDetailsPermanente.objects(id_report=id_report)
+        query = V2SRNodeDetailsPermanent.objects(id_report=id_report)
     else:
         query = V2SRNodeDetailsTemporal.objects(id_report=id_report)
     if query.count() > 0:
         return query.first()
     return None
 
-def get_temporal_report(id_report, create=False):
+def get_or_create_temporal_report(id_report, create=False) -> TemporalProcessingStateReport:
     query = TemporalProcessingStateReport.objects(id_report=id_report)
     if query.count() > 0 and create:
         query.first().delete()
+        return TemporalProcessingStateReport(id_report=id_report).save()
     elif query.count() == 0:
         return TemporalProcessingStateReport(id_report=id_report).save()
     return query.first()
@@ -95,6 +100,19 @@ def get_temporal_status(id_report) -> TemporalProcessingStateReport | None:
         return query.first()
     return None
 
+def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNodeDetailsBase | None:
+    query_node_details_permanent = V2SRNodeDetailsPermanent.objects(id_report=id_report)
+    query_node_details_temporal = V2SRNodeDetailsTemporal.objects(id_report=id_report)
+
+    if permanent and query_node_details_permanent.count() > 0:
+        return query_node_details_permanent.first()
+    elif permanent and query_node_details_permanent.count() == 0:
+        return None
+    elif query_node_details_temporal.count() > 0:
+        return query_node_details_temporal.first()
+    elif query_node_details_permanent.count() > 0:
+        return query_node_details_permanent.first()
+    return None
 
 def create_node(tipo:str, nombre: str, activado: bool, version=None) -> SRNode | V2SRNode | None:
     if version is None:
@@ -174,3 +192,16 @@ def msg_error_not_unique_node(node: SRNode | V2SRNode, exception: NotUniqueError
         return False, f"El nodo ya existe: {node}"
 
     return False, f"No es posible crear el nodo: {node} debido a: \n{exception}"
+
+def get_consignments(element_id:str, ini_date:dt.datetime, end_date:dt.datetime) -> List[V2SRConsignment]:
+    query = V2SRConsignments.objects(element_id=element_id)
+    if query.count() == 0:
+        return []
+    consignments = query.first()
+    return consignments.consignments_in_time_range(ini_date, end_date)
+
+def get_v2sr_consignment(element_id: str) -> V2SRConsignments|None:
+    query = V2SRConsignments.objects(element_id=element_id)
+    if query.count() == 0:
+        return None
+    return query.first()

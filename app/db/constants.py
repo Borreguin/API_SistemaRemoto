@@ -37,3 +37,11 @@ lb_n_tags = "n_tags"
 lb_n_bahias = "n_bahias"
 lb_n_instalaciones = "n_instalaciones"
 lb_n_entidades = "n_entidades"
+
+
+attr_no_consignacion = "no_consignacion"
+attr_fecha_inicio = "fecha_inicio"
+attr_fecha_final = "fecha_final"
+attr_detalle = "detalle"
+attr_responsable = "responsable"
+attributes_consignments = [attr_no_consignacion, attr_fecha_inicio, attr_fecha_final, attr_detalle, attr_responsable]

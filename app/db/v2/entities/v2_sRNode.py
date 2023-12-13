@@ -1,17 +1,17 @@
 from __future__ import annotations
+import datetime as dt
 import hashlib
 import traceback
-from typing import Tuple, List
 
 import pandas as pd
 from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField, IntField
-import datetime as dt
 
 from app.common import error_log
 from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION, lb_n_bahias, lb_n_tags, lb_n_instalaciones, \
     lb_n_entidades
 from app.db.v2.entities.v2_sREntity import V2SREntity
-from app.db.v2.v2_util import get_or_replace_entities_and_installations_from_dataframe, get_or_replace_bahias_and_tags_from_dataframe
+from app.db.v2.v2_util import get_or_replace_entities_and_installations_from_dataframe, \
+    get_or_replace_bahias_and_tags_from_dataframe
 
 
 class V2SRNode(Document):
@@ -58,6 +58,9 @@ class V2SRNode(Document):
         return dict(_id=str(self.pk), id_node=self.id_node, nombre=self.nombre, tipo=self.tipo, actualizado=self.actualizado,
                     entidades=[e.to_dict() for e in self.entidades] if self.entidades is not None else [],
                     activado=self.activado, n_tags=self.n_tags, n_bahias=self.n_bahias, n_instalaciones=self.n_instalaciones)
+
+    def get_document_id(self):
+        return str(self.pk)
 
     def to_summary(self):
         n_entidades, n_instalaciones, n_bahias, n_tags = 0, 0, 0, 0

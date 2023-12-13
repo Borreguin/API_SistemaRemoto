@@ -1,0 +1,3 @@
+from app.endpoints.AdminConsignacion.AdminConsignacion import create_grouped_endpoints, router
+
+create_grouped_endpoints(router)

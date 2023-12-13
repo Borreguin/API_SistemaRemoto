@@ -49,7 +49,8 @@ class V2SRInstallation(Document):
                     activado=self.activado, protocolo=self.protocolo,
                     longitud=0 if math.isnan(self.longitud) else self.longitud,
                     latitud=0 if math.isnan(self.latitud) else self.latitud,
-                    bahias=[b.to_dict() for b in self.bahias] if self.bahias is not None else [])
+                    bahias=[b.to_dict() for b in self.bahias] if self.bahias is not None else [],
+                    document_id=self.get_document_id())
 
     def to_summary(self):
         n_tags = 0
@@ -58,7 +59,11 @@ class V2SRInstallation(Document):
                 n_tags += len(bahia.tags) if bahia.tags is not None else 0
         return dict(instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
                     instalacion_nombre=self.instalacion_nombre, instalacion_tipo=self.instalacion_tipo,
-                    n_bahias=len(self.bahias) if self.bahias is not None else 0, n_tags=n_tags)
+                    n_bahias=len(self.bahias) if self.bahias is not None else 0, n_tags=n_tags,
+                    document_id=self.get_document_id())
+
+    def get_document_id(self):
+        return str(self.pk)
 
     def save_safely(self, *args, **kwargs):
         from app.db.db_util import save_mongo_document_safely

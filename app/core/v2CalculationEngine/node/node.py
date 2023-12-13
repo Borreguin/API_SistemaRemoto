@@ -14,12 +14,61 @@ Colossians 3:23
 •	Guarda en base de datos los resultados, la base de datos se encuentra en “../../_db/mongo_db”
 
 """
-
-
-from app.db.v2.entities.v2_sRNode import V2SRNode
 import datetime as dt
+from concurrent.futures import ProcessPoolExecutor
+from typing import List
+
+from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
+from app.common.util import get_time_in_minutes
+from app.core.v2CalculationEngine.NodeStatusCalculation import NodeStatusCalculation as nodeStatus
+from app.core.v2CalculationEngine.engine_util import generate_time_ranges
+from app.core.v2CalculationEngine.util import create_report, get_pi_server, \
+    delete_report_if_exists, verify_pi_server_connection, get_active_entities
+from app.db.constants import attr_nombre, attr_tipo
+from app.db.db_util import get_or_create_temporal_report, get_consignments
+from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
+from app.db.v2.entities.v2_sREntity import V2SREntity
+from app.db.v2.entities.v2_sRNode import V2SRNode
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
+from app.main import db_connection
+
+
+#
+# print(f"PIServer Connection: {pi_svr.server}")
+# report_ini_date = None
+# report_end_date = None
+# minutos_en_periodo = None
+# sR_node_name = None
+# n_lines = 40  # Para dar formato al log
+
+# """ Time format """
+# yyyy_mm_dd = "%Y-%m-%d"
+# yyyy_mm_dd_hh_mm_ss = "%Y-%m-%d %H:%M:%S"
+
+
+#     """
+#     Procesa un nodo
+#     :param force: Indica si debe forzar el guardado del reporte
+#     :param nodo: v2SRNode
+#     :param ini_date:  fecha inicial de reporte
+#     :param end_date:  fecha final de reporte
+#     :param save_in_db:  indica si se guardará en base de datos
+#     :return: Success, NodeReport or None, (int msg, str msg)
+#     """
+
 
 class NodeExecutor:
+    report_node: V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent = None
+    status_node: TemporalProcessingStateReport = None
+    pi_svr: PIServerBase = None
+    node: V2SRNode = None
+    report_id: str = None
+    executor: ProcessPoolExecutor = None
+    entities: List[V2SREntity] = None
+    node_consignments: List[V2SRConsignment]
+
     def __init__(self, node: V2SRNode, report_id: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
                  save_in_db: bool, force: bool, permanent_report: bool):
         self.node = node
@@ -29,275 +78,73 @@ class NodeExecutor:
         self.save_in_db = save_in_db
         self.force = force
         self.permanent_report = permanent_report
+        self.success = False
+        self.msg = None
+        self.error_code = None
+        self.minutes_in_period = None
+        self.start_time = dt.datetime.now()
+        self.check_connection()
+        self.executor = ProcessPoolExecutor()
 
+    def create_report(self):
+        self.report_node = create_report(self.ini_report_date, self.end_report_date, self.node, self.permanent_report)
 
+    def get_status_report(self):
+        self.status_node = get_or_create_temporal_report(self.report_id)
+        self.status_node.info[attr_nombre] = self.report_node.nombre
+        self.status_node.info[attr_tipo] = self.report_node.tipo
+        self.status_node.update_now()
 
+    def check_connection(self):
+        is_connected = db_connection()
+        self.pi_svr = get_pi_server()
+        if not is_connected or self.pi_svr is None:
+            self.msg = "No se ha podido conectar a la base de datos: "
+            self.msg += f"MongoBD" if not is_connected else f"PI Server"
+            self.error_code = nodeStatus.NO_DATA_BASE_CONNECTION
+            return False
+        """ verificar si existe conexión con el servidor PI: """
+        self.success, self.error_code = verify_pi_server_connection(self.pi_svr, self.status_node)
+        return self.success
 
+    def get_consignments(self):
+        self.node_consignments = get_consignments(self.node.get_document_id(), self.ini_report_date, self.end_report_date)
 
-# import argparse, os, sys
-# import queue
-#
-# script_path = os.path.dirname(os.path.abspath(__file__))
-# motor_path = os.path.dirname(script_path)
-# flask_path = os.path.dirname(motor_path)
-# project_path = os.path.dirname(flask_path)
-# sys.path.append(script_path)
-# sys.path.append(motor_path)
-# sys.path.append(project_path)
-#
-# # import custom libraries:
-# from app.db.v1.SRNodeReport.SRNodeReportTemporal import SRNodeDetailsTemporal
-# from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
-# from flask_app.motor import log_node
-#
-# from flask_app.my_lib.PI_connection import pi_connect as pi
-# from app.db.v1.ProcessingState import TemporalProcessingStateReport
-# import logging
-# import threading as th
-# from tqdm import tqdm
-# from random import randint
-#
-# """ Import clases for MongoDB """
-# from app.db.v1.SRNodeReport.sRNodeReportBase import *
-#
-# mongo_config = init.MONGOCLIENT_SETTINGS
-# """ Variables globales"""
-# if not init.PRODUCTION_ENV or init.DEBUG:
-#     # pi server por defecto
-#     pi_svr = pi.create_pi_server()
-# else:
-#     # seleccionando cualquiera disponible
-#     idx = randint(0, len(init.PISERVERS) - 1)
-#     print(f"PI aleatorio seleccionado: {init.PISERVERS[int(idx)]}")
-#     PiServerName = init.PISERVERS[int(idx)]
-#     pi_svr = pi.create_pi_server(PiServerName)
-#
-# print(f"PIServer Connection: {pi_svr.server}")
-# report_ini_date = None
-# report_end_date = None
-# minutos_en_periodo = None
-# sR_node_name = None
-# n_lines = 40  # Para dar formato al log
-#
-# """ configuración de logger """
-# verbosity = False
-# debug = init.DEBUG
-# log = log_node
-# # nivel de eventos a registrar:
-# log.setLevel(logging.INFO)
-#
-# """ Time format """
-# yyyy_mm_dd = "%Y-%m-%d"
-# yyyy_mm_dd_hh_mm_ss = "%Y-%m-%d %H:%M:%S"
-#
-# # Tipos de errores:
-# _0_ok = (0, "Nodo procesado correctamente")
-# _1_inesperado = (1, "Error no determinado")
-# _2_no_existe = (2, "No se encontro el nodo")
-# _3_no_reconocido = (3, "Objeto nodo no reconocido")
-# _4_no_hay_conexion = (4, "No es posible la conexión con el servidor PI")
-# _5_no_posible_entidades = (5, "No se ha obtenido las entidades en el nodo")
-# _6_no_existe_entidades = (6, "No se pudo calcular las entidades, revise archivo Log")
-# _7_no_es_posible_guardar = (7, "No se ha podido guardar el reporte del nodo")
-# _8_reporte_existente = (8, "No ha sido calculado, el reporte ya existe en DB")
-# _9_guardado = (9, "Reporte guardado en base de datos")
-# _10_sobrescrito = (10, "Reporte sobrescrito en base de datos")
-# _11_sin_consignacion_cont = (11, "Las UTR no contienen contenedor de consignaciones")
-# eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_conexion,
-#                _5_no_posible_entidades, _6_no_existe_entidades, _7_no_es_posible_guardar,
-#                _8_reporte_existente, _9_guardado, _10_sobrescrito, _11_sin_consignacion_cont]
-#
-#
+    def get_entities(self):
+        self.success, self.msg, self.entities = get_active_entities(self.node)
 
-#
-#
-# # La función devuelve el reporte por UTR
-# # busca las consignaciones existentes (si existe)
-# def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None):
-#     global report_ini_date
-#     global report_end_date
-#     global minutos_en_periodo
-#     # reporte de entity_list
-#     utr_report = SRUTRDetails(id_utr=utr.id_utr, utr_nombre=utr.utr_nombre, utr_tipo=utr.utr_tipo,
-#                               periodo_evaluacion_minutos=minutos_en_periodo)
-#
-#     try:
-#
-#         fault_tags = list()  # tags que no fueron procesadas adecuadamente
-#         print(f"Procesando [{utr.utr_nombre}] con [{len(tag_list)}] tags") if verbosity else None
-#
-#         # obtener consignaciones en el periodo de tiempo para generar periodos de consulta
-#         # se debe exceptuar periodos de consignación
-#
-#         # verificar que exista el contenedor de consignaciones:
-#         consDB = Consignments.objects(id_elemento=utr.utr_code).first()
-#         if consDB is not None:
-#             consignaciones_utr = consDB.consignments_in_time_range(report_ini_date, report_end_date)
-#         else:
-#             consignaciones_utr = []
-#
-#         # print("\n>>>>", utr.utr_nombre, consignaciones_utr)
-#         time_ranges = generate_time_ranges(consignaciones_utr, report_ini_date, report_end_date)
-#
-#         # adjuntar consignaciones tomadas en cuenta:
-#         utr_report.consignaciones_detalle = consignaciones_utr
-#
-#         # reportar por cada tag e incluir en el reporte utr
-#         msg = str()
-#         for tag, condition in zip(tag_list, condition_list):
-#             try:
-#                 # buscando la Tag en el servidor PI
-#                 pt = pi.create_pi_point(pi_svr, tag)
-#                 if pt.pt is None:
-#                     fault_tags.append(tag)  # La tag no fue encontrada en el servidor PI
-#                     continue  # continue con la siguiente tag
-#                 # creando la condición de indisponibilidad:
-#                 if not "expr:" in condition:
-#                     # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc. v1
-#                     #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
-#                     conditions = str(condition).split("#")
-#                     # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
-#                     expression = f'Compare(DigText(\'{tag}\'), "{conditions[0].strip()}")'
-#                     for c in conditions[1:]:
-#                         # expression += f" OR '{tag}' = \"{c}\""
-#                         expression += f' OR Compare(DigText(\'{tag}\'), "{c.strip()}")'
-#                 else:
-#                     expression = condition.replace("expr:", "")
-#
-#                 # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
-#                 #       tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
-#                 #       consignación:                  [-------------------]
-#                 #       ocurrido:           [...::.....:::::::::::::::::::..:...:::........]
-#                 #       minutos_disp:       [...::.....]                  [.:...:::........]
-#                 #       disponibilidad = #minutos_dispo/(tiempo_evaluacion - #minutos_consignados)
-#                 #
-#                 #                   UTR x: tiempo mes:               30*60*24 =  43200 minutos
-#                 #                          tiempo consignado:         2*24*60 =   2880 minutos
-#                 #                          tiempo evaluar:       43200 - 2880 =  40320 minutos
-#                 #                          tiempo disponible(RS):             = t1 + t2   -> (t1+t2)/40320
-#                 # Reporte final:
-#                 #                          tiempo disponible                        = 40300 minutos  (20 minutos indispo)
-#                 #                          tiempo evaluar                           = 40320
-#                 #                          tiempo consignado                        = 2880  minutos
-#                 #                          tiempo a evaluar (t_operacion + t_consig)= 43200 minutos
-#                 #
-#                 indisponible_minutos = 0  # indisponibilidad acumulada
-#
-#                 for time_range in time_ranges:
-#                     value = pt.time_filter(time_range, expression, span=None, time_unit="mi")
-#                     # acumulando el tiempo de indisponibilidad
-#                     indisponible_minutos += value[tag].iloc[0]
-#                 tag_report = SRTagDetails(tag_name=tag, indisponible_minutos=indisponible_minutos)
-#                 utr_report.indisponibilidad_detalle.append(tag_report)
-#
-#             except Exception as e:
-#                 fault_tags.append(tag)
-#                 msg += f"[tag]: \n {str(e)} \n"
-#                 print(msg) if verbosity else None
-#
-#         # la UTR no tiene tags válidas para el cálculo:
-#         if len(utr_report.indisponibilidad_detalle) == 0:
-#             utr_report.calculate(report_ini_date, report_end_date)
-#             if q is not None:
-#                 q.put((False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"))
-#             return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
-#
-#         # All is OK until here:
-#         utr_report.calculate(report_ini_date, report_end_date)
-#         if q is not None:
-#             q.put((True, utr_report, fault_tags, msg))
-#         return True, utr_report, fault_tags, msg
-#     except Exception as e:
-#         tb = traceback.format_exc()
-#         if "dereference unknown document" in str(e):
-#             detalle = "El contenedor de consignaciones no ha sido aún creado, " \
-#                       "vuelva a crear el elemento a través del archivo Excel"
-#         else:
-#             detalle = "Error no determinado"
-#         msg = f"Error al momento de procesar las tags, observe detalles a continuación: \n{detalle}\n{str(e)} \n{tb}"
-#
-#         if q is not None:
-#             utr_report.calculate(report_ini_date, report_end_date)
-#             q.put((False, utr_report, [], msg))
-#         return False, utr_report, [], msg
-#
-#
+    def init(self):
+        if self.error_code == nodeStatus.NO_DATA_BASE_CONNECTION:
+            return
+        self.minutes_in_period = get_time_in_minutes(self.ini_report_date, self.end_report_date)
+        self.create_report()
+        self.get_status_report()
+        self.get_entities()
+        """ Examinar si existe reporte asociado al nodo en este periodo de tiempo """
+        #  si el reporte va ser re-escrito, entonces se elimina el existente de base de datos
+        #  caso contrario no se puede continuar al ya existir un reporte asociado a este nodo
+        self.success, node_report_db, self.msg = delete_report_if_exists(self.save_in_db, self.force, self.report_id,
+                                                                         self.status_node, self.permanent_report)
+
+    def processing_entities(self):
+        for entity in self.entities:
+            datetime_range = generate_time_ranges(self.node_consignments, self.ini_report_date, self.end_report_date)
+            entity_consignments = get_consignments(entity.get_document_id(), self.ini_report_date, self.end_report_date)
+
+    def processing_node(self):
+        self.init()
+        if not self.success:
+            return
+        self.processing_entities()
+
 # def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
-#     """
-#     Procesa un nodo
-#     :param force: Indica si debe forzar el guardado del reporte
-#     :param nodo: [str, SRNode] Nombre del nodo, o su respectivo objeto SRNode
-#     :param ini_date:  fecha inicial de reporte
-#     :param end_date:  fecha final de reporte
-#     :param save_in_db:  indica si se guardará en base de datos
-#     :return: Success, NodeReport or None, (int msg, str msg)
-#     """
-#     global sR_node_name
-#     global report_ini_date
-#     global report_end_date
-#     global minutos_en_periodo
-#     reporte_ya_existe = False
-#
-#     if isinstance(nodo, str):
-#         connect(**mongo_config)
-#         print(mongo_config)
-#         sR_node = SRNode.objects(nombre=nodo).first()
-#         if sR_node is None:
-#             return False, None, (_2_no_existe[0], f'No se encontro el nodo {nodo}')
-#     elif isinstance(nodo, SRNode):
-#         sR_node = nodo
-#     else:
-#         return False, None, (_3_no_reconocido[0], f'Objeto nodo no reconocido: {nodo}')
-#
-#     """ Actualizar fecha y fin de reporte """
-#     sR_node_name = sR_node.nombre
-#     report_ini_date = ini_date
-#     report_end_date = end_date
-#     t_delta = report_end_date - report_ini_date
-#     minutos_en_periodo = t_delta.days * (60 * 24) + t_delta.seconds // 60 + (t_delta.seconds % 60)/60
-#
-#     """ Creando reporte de nodo """
-#     if u.isTemporal(ini_date, end_date):
-#         report_node = SRNodeDetailsTemporal(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
-#                                             fecha_inicio=report_ini_date,
-#                                             fecha_final=report_end_date)
-#     else:
-#         report_node = SRNodeDetailsPermanente(nodo=sR_node, nombre=sR_node.nombre, tipo=sR_node.tipo,
-#                                               fecha_inicio=report_ini_date,
-#                                               fecha_final=report_end_date)
-#     status_node = TemporalProcessingStateReport(id_report=report_node.id_report,
-#                                                 msg=f"Empezando cálculo del nodo: {sR_node_name}",
-#                                                 finish=False, percentage=0)
-#     status_node.info["nombre"] = report_node.nombre
-#     status_node.info["tipo"] = report_node.tipo
-#     status_node.update_now()
-#
-#     """ Examinar si existe reporte asociado al nodo en este periodo de tiempo """
-#     # si el reporte va ser re-escrito, entonces se elimina el existente de base de datos
-#     # caso contrario no se puede continuar al ya existir un reporte asociado a este nodo
-#     success, node_report_db, msg = delete_report_if_exists(save_in_db, force, report_node, status_node)
-#     if not success:
-#         # ya existe un reporte asociado, por lo que no se continúa
-#         return False, node_report_db, msg
-#
-#     """ verificar si existe conexión con el servidor PI: """
-#     success, status = verify_pi_server_connection(status_node)
-#     if not success:
-#         # si no existe conexión con el servidor no se puede continuar:
-#         return False, node_report, status
-#
-#     """ Seleccionando las entidades a trabajar (estado: activado) """
-#     """ entities es una lista de SREntity """
-#     success, entities, status = get_active_entities(sR_node, status_node)
-#     if not success:
-#         # si no hay entidades en el nodo, no se puede continuar
-#         return False, node_report, status
+
+
+
 #
 #     """ Trabajando con cada entity_list, cada entity_list tiene utrs que tienen tags a calcular """
-#     # la cola que permitirá recibir los resultados de cada hilo
-#     out_queue = queue.Queue()
-#     # cronometrar el tiempo de cálculo
-#     start_time = dt.datetime.now()
+
+
 #     # Procesando cada utr dentro de un hilo:
 #     structure, out_queue, n_threads = processing_each_utr_in_threads(entities, out_queue)
 #
@@ -351,31 +198,7 @@ class NodeExecutor:
 #     return True, report_node, (msg_save[0], msg)
 #
 #
-# def delete_report_if_exists(save_in_db, force, report_node, status_node):
-#     if save_in_db or force:
-#         """ Observar si existe el nodo en la base de datos """
-#         try:
-#             if u.isTemporal(report_node.fecha_inicio, report_node.fecha_final):
-#                 node_report_db = SRNodeDetailsTemporal.objects(id_report=report_node.id_report).first()
-#             else:
-#                 node_report_db = SRNodeDetailsPermanente.objects(id_report=report_node.id_report).first()
-#             reporte_ya_existe = (node_report_db is not None)
-#             """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
-#             if reporte_ya_existe and save_in_db and not force:
-#                 status_node.finished()
-#                 status_node.msg = _8_reporte_existente[1]
-#                 status_node.update_now()
-#                 return False, node_report_db, _8_reporte_existente
-#             if reporte_ya_existe and force:
-#                 node_report_db.delete()
-#                 return True, None, "Reporte eliminado de manera correcta para reescritura"
-#             return True, None, "No es necesario eliminar el reporte"
-#
-#         except Exception as e:
-#             msg = "Problema de concistencia en la base de datos"
-#             tb = traceback.format_exc()
-#             log.error(f"{msg} {str(e)} \n {tb}")
-#             return False, None, msg
+
 #
 #
 # def verify_pi_server_connection(status_node):
@@ -612,6 +435,3 @@ class NodeExecutor:
 #                    f"\nRevise el archivo log en [/output] \n{msg}\n"
 #         log.error(to_print)
 #         exit(int(msg[0]))
-
-
-

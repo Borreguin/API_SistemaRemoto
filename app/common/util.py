@@ -5,6 +5,7 @@ from typing import List
 import pandas as pd
 import bcrypt
 import os
+import datetime as dt
 
 from fastapi import UploadFile
 
@@ -77,3 +78,8 @@ async def get_df_from_upload_file(upload_file: UploadFile, temp_path: str):
     except Exception as e:
         msg = f"Error al leer información del archivo: {str(e)}"
         return False, pd.DataFrame(), msg
+
+def get_time_in_minutes(ini_date: dt.datetime, end_date: dt.datetime):
+    t_delta = end_date - ini_date
+    time_in_minutes = t_delta.days * (60 * 24) + t_delta.seconds // 60 + (t_delta.seconds % 60) / 60
+    return time_in_minutes

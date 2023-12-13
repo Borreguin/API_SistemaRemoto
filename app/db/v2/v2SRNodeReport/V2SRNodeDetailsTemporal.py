@@ -1,9 +1,10 @@
-from app.db.v1.SRNodeReport.sRNodeReportBase import SRNodeDetailsBase, dt
-
+import datetime as dt
 from mongoengine import *
 
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsBase import V2SRNodeDetailsBase
 
-class V2SRNodeDetailsTemporal(SRNodeDetailsBase):
+
+class V2SRNodeDetailsTemporal(V2SRNodeDetailsBase):
     # Esta configuración permite crear documentos JSON con expiración de tiempo
     created = DateTimeField(default=dt.datetime.utcnow())
     meta = {"collection": "TEMPORAL|v2Nodos", 'indexes': [{

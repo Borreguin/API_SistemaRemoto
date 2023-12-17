@@ -14,16 +14,20 @@ Colossians 3:23
 •	Guarda en base de datos los resultados, la base de datos se encuentra en “../../_db/mongo_db”
 
 """
-import datetime as dt
-from concurrent.futures import ProcessPoolExecutor
-from typing import List
+from __future__ import annotations
 
-from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
+import os.path
+from concurrent.futures import ProcessPoolExecutor
+from logging import Logger
+from typing import List
+import traceback as tb
+from app.common import configure_logger
+from app.common.default_logger import default_log_path
 from app.common.util import get_time_in_minutes
-from app.core.v2CalculationEngine.NodeStatusCalculation import NodeStatusCalculation as nodeStatus
-from app.core.v2CalculationEngine.engine_util import generate_time_ranges
-from app.core.v2CalculationEngine.util import create_report, get_pi_server, \
-    delete_report_if_exists, verify_pi_server_connection, get_active_entities
+from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange
+from app.core.v2CalculationEngine.engine_util import get_date_time_ranges_using_consignments
+from app.core.v2CalculationEngine.node.EntityExecutor import EntityExecutor
+from app.core.v2CalculationEngine.util import *
 from app.db.constants import attr_nombre, attr_tipo
 from app.db.db_util import get_or_create_temporal_report, get_consignments
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
@@ -33,6 +37,7 @@ from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
 from app.main import db_connection
+
 
 
 #
@@ -68,6 +73,8 @@ class NodeExecutor:
     executor: ProcessPoolExecutor = None
     entities: List[V2SREntity] = None
     node_consignments: List[V2SRConsignment]
+    date_time_range: List[DateTimeRange]
+    log : Logger = None
 
     def __init__(self, node: V2SRNode, report_id: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
                  save_in_db: bool, force: bool, permanent_report: bool):
@@ -83,19 +90,38 @@ class NodeExecutor:
         self.error_code = None
         self.minutes_in_period = None
         self.start_time = dt.datetime.now()
-        self.check_connection()
         self.executor = ProcessPoolExecutor()
+        self.log = configure_logger(log_name=f'{self.node.nombre}.log', log_path=os.path.join(default_log_path, 'v2Engine'))
 
     def create_report(self):
-        self.report_node = create_report(self.ini_report_date, self.end_report_date, self.node, self.permanent_report)
+        self.report_node = get_node_details_report(self.report_id, self.permanent_report)
+        if self.force and self.report_node is not None:
+            self.success, self.msg = delete_v2sr_node_report_if_exists(self.report_id, self.permanent_report)
+        elif self.report_node is not None and not self.force:
+            self.success, self.error_code, self.msg = False, nodeStatus.REPORT_EXIST, f"Ya existe un reporte asociado al nodo {self.node}"
+            return False
+        self.report_node = create_v2sr_node_report(self.ini_report_date, self.end_report_date, self.node, self.permanent_report)
 
     def get_status_report(self):
+        self.log.info(f"get_status_report")
         self.status_node = get_or_create_temporal_report(self.report_id)
-        self.status_node.info[attr_nombre] = self.report_node.nombre
-        self.status_node.info[attr_tipo] = self.report_node.tipo
+        self.status_node.info[attr_nombre] = self.node.nombre
+        self.status_node.info[attr_tipo] = self.node.tipo
         self.status_node.update_now()
 
+    def update_info_status_report(self, msg: str, percentage: float):
+        self.log.info(msg)
+        self.status_node.msg = msg
+        self.status_node.percentage = round(percentage, 2)
+        self.status_node.save_safely()
+
+    def update_fail_status_report(self, msg: str):
+        self.status_node.failed()
+        self.status_node.msg = msg
+        self.status_node.save_safely()
+
     def check_connection(self):
+        self.log.info(f"check_connection")
         is_connected = db_connection()
         self.pi_svr = get_pi_server()
         if not is_connected or self.pi_svr is None:
@@ -105,37 +131,44 @@ class NodeExecutor:
             return False
         """ verificar si existe conexión con el servidor PI: """
         self.success, self.error_code = verify_pi_server_connection(self.pi_svr, self.status_node)
-        return self.success
+        assert self.success, self.error_code
 
     def get_consignments(self):
-        self.node_consignments = get_consignments(self.node.get_document_id(), self.ini_report_date, self.end_report_date)
+        self.log.info('get_consignments')
+        self.date_time_range, self.node_consignments = (
+            get_date_time_ranges_using_consignments(self.node.get_document_id(), self.ini_report_date, self.end_report_date)
+        )
 
     def get_entities(self):
         self.success, self.msg, self.entities = get_active_entities(self.node)
 
     def init(self):
-        if self.error_code == nodeStatus.NO_DATA_BASE_CONNECTION:
-            return
+        self.get_status_report()
+        self.update_info_status_report(f'Get all settings for node {self.node}', 0)
+        self.check_connection()
         self.minutes_in_period = get_time_in_minutes(self.ini_report_date, self.end_report_date)
         self.create_report()
-        self.get_status_report()
         self.get_entities()
-        """ Examinar si existe reporte asociado al nodo en este periodo de tiempo """
-        #  si el reporte va ser re-escrito, entonces se elimina el existente de base de datos
-        #  caso contrario no se puede continuar al ya existir un reporte asociado a este nodo
-        self.success, node_report_db, self.msg = delete_report_if_exists(self.save_in_db, self.force, self.report_id,
-                                                                         self.status_node, self.permanent_report)
+        self.get_consignments()
+        self.update_info_status_report(f'All settings are ok for node {self.node}', 0)
 
     def processing_entities(self):
-        for entity in self.entities:
-            datetime_range = generate_time_ranges(self.node_consignments, self.ini_report_date, self.end_report_date)
-            entity_consignments = get_consignments(entity.get_document_id(), self.ini_report_date, self.end_report_date)
+        for ix, entity in enumerate(self.entities):
+            self.update_info_status_report(f'Procesando Entidad: {entity}', ix/len(self.entities))
+            min_percentage, max_percentage = ix/len(self.entities)*100, (ix+1)/len(self.entities)*100
+            EntityExecutor(self.pi_svr, entity, self.status_node, self.date_time_range, self.minutes_in_period,
+                           min_percentage, max_percentage, self.log).process()
 
     def processing_node(self):
-        self.init()
-        if not self.success:
-            return
-        self.processing_entities()
+        try:
+            self.init()
+            self.processing_entities()
+        except Exception as e:
+            self.success = False
+            self.msg = f'No es posible procesar el nodo {self.node}. \nError: {e}'
+            self.status_node.failed()
+            self.status_node.save_safely()
+            self.log.error(f'{self.msg} {tb.format_exc()}')
 
 # def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
 

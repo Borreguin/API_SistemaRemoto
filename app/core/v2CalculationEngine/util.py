@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import datetime as dt
 import traceback
 from random import randint
+from typing import Tuple
 
 from app.common import report_node_log as log
 from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
@@ -21,7 +24,7 @@ def get_pi_server() -> PIServerBase:
     pi_server_name = Settings.PISERVERS[int(idx)]
     return create_pi_server(pi_server_name)
 
-def create_report(ini_report_date: dt.datetime, end_report_date: dt.datetime, node: V2SRNode, permanent: bool = False):
+def create_v2sr_node_report(ini_report_date: dt.datetime, end_report_date: dt.datetime, node: V2SRNode, permanent: bool = False):
     if permanent:
         report_node = V2SRNodeDetailsPermanent(nodo=node, nombre=node.nombre, tipo=node.tipo,
                                                fecha_inicio=ini_report_date,
@@ -32,34 +35,29 @@ def create_report(ini_report_date: dt.datetime, end_report_date: dt.datetime, no
                                               fecha_final=end_report_date)
     return report_node
 
-def delete_report_if_exists(save_in_db:bool, force: bool, id_report: str, status_node, permanent: bool = False):
-    if save_in_db or force:
-        """ Observar si existe el nodo en la base de datos """
-        try:
-            node_details_report_db = get_node_details_report(id_report, permanent)
-            report_already_exists = (node_details_report_db is not None)
-            """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
-            if report_already_exists and save_in_db and not force:
-                status_node.finished()
-                status_node.msg = nodeStatus.REPORT_EXIST
-                status_node.update_now()
-                return False, node_details_report_db, nodeStatus.REPORT_EXIST
-            if report_already_exists and force:
-                node_details_report_db.delete()
-                return True, None, "Reporte eliminado de manera correcta para reescritura"
-            return True, None, "No es necesario eliminar el reporte"
+def delete_v2sr_node_report_if_exists(report_id: str, permanent_report: bool) \
+        -> Tuple[bool, str]:
+    """ Observar si existe el nodo en la base de datos """
+    try:
+        node_details_report_db = get_node_details_report(report_id, permanent_report)
+        report_already_exists = (node_details_report_db is not None)
+        """ Si se desea guardar y ya existe y no es sobreescritura, no se continúa """
+        if report_already_exists:
+            node_details_report_db.delete()
+            return True, "Reporte eliminado de manera correcta para reescritura"
+        return True, "No es necesario eliminar el reporte"
 
-        except Exception as e:
-            msg = "Problema de concistencia en la base de datos"
-            tb = traceback.format_exc()
-            log.error(f"{msg} {str(e)} \n{tb}")
-            return False, None, msg
+    except Exception as e:
+        msg = "Problema de concistencia en la base de datos"
+        tb = traceback.format_exc()
+        log.error(f"{msg} {str(e)} \n{tb}")
+        return False, msg
 
 
 def verify_pi_server_connection(pi_svr: PIServerBase, status_node: TemporalProcessingStateReport):
     try:
         pi_svr.server.Connect()
-        return True, nodeStatus.OK
+        return True, nodeStatus.CONNECTED
     except Exception as e:
         msg = f"No es posible la conexión con el servidor [{pi_svr.server.Name}]"
         log.error(f"{msg} \n[{str(e)}] \n[{traceback.format_exc()}]")
@@ -69,7 +67,7 @@ def verify_pi_server_connection(pi_svr: PIServerBase, status_node: TemporalProce
         return False, nodeStatus.NO_PI_CONNECTION
 
 
-def get_active_entities(node:V2SRNode):
+def get_active_entities(node: V2SRNode):
     if node.entidades is None or len(node.entidades) == 0:
         return False, "No hay entidades a procesar en el nodo", None
     entities = [e for e in node.entidades if e.activado]

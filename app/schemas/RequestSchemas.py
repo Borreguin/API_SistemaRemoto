@@ -103,15 +103,18 @@ class DetalleConsignacionRequest(BaseModel):
     detalle: Optional[dict] = dict(description="json con detalle de la consignación")
     responsable: str = "responsable del ingreso de consignación"
 
-class V2ConsignmentDetailRequest(BaseModel):
+class V2ConsignmentDetails(BaseModel):
+    observations: str
+    short_description: str
+    consignment_type: str
+    element: dict
+
+class V2ConsignmentRequest(BaseModel):
     no_consignacion: str
     responsable: str
-    description: Optional[str]
-    short_description: Optional[str]
-    consignment_type: Optional[str]
-    element_info: Optional[dict]
     fecha_inicio: Optional[str]
     fecha_final: Optional[str]
+    element_info: Optional[V2ConsignmentDetails]
 
 
 class ConsignacionRequest(BaseModel):

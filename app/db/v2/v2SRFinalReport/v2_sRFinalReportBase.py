@@ -181,12 +181,12 @@ class V2SRFinalReportBase(Document):
             row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
             for reporte_instalacion in reporte_entidad.reportes_instalaciones:
                 row[lb_dispo_promedio_instalacion] = reporte_instalacion.disponibilidad_promedio_porcentage / 100
-                row[lb_instalacion] = reporte_instalacion.utr_nombre
+                row[lb_instalacion] = reporte_instalacion.instalacion_nombre
                 row[lb_no_seniales] = reporte_instalacion.numero_tags
                 row[lb_indisponible_minutos_promedio] = \
                     reporte_instalacion.indisponibilidad_acumulada_minutos / reporte_instalacion.numero_tags \
                         if reporte_instalacion.numero_tags > 0 else -1
-                f_utr = self.installation_dict.get(reporte_instalacion.id_utr, None)
+                f_utr = self.installation_dict.get(reporte_instalacion.instalacion_id, None)
                 row[lb_protocolo] = f_utr.get(lb_protocolo, None) if f_utr is not None else None
                 row[lb_latitud] = f_utr.get(lb_latitud, None) if f_utr is not None else None
                 row[lb_longitud] = f_utr.get(lb_longitud, None) if f_utr is not None else None

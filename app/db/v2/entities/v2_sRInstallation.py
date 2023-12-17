@@ -15,7 +15,6 @@ class V2SRInstallation(Document):
     instalacion_ems_code = StringField(required=True, unique=True, default=None)
     instalacion_nombre = StringField(required=True)
     instalacion_tipo = StringField(required=True)
-    consignaciones = ReferenceField(Consignments, dbref=True)
     activado = BooleanField(default=True)
     protocolo = StringField(default="No definido", required=False)
     longitud = FloatField(required=False, default=0)
@@ -45,7 +44,6 @@ class V2SRInstallation(Document):
     def to_dict(self):
         return dict(instalacion_id=self.instalacion_id, instalacion_ems_code=self.instalacion_ems_code,
                     instalacion_nombre=self.instalacion_nombre, instalacion_tipo=self.instalacion_tipo,
-                    consignaciones=self.consignaciones.id if self.consignaciones is not None else None,
                     activado=self.activado, protocolo=self.protocolo,
                     longitud=0 if math.isnan(self.longitud) else self.longitud,
                     latitud=0 if math.isnan(self.latitud) else self.latitud,

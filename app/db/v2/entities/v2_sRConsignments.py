@@ -5,6 +5,7 @@ from typing import List
 
 from mongoengine import Document, StringField, DateTimeField, DictField, EmbeddedDocumentField, ListField
 
+from app.db.constants import V2_SR_CONSIGNMENT_LABEL
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 import datetime as dt
 
@@ -25,39 +26,42 @@ def check_consignment_conflict(consignment: V2SRConsignment, consignments: List[
 
 
 class V2SRConsignments(Document):
-    element_id = StringField(required=True, unique=True)
+    id_elemento = StringField(required=True, unique=True)
     desde = DateTimeField(required=False, default=None)
     hasta = DateTimeField(required=False, default=None)
-    element_info = DictField(required=False)
+    element = DictField(required=False)
     consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment))
-    document = StringField(required=True, default="v2SRConsignments")
+    document = StringField(required=True, default=V2_SR_CONSIGNMENT_LABEL)
     meta = {"collection": "INFO|Consignaciones"}
 
-    def __init__(self, element_id:str, desde, hasta, *args, **values):
+    def __init__(self, id_elemento:str, desde, hasta, *args, **values):
         super().__init__(*args, **values)
-        self.element_id = element_id
-        if isinstance(desde, dt.datetime):
+        self.id_elemento = id_elemento
+        if isinstance(desde, dt.datetime) and self.desde is None:
             self.desde = desde
-        if isinstance(hasta, dt.datetime):
+        if isinstance(hasta, dt.datetime) and self.hasta is None:
             self.hasta = hasta
 
-        if isinstance(desde, str):
+        if isinstance(desde, str) and self.desde is None:
             self.desde = dt.datetime.strptime(desde, "%Y-%m-%d %H:%M:%S")
-        if isinstance(hasta, str):
+        if isinstance(hasta, str) and self.hasta is None:
             self.hasta = dt.datetime.strptime(hasta, "%Y-%m-%d %H:%M:%S")
 
     def insert_consignment(self, consignment: V2SRConsignment):
+        if consignment.fecha_inicio >  consignment.fecha_final:
+            return False, f"Fechas incorrectas {consignment.fecha_inicio} > {consignment.fecha_final}"
         # si es primera consignacion a insertar
         if len(self.consignaciones) == 0:
             self.consignaciones.append(consignment)
-            self.update_from_until(consignment.fecha_inicio, consignment.fecha_final)
+            self.desde, self.hasta = consignment.fecha_inicio, consignment.fecha_final
             return True, f"Consignación insertada: {consignment}"
         conflict, msg = check_consignment_conflict(consignment, self.consignaciones)
         if conflict:
             return False, msg
+        self.consignaciones.append(consignment)
         self.consignaciones.sort(key=lambda c: c.fecha_inicio, reverse=False)
-
-        self.update_from_until(consignment.fecha_inicio, consignment.fecha_final)
+        if len(self.consignaciones) > 0:
+            self.desde, self.hasta = self.consignaciones[0].fecha_inicio, self.consignaciones[-1].fecha_final
         return True, f"Consignación insertada: {consignment}"
 
     def update_from_until(self, from_date: dt.datetime, until_date: dt.datetime):
@@ -79,7 +83,7 @@ class V2SRConsignments(Document):
                 consignment_to_delete = c
 
         if consignment_to_delete is None:
-            return False, f"No existe la consignación [{consignment_id}] en elemento [{self.element_id}]"
+            return False, f"No existe la consignación [{consignment_id}] en elemento [{self.id_elemento}]"
 
         self.consignaciones = consignments
         # Se procede a eliminar si existe:
@@ -87,7 +91,8 @@ class V2SRConsignments(Document):
             rmtree(consignment_to_delete.folder)
         # Order consignments:
         self.consignaciones.sort(key=lambda csg: csg.fecha_inicio, reverse=False)
-        self.desde, self.hasta = self.consignaciones[0].fecha_inicio, self.consignaciones[-1].fecha_final
+        if len(self.consignaciones) > 0:
+            self.desde, self.hasta = self.consignaciones[0].fecha_inicio, self.consignaciones[-1].fecha_final
         return True, f"Consignación [{consignment_id}] ha sido eliminada"
 
     def consignments_in_time_range(self, ini_date: dt.datetime | str, end_time: dt.datetime | str) -> List[V2SRConsignment]:
@@ -115,5 +120,5 @@ class V2SRConsignments(Document):
             else f"La consignación no ha sido encontrada"
 
     def __str__(self):
-        return f"{self.element_id}: [from: {self.desde}, until: {self.hasta}] " \
+        return f"{self.id_elemento}: [from: {self.desde}, until: {self.hasta}] " \
                f" Total: {len(self.consignaciones)}"

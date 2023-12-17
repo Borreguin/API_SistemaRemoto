@@ -1,5 +1,7 @@
 
 import datetime as dt
+from typing import List
+
 
 class DateTimeRange:
     start : dt.datetime
@@ -38,4 +40,12 @@ class DateTimeRange:
 
     def __contains__(self, other):
         return self.start <= other.start and self.end >= other.end
+
+    def get_time_in_minutes(self):
+        t_delta = self.end - self.start
+        time_in_minutes = t_delta.days * (60 * 24) + t_delta.seconds // 60 + (t_delta.seconds % 60) / 60
+        return time_in_minutes
+
+def get_total_time_in_minutes(time_range_list: List[DateTimeRange]):
+    return sum([t.get_time_in_minutes() for t in time_range_list])
 

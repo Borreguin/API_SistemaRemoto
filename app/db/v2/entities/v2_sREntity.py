@@ -29,7 +29,7 @@ class V2SREntity(EmbeddedDocument):
             self.entidad_nombre = entidad_nombre
         if self.id_entidad is None:
             self.update_entity_id()
-        if self.document_id:
+        if self.document_id is None:
             self.document_id = str(uuid.uuid4())
 
     def update_entity_id(self):

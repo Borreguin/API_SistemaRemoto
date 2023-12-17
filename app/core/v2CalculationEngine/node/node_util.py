@@ -6,8 +6,8 @@ import pandas as pd
 
 from app.common import report_node_detail_log as log
 from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
-from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange
-from app.core.v2CalculationEngine.constants import columns_unavailability, cl_success
+from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange, get_total_time_in_minutes
+from app.core.v2CalculationEngine.constants import columns_unavailability, cl_success, cl_processed_time
 from app.core.v2CalculationEngine.node.tag_util import get_tag_unavailability_from_history
 from app.db.v2.entities.v2_sRTag import V2SRTag
 
@@ -50,16 +50,17 @@ from app.db.v2.entities.v2_sRTag import V2SRTag
 
 def processing_unavailability_of_tags(tag_list: List[V2SRTag], time_ranges: List[DateTimeRange], pi_svr: PIServerBase):
 
-    df_tag_unavailability = pd.DataFrame(columns=columns_unavailability, index=tag_list)
+    df_tag_unavailability = pd.DataFrame(columns=columns_unavailability, index=[tag.tag_name for tag in tag_list])
     df_tag_unavailability[cl_success] = False
+    processed_time = get_total_time_in_minutes(time_ranges)
     try:
         log.info(f"processing_tags started with [{len(tag_list)}] tags")
         log.info(f"processing_tags started with [{len(time_ranges)}] time_ranges")
 
         # obtener la indisponibilidad de cada tag:
         for tag in tag_list:
-            success, indisponible_minutos, msg = get_tag_unavailability_from_history(tag.tag_name, tag.filter_expression, time_ranges, pi_svr)
-            df_tag_unavailability.loc[tag.tag_name] = [success, indisponible_minutos, msg]
+            success, unavailability_minutes, msg = get_tag_unavailability_from_history(tag.tag_name, tag.filter_expression, time_ranges, pi_svr)
+            df_tag_unavailability.loc[tag.tag_name] = [success, unavailability_minutes, processed_time, msg]
         return True, "processing_tags finished OK", df_tag_unavailability
 
     except Exception as e:

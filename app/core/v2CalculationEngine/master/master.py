@@ -26,7 +26,7 @@ import datetime as dt
 
 from app.common import report_log
 from app.core.v2CalculationEngine.constants import NUMBER_OF_PROCESSES, TIMEOUT_SECONDS
-from app.core.v2CalculationEngine.node.node import NodeExecutor
+from app.core.v2CalculationEngine.node.NodeExecutor import NodeExecutor
 from app.core.v2CalculationEngine.engine_util import head
 from app.db.db_util import get_all_v2_nodes, get_temporal_status
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
@@ -77,7 +77,9 @@ class MasterEngine:
         all_nodes = get_all_v2_nodes()
         if len(all_nodes) == 0:
             self.success, self.msg = False, f"No hay nodos a procesar"
+        nodes = list()
         for node in all_nodes:
+            nodes.append(node)
             report_id = get_report_id(node.tipo, node.nombre, self.report_ini_date, self.report_end_date)
             self.nodes_report_ids[node.id_node] = report_id
             status = get_temporal_status(report_id)
@@ -85,14 +87,14 @@ class MasterEngine:
             if is_already_running:
                 return False, self.msg
 
-        self.all_nodes = all_nodes
+        self.all_nodes = nodes
         self.success, self.msg = True, f"Se encontraron {len(all_nodes)} nodos a procesar"
         return True, self.msg
 
     def run_all_nodes(self):
         if not self.success or self.is_already_running:
-            return False, self.msg, None
-        msg = f"{head(self.report_ini_date, self.report_end_date)} Empezando el cálculo {len(self.all_nodes)} nodos"
+            return False, f"Existen nodos que están siendo procesados", None
+        msg = f"{head(self.report_ini_date, self.report_end_date)} \nEmpezando el cálculo {len(self.all_nodes)} nodos"
         report_log.info(msg)
         self.nodes_msg.append(msg)
         try:
@@ -119,7 +121,7 @@ class MasterEngine:
             msg = f"{head(self.report_ini_date, self.report_end_date)} Error al ejecutar los nodos \n {str(e)}"
             self.nodes_msg.append(msg)
             tb = traceback.extract_stack()
-            report_log.error(f"{msg} \n {tb}")
+            report_log.error(f"{msg} \n{tb}")
             return False, msg, None
 
     @staticmethod
@@ -131,6 +133,7 @@ class MasterEngine:
             status.save()
             """ Running the complete process for a single node """
             node_executor = NodeExecutor(node, id_report, ini_report_date, end_report_date, save_in_db, force, permanent_report)
+            node_executor.processing_node()
             report_log.info(head(ini_report_date, end_report_date) + msg)
             success, msg = True, f"El nodo {node.nombre} ha sido procesado exitosamente"
         except Exception as e:
@@ -140,6 +143,15 @@ class MasterEngine:
         status = get_temporal_status(id_report)
         status.delete()
         return success, msg
+
+if __name__ == "__main__":
+    ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+    end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
+    master = MasterEngine(ini_date, end_date)
+    master.get_all_nodes()
+    master.run_all_nodes()
+    report_log.info(master.msg)
+
 
 # TODO: RS Check this code down
 #             child_processes = list()
@@ -365,8 +377,3 @@ class MasterEngine:
 #     success, results, msg = run_all_nodes(report_ini_date, report_end_date, save_in_db=True, force=True)
 #     run_summary(report_ini_date, report_end_date, force=True, results=results, log_msg=msg)
 
-
-if __name__ == "__main__":
-    master_engine = MasterEngine(report_ini_date=dt.datetime(2020, 10, 11), report_end_date=dt.datetime(2020, 10, 12))
-    master_engine.get_all_nodes()
-    master_engine.run_all_nodes()

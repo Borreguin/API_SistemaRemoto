@@ -42,12 +42,12 @@ def get_tag_unavailability_from_history(tag_name:str, condition:str, time_ranges
         #                Ejemplo : tiempo mes:               30*60*24 =  43200 minutos
         #                          tiempo consignado:         2*24*60 =   2880 minutos
         #                          tiempo evaluar:       43200 - 2880 =  40320 minutos
-        #                          tiempo disponible(RS):             = t1 + t2   -> (t1+t2)/40320
+        #                          porcentaje indisponible:           = t1 + t2 + tn  -> [(t_ind1 + t_ind2 + ...)/n]/40320
         # Reporte final:
-        #                          tiempo disponible                        = 40300 minutos  (20 minutos indispo)
+        #                          tiempo disponible                        = 40300 minutos  (20 minutos indisponibilidad)
         #                          tiempo evaluar                           = 40320
         #                          tiempo consignado                        = 2880  minutos
-        #                          tiempo a evaluar (t_operacion + t_consig)= 43200 minutos
+        #                          tiempo procesado (t_operacion + t_consig)= 43200 minutos
         #
 
         indisponible_minutos = 0  # indisponibilidad acumulada

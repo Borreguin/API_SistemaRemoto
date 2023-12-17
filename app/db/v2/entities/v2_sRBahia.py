@@ -28,7 +28,7 @@ class V2SRBahia(EmbeddedDocument):
             self.voltaje = convert_to_float(voltaje)
         if bahia_nombre is not None:
             self.bahia_nombre = bahia_nombre
-        if self.document_id is not None:
+        if self.document_id is None:
             self.document_id = str(uuid.uuid4())
 
     def __str__(self):

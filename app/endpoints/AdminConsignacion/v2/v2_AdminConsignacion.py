@@ -26,7 +26,7 @@ def v2_admin_consignments(router: APIRouter):
     @router.post(consignacion_elemento_fecha_uri)
     def v2_consignar_elemento_asociado_id_elemento(element_id: str, ini_date: str,
                                                    end_date: str,
-                                                   data_request: V2ConsignmentDetailRequest,
+                                                   data_request: V2ConsignmentRequest,
                                                    response: Response = Response()):
         """ Consignar un elemento asociadas a: "id_elemento" \n
             <b>id_elemento</b> corresponde al elemento a consignar \n
@@ -57,9 +57,9 @@ def v2_admin_consignments(router: APIRouter):
 
     @router.put(consignacion_by_elemento_and_consignacion_id)
     def v2_edita_consignacion_por_elemento_id_y_consignacion_id(element_id: str,
-                                                             consignment_id: str,
-                                                             request_data: V2ConsignmentDetailRequest,
-                                                             response: Response = Response()):
+                                                                consignment_id: str,
+                                                                request_data: V2ConsignmentRequest,
+                                                                response: Response = Response()):
         """ Edita la consignación asociada al elemento: "id_elemento", cuya idenficación es "id_consignacion" \n
             <b>id_elemento</b> corresponde al elemento consignado \n
             <b>id_consignacion</b> corresponde a la identificación de la consignación \n
@@ -82,7 +82,7 @@ def v2_admin_consignments(router: APIRouter):
             formato de fechas: <b>yyyy-mm-dd hh:mm:ss</b>
         """
         resp, response.status_code = (
-            v2_post_carga_archivo_a_consignacion_asociada_al_elemento(element_id, consignment_id, upload_file)
+            await v2_post_carga_archivo_a_consignacion_asociada_al_elemento(element_id, consignment_id, upload_file)
         )
         return resp
 

@@ -100,7 +100,7 @@ def get_temporal_status(id_report) -> TemporalProcessingStateReport | None:
         return query.first()
     return None
 
-def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNodeDetailsBase | None:
+def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
     query_node_details_permanent = V2SRNodeDetailsPermanent.objects(id_report=id_report)
     query_node_details_temporal = V2SRNodeDetailsTemporal.objects(id_report=id_report)
 
@@ -193,15 +193,15 @@ def msg_error_not_unique_node(node: SRNode | V2SRNode, exception: NotUniqueError
 
     return False, f"No es posible crear el nodo: {node} debido a: \n{exception}"
 
-def get_consignments(element_id:str, ini_date:dt.datetime, end_date:dt.datetime) -> List[V2SRConsignment]:
-    query = V2SRConsignments.objects(element_id=element_id)
+def get_consignments(id_elemento:str, ini_date:dt.datetime, end_date:dt.datetime) -> List[V2SRConsignment]:
+    query = V2SRConsignments.objects(id_elemento=id_elemento)
     if query.count() == 0:
         return []
     consignments = query.first()
     return consignments.consignments_in_time_range(ini_date, end_date)
 
-def get_v2sr_consignment(element_id: str) -> V2SRConsignments|None:
-    query = V2SRConsignments.objects(element_id=element_id)
+def get_v2sr_consignment(id_elemento: str) -> V2SRConsignments|None:
+    query = V2SRConsignments.objects(id_elemento=id_elemento)
     if query.count() == 0:
         return None
     return query.first()

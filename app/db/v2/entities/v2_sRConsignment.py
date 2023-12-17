@@ -1,6 +1,6 @@
 
 from app.common import error_log
-from app.common.util import get_time_in_minutes
+from app.common.util import get_time_in_minutes, to_dict
 from app.core.repositories import local_repositories
 from app.db.constants import attributes_consignments
 from app.db.v1.Info import *
@@ -52,7 +52,7 @@ class V2SRConsignment(EmbeddedDocument):
         return dict(no_consignacion=self.no_consignacion,
                     fecha_inicio=str(self.fecha_inicio), fecha_final=str(self.fecha_final),
                     id_consignacion=self.consignment_id, responsable=self.responsable,
-                    info=self.info.to_dict() if self.info is not None else None)
+                    element_info=self.element_info.to_dict() if self.element_info is not None else None)
 
     def edit(self, to_update: dict):
         try:

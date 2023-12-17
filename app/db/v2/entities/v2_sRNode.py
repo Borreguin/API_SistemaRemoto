@@ -52,7 +52,7 @@ class V2SRNode(Document):
 
     def __str__(self):
         return (f"v2SRNode [({self.tipo}) {self.nombre}] "
-                f"entidades: {[str(e) for e in self.entidades] if self.entidades is not None else 0}")
+                f"entidades: {len(self.entidades) if self.entidades is not None else 0}")
 
     def to_dict(self):
         return dict(_id=str(self.pk), id_node=self.id_node, nombre=self.nombre, tipo=self.tipo, actualizado=self.actualizado,

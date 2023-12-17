@@ -1,8 +1,9 @@
 from mongoengine import Document, StringField, LazyReferenceField, IntField, DateTimeField, ListField, \
     EmbeddedDocumentField, FloatField, DictField
 
+from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRNode import V2SRNode
-from app.db.v2.v2SRNodeReport.Details.v2_sREntityReportDetails import V2SREntityDetails
+from app.db.v2.v2SRNodeReport.Details.v2_sREntityReportDetails import V2SREntityReportDetails
 from app.db.v2.v2SRNodeReport.report_util import get_report_id
 import datetime as dt
 
@@ -15,7 +16,8 @@ class V2SRNodeDetailsBase(Document):
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
     numero_tags_total = IntField(required=True, default=0)
-    reportes_entidades = ListField(EmbeddedDocumentField(V2SREntityDetails), required=True, default=list())
+    reportes_entidades = ListField(EmbeddedDocumentField(V2SREntityReportDetails), required=True, default=list())
+    consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment), required=True, default=list())
     # se acepta el caso de -1 para indicar que la disponibilidad no pudo ser establecida
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     tiempo_calculo_segundos = FloatField(required=False)
@@ -30,9 +32,9 @@ class V2SRNodeDetailsBase(Document):
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.nombre is not None and self.tipo is not None:
-            self.id_report = get_report_id(self.tipo, self.nombre,
-                                           self.fecha_inicio.strftime('%d-%m-%Y %H:%M'),
-                                           self.fecha_final.strftime('%d-%m-%Y %H:%M'))
+            inicio = self.fecha_inicio.strftime('%d-%m-%Y %H:%M') if isinstance(self.fecha_inicio, dt.datetime) else self.fecha_inicio
+            final = self.fecha_final.strftime('%d-%m-%Y %H:%M') if isinstance(self.fecha_final, dt.datetime) else self.fecha_final
+            self.id_report = get_report_id(self.tipo, self.nombre, inicio, final)
 
     def __str__(self):
         return f"({self.tipo}, {self.nombre}):[ent:{len(self.reportes_entidades)}, tags:{self.numero_tags_total}]"
@@ -67,7 +69,7 @@ class V2SRNodeDetailsBase(Document):
         # ordenar los reportes por valor de disponibilidad
         self.reportes_entidades = sorted(self.reportes_entidades, key=lambda k: k["disponibilidad_promedio_ponderada_porcentage"])
         for ix, entidad in enumerate(self.reportes_entidades):
-            reportes_utrs = sorted(entidad.reportes_installations, key=lambda k: k["disponibilidad_promedio_porcentage"])
+            reportes_utrs = sorted(entidad.reportes_instalaciones, key=lambda k: k["disponibilidad_promedio_porcentage"])
             self.reportes_entidades[ix].reportes_utrs = reportes_utrs
 
     def to_dict(self):
@@ -88,7 +90,7 @@ class V2SRNodeDetailsBase(Document):
         novedades=dict(tags_fallidas=self.tags_fallidas, utr_fallidas=self.utr_fallidas,
                     entidades_fallidas=self.entidades_fallidas)
         n_entidades = len(self.reportes_entidades)
-        n_rtus = sum([len(e.reportes_installations) for e in self.reportes_entidades])
+        n_rtus = sum([len(e.reportes_instalaciones) for e in self.reportes_entidades])
         procesamiento=dict(numero_tags_total=self.numero_tags_total, numero_utrs_procesadas=n_rtus,
                            numero_entidades_procesadas=n_entidades)
         return dict(id_report=self.id_report, nombre=self.nombre, tipo=self.tipo,

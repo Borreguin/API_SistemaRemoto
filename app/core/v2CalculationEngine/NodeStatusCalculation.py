@@ -1,8 +1,9 @@
 from enum import Enum
 
 
-class NodeStatusCalculation(Enum,str):
+class NodeStatusCalculation(str, Enum):
     OK = "Nodo procesado correctamente"
+    CONNECTED = "Connected"
     ERROR = "Error no determinado"
     NOT_FOUND = "No se encontro el nodo"
     NOT_RECOGNIZED = "Objeto nodo no reconocido"

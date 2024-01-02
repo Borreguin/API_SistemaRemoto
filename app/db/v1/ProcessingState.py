@@ -4,6 +4,7 @@ from mongoengine import *
 import datetime as dt
 
 from app.common import error_log
+from app.utils.utils import validate_percentage
 
 
 class TemporalProcessingStateReport(Document):
@@ -66,6 +67,7 @@ class TemporalProcessingStateReport(Document):
 
     def save_safely(self):
         try:
+            self.percentage = validate_percentage(self.percentage)
             self.save()
         except Exception as e:
             error_log.error(f"Processing State save_safely error: {e}")

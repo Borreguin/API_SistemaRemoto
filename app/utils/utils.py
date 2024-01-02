@@ -332,3 +332,11 @@ def check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date):
     if end_date < ini_date:
         return False, ini_date, end_date, "La fecha de inicio es mayor que la fecha de fin"
     return True, ini_date, end_date, "Rango correcto"
+
+
+def validate_percentage(value):
+    if value < 0:
+        return int(0)
+    if value > 100:
+        return int(100)
+    return value

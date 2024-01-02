@@ -6,6 +6,7 @@ V2_SR_CONSIGNMENT_LABEL = "v2SRConsignments"
 
 SR_NODE_COLLECTION = "CONFG|Nodos"
 SR_INSTALLATION_COLLECTION = "CONFG|Instalaciones"
+SR_REPORTE_SISTEMA_REMOTO = "Reporte Sistema Remoto"
 
 attr_nombre = "nombre"
 attr_tipo = "tipo"

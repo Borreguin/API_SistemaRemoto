@@ -30,7 +30,7 @@ class V2SRConsignments(Document):
     desde = DateTimeField(required=False, default=None)
     hasta = DateTimeField(required=False, default=None)
     element = DictField(required=False)
-    consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment))
+    consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment), default=[])
     document = StringField(required=True, default=V2_SR_CONSIGNMENT_LABEL)
     meta = {"collection": "INFO|Consignaciones"}
 

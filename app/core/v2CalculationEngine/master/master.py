@@ -21,7 +21,7 @@ Colossians 3:23
 from __future__ import annotations
 import multiprocessing
 import traceback
-from typing import List
+from typing import List, Tuple
 import datetime as dt
 
 from app.common import report_log
@@ -41,6 +41,7 @@ class MasterEngine:
     success = False
     is_already_running = False
     msg = 'No se ha iniciado el cálculo'
+    force: bool = False
 
     """ variables para llevar logs"""
     nodes_msg: List[str] = []
@@ -91,10 +92,10 @@ class MasterEngine:
         self.success, self.msg = True, f"Se encontraron {len(all_nodes)} nodos a procesar"
         return True, self.msg
 
-    def run_all_nodes(self):
+    async def run_all_nodes(self):
         if not self.success or self.is_already_running:
-            return False, f"Existen nodos que están siendo procesados", None
-        msg = f"{head(self.report_ini_date, self.report_end_date)} \nEmpezando el cálculo {len(self.all_nodes)} nodos"
+            return False, f"Existen nodos que están siendo procesados"
+        msg = f"{head(self.report_ini_date, self.report_end_date)} Empezando el cálculo {len(self.all_nodes)} nodos"
         report_log.info(msg)
         self.nodes_msg.append(msg)
         try:
@@ -111,46 +112,52 @@ class MasterEngine:
                                       for node in self.all_nodes]
                 results = [res.get(timeout=TIMEOUT_SECONDS) for res in multiple_responses]
                 self.success = all([res[0] for res in results])
-                msg = [res[1] for res in results]
+                self.nodes_msg += [res[1] for res in results]
                 head_value = f"{head(self.report_ini_date, self.report_end_date)} "
                 success_msg = f"{head_value} Todos los nodos han sido procesados"
-                unsuccessful_msg = f"{head_value} No se pudo procesar todos los nodos \nDetalles:\n" + "\n".join(msg)
+                unsuccessful_msg = f"{head_value} No se pudo procesar todos los nodos \nDetalles:\n" + "\n".join(self.nodes_msg)
                 self.msg = success_msg if self.success else unsuccessful_msg
-                report_log.info(self.msg)
+                self.nodes_msg.append(self.msg)
+                return self.success, self.msg
         except Exception as e:
             msg = f"{head(self.report_ini_date, self.report_end_date)} Error al ejecutar los nodos \n {str(e)}"
             self.nodes_msg.append(msg)
             tb = traceback.extract_stack()
             report_log.error(f"{msg} \n{tb}")
-            return False, msg, None
+            return False, msg
 
     @staticmethod
     def run_node(node: V2SRNode, id_report: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
-                 save_in_db: bool, force: bool, permanent_report: bool):
+                 save_in_db: bool, force: bool, permanent_report: bool) -> Tuple[bool, str]:
+        msg = f"Empezando el cálculo de {node.tipo} {node.nombre}"
         try:
-            msg = f"Empezando el cálculo de {node.tipo} {node.nombre}"
             status = TemporalProcessingStateReport(id_report=id_report, percentage=0, processing=True, msg=msg)
             status.save()
             """ Running the complete process for a single node """
             node_executor = NodeExecutor(node, id_report, ini_report_date, end_report_date, save_in_db, force, permanent_report)
-            node_executor.processing_node()
+            success, msg = node_executor.processing_node()
             report_log.info(head(ini_report_date, end_report_date) + msg)
-            success, msg = True, f"El nodo {node.nombre} ha sido procesado exitosamente"
         except Exception as e:
             msg = f"Error al procesar el nodo {node}:\n{str(e)}"
-            report_log.error(msg)
+            report_log.error(f'{msg} {traceback.format_exc()}')
             success, msg = False, msg
         status = get_temporal_status(id_report)
         status.delete()
         return success, msg
 
+    def calculate_all_active_nodes(self, force: bool = False):
+        self.force = force
+        master = MasterEngine(self.report_ini_date, self.report_end_date)
+        master.get_all_nodes()
+        master.run_all_nodes()
+        report_log.info(master.msg)
+
+
 if __name__ == "__main__":
     ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
     end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
-    master = MasterEngine(ini_date, end_date)
-    master.get_all_nodes()
-    master.run_all_nodes()
-    report_log.info(master.msg)
+    MasterEngine(ini_date, end_date).calculate_all_active_nodes()
+    print('finish')
 
 
 # TODO: RS Check this code down

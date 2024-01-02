@@ -10,6 +10,7 @@ from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange, get_total_
 from app.core.v2CalculationEngine.constants import columns_unavailability, cl_success, cl_processed_time
 from app.core.v2CalculationEngine.node.tag_util import get_tag_unavailability_from_history
 from app.db.v2.entities.v2_sRTag import V2SRTag
+from app.db.v2.v2SRNodeReport.Details.v2_sRTagReportDetails import V2SRTagDetails
 
 
 # # obtener consignaciones en el periodo de tiempo para generar periodos de consulta
@@ -50,9 +51,8 @@ from app.db.v2.entities.v2_sRTag import V2SRTag
 
 def processing_unavailability_of_tags(tag_list: List[V2SRTag], time_ranges: List[DateTimeRange], pi_svr: PIServerBase):
 
-    df_tag_unavailability = pd.DataFrame(columns=columns_unavailability, index=[tag.tag_name for tag in tag_list])
-    df_tag_unavailability[cl_success] = False
-    processed_time = get_total_time_in_minutes(time_ranges)
+    tag_report_list: List[V2SRTagDetails] = list()
+    failed_tags: List[str] = list()
     try:
         log.info(f"processing_tags started with [{len(tag_list)}] tags")
         log.info(f"processing_tags started with [{len(time_ranges)}] time_ranges")
@@ -60,11 +60,15 @@ def processing_unavailability_of_tags(tag_list: List[V2SRTag], time_ranges: List
         # obtener la indisponibilidad de cada tag:
         for tag in tag_list:
             success, unavailability_minutes, msg = get_tag_unavailability_from_history(tag.tag_name, tag.filter_expression, time_ranges, pi_svr)
-            df_tag_unavailability.loc[tag.tag_name] = [success, unavailability_minutes, processed_time, msg]
-        return True, "processing_tags finished OK", df_tag_unavailability
+            if success:
+                tag_report = V2SRTagDetails(tag_name=tag.tag_name, indisponible_minutos=unavailability_minutes)
+                tag_report_list.append(tag_report)
+            else:
+                failed_tags.append(tag.tag_name)
+        return True, "processing_tags finished OK", tag_report_list, failed_tags
 
     except Exception as e:
         tb = traceback.format_exc()
         msg = f"Error al momento de procesar las tags"
         log.error(f"{msg}, {e} \ndetalles: \n{tb}")
-        return False, msg, df_tag_unavailability
+        return False, msg, tag_report_list, failed_tags

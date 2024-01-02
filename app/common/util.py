@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from typing import List
 import pandas as pd
@@ -83,3 +84,15 @@ def get_time_in_minutes(ini_date: dt.datetime, end_date: dt.datetime):
     t_delta = end_date - ini_date
     time_in_minutes = t_delta.days * (60 * 24) + t_delta.seconds // 60 + (t_delta.seconds % 60) / 60
     return time_in_minutes
+
+def get_time_in_seconds(ini_date: dt.datetime, end_date: dt.datetime):
+    t_delta = end_date - ini_date
+    time_in_minutes = t_delta.days * (60 * 60 * 24) + t_delta.seconds
+    return time_in_minutes
+
+def clean_alphanumeric_name(name):
+    # Define the regular expression pattern
+    pattern = re.compile(r'[^a-zA-Z0-9]+')
+    # Replace special characters with '-'
+    cleaned_name = re.sub(pattern, '-', name)
+    return cleaned_name

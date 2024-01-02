@@ -23,13 +23,13 @@ from typing import List
 import traceback as tb
 from app.common import configure_logger
 from app.common.default_logger import default_log_path
-from app.common.util import get_time_in_minutes
+from app.common.util import get_time_in_minutes, get_time_in_seconds
 from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange
 from app.core.v2CalculationEngine.engine_util import get_date_time_ranges_using_consignments
 from app.core.v2CalculationEngine.node.EntityExecutor import EntityExecutor
 from app.core.v2CalculationEngine.util import *
 from app.db.constants import attr_nombre, attr_tipo
-from app.db.db_util import get_or_create_temporal_report, get_consignments
+from app.db.db_util import get_or_create_temporal_report
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sREntity import V2SREntity
@@ -37,7 +37,7 @@ from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
 from app.main import db_connection
-
+from app.utils.utils import validate_percentage
 
 
 #
@@ -74,10 +74,14 @@ class NodeExecutor:
     entities: List[V2SREntity] = None
     node_consignments: List[V2SRConsignment]
     date_time_range: List[DateTimeRange]
-    log : Logger = None
+    bahias_fallidas: List = list()
+    instalaciones_fallidas: List = list()
+    entidades_fallidas: List = list()
+    log: Logger = None
 
     def __init__(self, node: V2SRNode, report_id: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
                  save_in_db: bool, force: bool, permanent_report: bool):
+        self.start_time = dt.datetime.now()
         self.node = node
         self.report_id = report_id
         self.ini_report_date = ini_report_date
@@ -91,7 +95,8 @@ class NodeExecutor:
         self.minutes_in_period = None
         self.start_time = dt.datetime.now()
         self.executor = ProcessPoolExecutor()
-        self.log = configure_logger(log_name=f'{self.node.nombre}.log', log_path=os.path.join(default_log_path, 'v2Engine'))
+        self.log = configure_logger(log_name=f'{self.node.nombre}.log',
+                                    log_path=os.path.join(default_log_path, 'v2Engine'))
 
     def create_report(self):
         self.report_node = get_node_details_report(self.report_id, self.permanent_report)
@@ -100,7 +105,8 @@ class NodeExecutor:
         elif self.report_node is not None and not self.force:
             self.success, self.error_code, self.msg = False, nodeStatus.REPORT_EXIST, f"Ya existe un reporte asociado al nodo {self.node}"
             return False
-        self.report_node = create_v2sr_node_report(self.ini_report_date, self.end_report_date, self.node, self.permanent_report)
+        self.report_node = create_v2sr_node_report(self.ini_report_date, self.end_report_date, self.node,
+                                                   self.permanent_report)
 
     def get_status_report(self):
         self.log.info(f"get_status_report")
@@ -134,9 +140,10 @@ class NodeExecutor:
         assert self.success, self.error_code
 
     def get_consignments(self):
-        self.log.info('get_consignments')
+        self.log.info(f'[${self.node}] get_consignments')
         self.date_time_range, self.node_consignments = (
-            get_date_time_ranges_using_consignments(self.node.get_document_id(), self.ini_report_date, self.end_report_date)
+            get_date_time_ranges_using_consignments(self.node.get_document_id(), self.ini_report_date,
+                                                    self.end_report_date)
         )
 
     def get_entities(self):
@@ -154,24 +161,46 @@ class NodeExecutor:
 
     def processing_entities(self):
         for ix, entity in enumerate(self.entities):
-            self.update_info_status_report(f'Procesando Entidad: {entity}', ix/len(self.entities))
-            min_percentage, max_percentage = ix/len(self.entities)*100, (ix+1)/len(self.entities)*100
-            EntityExecutor(self.pi_svr, entity, self.status_node, self.date_time_range, self.minutes_in_period,
-                           min_percentage, max_percentage, self.log).process()
+            self.update_info_status_report(f'Procesando Entidad: {entity}', ix / len(self.entities))
+            min_percentage = validate_percentage(ix / len(self.entities) * 100)
+            max_percentage = validate_percentage((ix + 1) / len(self.entities) * 100)
+            entity_executor = EntityExecutor(self.pi_svr, entity, self.status_node, self.date_time_range,
+                                           self.ini_report_date, self.end_report_date, min_percentage, max_percentage,
+                                           self.log).process()
+            if not entity_executor.success or entity_executor.entity_report.disponibilidad_promedio_porcentage == -1:
+                self.entidades_fallidas.append(entity.to_summary())
+            self.report_node.reportes_entidades.append(entity_executor.entity_report)
+            self.bahias_fallidas += entity_executor.bahias_fallidas
+            self.instalaciones_fallidas += entity_executor.instalaciones_fallidas
+
+        self.report_node.bahias_fallidas = self.bahias_fallidas
+        self.report_node.instalaciones_fallidas = self.instalaciones_fallidas
+        self.report_node.entidades_fallidas = self.entidades_fallidas
+        self.report_node.calculate()
+        self.report_node.tiempo_calculo_segundos = get_time_in_seconds(self.start_time, dt.datetime.now())
+        self.log.info(f'[{self.node}] All entities were processed')
+        if self.report_node.disponibilidad_promedio_porcentage == -1:
+            self.success, self.msg = False, f"No able to calculate this nodo {self.node}"
+
+    def save_report(self):
+        self.report_node.save()
+
 
     def processing_node(self):
         try:
             self.init()
             self.processing_entities()
+            self.save_report()
+            self.msg = f'Nodo {self.node} fue procesado exitosamente'
+            self.success = True
         except Exception as e:
             self.success = False
             self.msg = f'No es posible procesar el nodo {self.node}. \nError: {e}'
             self.status_node.failed()
             self.status_node.save_safely()
             self.log.error(f'{self.msg} {tb.format_exc()}')
-
+        return self.success, self.msg
 # def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
-
 
 
 #

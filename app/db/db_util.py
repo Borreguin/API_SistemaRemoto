@@ -16,6 +16,8 @@ from app.db.v2.entities.v2_sRConsignments import V2SRConsignments
 from app.db.v2.entities.v2_sREntity import V2SREntity
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.entities.v2_sRNode import V2SRNode
+from app.db.v2.v2SRFinalReport.v2_SRFinalReportTemporal import V2SRFinalReportTemporal
+from app.db.v2.v2SRFinalReport.v2_sRFinalReportPermanent import V2SRFinalReportPermanent
 from app.db.v2.v2_util import find_collection_and_dup_key
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsBase import V2SRNodeDetailsBase
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
@@ -113,6 +115,18 @@ def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNode
     elif query_node_details_permanent.count() > 0:
         return query_node_details_permanent.first()
     return None
+
+def get_final_report_report(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+    if permanent:
+        query = V2SRFinalReportPermanent.objects(id_report=id_report)
+    else:
+        query = V2SRFinalReportTemporal.objects(id_report=id_report)
+
+    if query.count() > 0:
+        return query.first()
+    return None
+
+
 
 def create_node(tipo:str, nombre: str, activado: bool, version=None) -> SRNode | V2SRNode | None:
     if version is None:

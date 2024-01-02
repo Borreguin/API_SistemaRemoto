@@ -8,6 +8,7 @@ from app.common import report_log
 import hashlib
 import datetime as dt
 
+from app.db.constants import SR_REPORTE_SISTEMA_REMOTO
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRFinalReport import V2SRNodeSummaryReport
 from app.db.v2.v2SRFinalReport.constants import *
@@ -21,7 +22,7 @@ import queue
 
 class V2SRFinalReportBase(Document):
     id_report = StringField(required=True, unique=True)
-    tipo = StringField(required=True, default="Reporte Sistema Remoto")
+    tipo = StringField(required=True, default=SR_REPORTE_SISTEMA_REMOTO)
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
     periodo_evaluacion_minutos = IntField(required=True)

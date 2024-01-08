@@ -19,19 +19,20 @@ Colossians 3:23
 
 """
 from __future__ import annotations
+
 import multiprocessing
 import traceback
-from typing import List, Tuple
-import datetime as dt
+from typing import Tuple
 
 from app.common import report_log
 from app.core.v2CalculationEngine.constants import NUMBER_OF_PROCESSES, TIMEOUT_SECONDS
-from app.core.v2CalculationEngine.node.NodeExecutor import NodeExecutor
 from app.core.v2CalculationEngine.engine_util import head
-from app.db.db_util import get_all_v2_nodes, get_temporal_status
+from app.core.v2CalculationEngine.node.NodeExecutor import NodeExecutor
+from app.db.constants import SR_REPORTE_SISTEMA_REMOTO
+from app.db.db_util import *
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v2.entities.v2_sRNode import V2SRNode
-from app.db.v2.v2SRNodeReport.report_util import get_report_id
+from app.db.v2.v2SRNodeReport.report_util import get_report_id, get_final_report_id
 from app.main import db_connection
 
 
@@ -42,6 +43,7 @@ class MasterEngine:
     is_already_running = False
     msg = 'No se ha iniciado el cálculo'
     force: bool = False
+    final_report: V2SRFinalReportTemporal | V2SRFinalReportPermanent
 
     """ variables para llevar logs"""
     nodes_msg: List[str] = []
@@ -50,15 +52,13 @@ class MasterEngine:
 
     def __init__(self, report_ini_date: dt.datetime, report_end_date: dt.datetime,
                  save_in_db=False, force=False, permanent_report=False):
-        self.permanent_report = permanent_report
+        self.is_permanent = permanent_report
         self.all_nodes: List[V2SRNode] = []
         self.report_ini_date = report_ini_date
         self.report_end_date = report_end_date
         self.save_in_db = save_in_db
         self.force = force
         self.results = None
-        self.log_msg = None
-        self.final_report = None
         self.is_already_running = False
         db_connection()
 
@@ -75,7 +75,7 @@ class MasterEngine:
 
     def get_all_nodes(self):
         """ Buscando los nodos con los que se va a trabajar """
-        all_nodes = get_all_v2_nodes()
+        all_nodes = get_all_v2_nodes(active=True)
         if len(all_nodes) == 0:
             self.success, self.msg = False, f"No hay nodos a procesar"
         nodes = list()
@@ -107,7 +107,7 @@ class MasterEngine:
                                                              self.report_end_date,
                                                              self.save_in_db,
                                                              self.force,
-                                                             self.permanent_report
+                                                             self.is_permanent
                                                              ))
                                       for node in self.all_nodes]
                 results = [res.get(timeout=TIMEOUT_SECONDS) for res in multiple_responses]
@@ -145,18 +145,41 @@ class MasterEngine:
         status.delete()
         return success, msg
 
+    def create_final_report(self):
+        id_report = get_final_report_id(SR_REPORTE_SISTEMA_REMOTO, self.report_ini_date, self.report_end_date)
+        final_report = get_final_report_by_id(id_report, self.is_permanent)
+        assert not(self.force and final_report is not None) , 'Ya existe un reporte previo'
+        if final_report is not None and self.force:
+            final_report.delete()
+        self.final_report = create_final_report(self.report_ini_date, self.final_report, self.is_permanent)
+
+    def calculate_final_report(self):
+        assert len(self.nodes_report_ids.keys()) > 0, 'No hay reporte de nodos a procesar'
+        for id_node, report_id in self.nodes_report_ids.items():
+            detail_report_node = get_node_details_report(report_id, self.is_permanent)
+            if detail_report_node is None:
+                node = V2SRNode.find_by_id(id_node)
+                msg = f'No es posible encontrar el nodo con id {id_node}' if node is None else f'No hay reporte detallado para el nodo {node}'
+                report_log.warning(msg)
+                self.nodes_msg.append(msg)
+            self.final_report.append_each_node_detail()
+
+
     def calculate_all_active_nodes(self, force: bool = False):
-        self.force = force
-        master = MasterEngine(self.report_ini_date, self.report_end_date)
-        master.get_all_nodes()
-        master.run_all_nodes()
-        report_log.info(master.msg)
+        try:
+            self.force = force
+            self.create_final_report()
+            self.get_all_nodes()
+            self.run_all_nodes()
+            report_log.info(self.msg)
+        except Exception as e:
+            report_log.error(f'No able to calculate_all_active_nodes due to {e} \n {traceback.extract_stack()}')
 
 
 if __name__ == "__main__":
     ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
     end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
-    MasterEngine(ini_date, end_date).calculate_all_active_nodes()
+    MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=False)
     print('finish')
 
 

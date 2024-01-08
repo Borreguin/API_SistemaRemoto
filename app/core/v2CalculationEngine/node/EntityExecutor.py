@@ -31,6 +31,8 @@ class EntityExecutor:
     entity_time_ranges: List[DateTimeRange] = list()
     bahias_fallidas: List = list()
     instalaciones_fallidas: List = list()
+    numero_bahias_procesadas: int = 0
+    numero_instalaciones_procesadas: int = 0
     log: Logger = None
 
     def __init__(self, pi_svr: PIServerBase, entity: V2SREntity, status_node: TemporalProcessingStateReport,
@@ -111,6 +113,7 @@ class EntityExecutor:
         if not success or len(failed_tags) == len(bahia.tags):
             self.bahias_fallidas.append(bahia.to_summary())
             return False, msg, None
+        self.numero_bahias_procesadas += 1
         bahia_report.periodo_efectivo_minutos = get_total_time_in_minutes(bahia_time_ranges)
         bahia_report.reportes_tags = tag_reports
         bahia_report.tags_fallidas = failed_tags
@@ -133,6 +136,7 @@ class EntityExecutor:
         installation_report.calculate()
         if installation_report.disponibilidad_promedio_porcentage == -1:
             self.instalaciones_fallidas.append(installation.fetch().to_summary())
+        self.numero_instalaciones_procesadas += 1
         self.entity_report.reportes_instalaciones.append(installation_report)
 
 

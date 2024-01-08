@@ -103,30 +103,25 @@ def get_temporal_status(id_report) -> TemporalProcessingStateReport | None:
     return None
 
 def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
-    query_node_details_permanent = V2SRNodeDetailsPermanent.objects(id_report=id_report)
-    query_node_details_temporal = V2SRNodeDetailsTemporal.objects(id_report=id_report)
+    if permanent:
+        query = V2SRNodeDetailsPermanent.objects(id_report=id_report)
+    else:
+        query = V2SRNodeDetailsTemporal.objects(id_report=id_report)
 
-    if permanent and query_node_details_permanent.count() > 0:
-        return query_node_details_permanent.first()
-    elif permanent and query_node_details_permanent.count() == 0:
-        return None
-    elif query_node_details_temporal.count() > 0:
-        return query_node_details_temporal.first()
-    elif query_node_details_permanent.count() > 0:
-        return query_node_details_permanent.first()
-    return None
+    return query.first() if query.count() > 0 else None
 
-def get_final_report_report(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+def get_final_report_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
     if permanent:
         query = V2SRFinalReportPermanent.objects(id_report=id_report)
     else:
         query = V2SRFinalReportTemporal.objects(id_report=id_report)
 
-    if query.count() > 0:
-        return query.first()
-    return None
+    return query.first() if query.count() > 0 else None
 
-
+def create_final_report(fecha_inicio: dt.datetime, fecha_final: dt.datetime, permanent:bool) -> V2SRFinalReportTemporal|V2SRFinalReportPermanent:
+    if permanent:
+        return V2SRFinalReportPermanent(fecha_inicio=fecha_inicio, fecha_final=fecha_final)
+    return V2SRFinalReportTemporal(fecha_inicio=fecha_inicio, fecha_final=fecha_final)
 
 def create_node(tipo:str, nombre: str, activado: bool, version=None) -> SRNode | V2SRNode | None:
     if version is None:

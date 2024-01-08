@@ -48,9 +48,10 @@ class V2SRConsignment(EmbeddedDocument):
         return f"({self.no_consignacion}: min={self.t_minutos}) [{self.fecha_inicio.strftime('%d-%m-%Y %H:%M')}, " \
                f"{self.fecha_final.strftime('%d-%m-%Y %H:%M')}]"
 
-    def to_dict(self):
+    def to_dict(self, as_str=True):
         return dict(no_consignacion=self.no_consignacion,
-                    fecha_inicio=str(self.fecha_inicio), fecha_final=str(self.fecha_final),
+                    fecha_inicio=str(self.fecha_inicio) if as_str else self.fecha_inicio,
+                    fecha_final=str(self.fecha_final) if as_str else self.fecha_final,
                     id_consignacion=self.consignment_id, responsable=self.responsable,
                     element_info=self.element_info.to_dict() if self.element_info is not None else None)
 

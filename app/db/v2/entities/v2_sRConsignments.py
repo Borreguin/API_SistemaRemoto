@@ -114,7 +114,7 @@ class V2SRConsignments(Document):
         for consignacion in self.consignaciones:
             if consignacion.consignment_id == id_to_edit:
                 found = True
-                consignacion.edit(consignment.to_dict())
+                consignacion.edit(consignment.to_dict(as_str=False))
                 break
         return found, f"La consignación {consignment.no_consignacion} ha sido editada correctamente" if found \
             else f"La consignación no ha sido encontrada"

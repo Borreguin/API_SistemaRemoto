@@ -122,7 +122,8 @@ class ConsignacionRequest(BaseModel):
     no_consignacion: str = "Id de elemento"
     fecha_inicio: str = "yyyy-mm-dd hh:mm:ss"
     fecha_final: str = "yyyy-mm-dd hh:mm:ss"
-    detalle: Optional[str] = "json con detalle de la consignación"
+    detalle: Optional[dict] = "json con detalle de la consignación"
+    responsable: str = "Responsable"
 
 
 class FormatOption(str, Enum):

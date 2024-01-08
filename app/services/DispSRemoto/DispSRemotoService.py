@@ -269,7 +269,7 @@ def get_obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_d
         msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     # check the existing nodes:
-    all_nodes = SRNode.objects()
+    all_nodes = SRNode.objects(document="SRNode")
     all_nodes = [n for n in all_nodes if n.activado]
     if len(all_nodes) == 0:
         msg = f"No se encuentran nodos que procesar"

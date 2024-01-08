@@ -540,7 +540,7 @@ def test():
     # get date for last month:
     # report_ini_date, report_end_date = u.get_dates_for_last_month()
 
-    all_nodes = SRNode.objects()
+    all_nodes = SRNode.objects(document="SRNode")
     if len(all_nodes) == 0:
         print("No hay nodos a procesar")
         exit(-1)

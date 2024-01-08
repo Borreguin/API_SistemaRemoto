@@ -7,3 +7,8 @@ def get_report_id(tipo:str, nombre:str, fecha_inicio:dt.datetime|str, fecha_fina
     inicio = fecha_inicio.strftime('%d-%m-%Y %H:%M') if isinstance(fecha_inicio, dt.datetime) else fecha_inicio
     fin = fecha_final.strftime('%d-%m-%Y %H:%M') if isinstance(fecha_final, dt.datetime) else fecha_final
     return get_id([nombre, tipo, inicio, fin])
+
+def get_final_report_id(tipo:str, fecha_inicio:dt.datetime|str, fecha_final:dt.datetime|str):
+    inicio = fecha_inicio.strftime('%d-%m-%Y %H:%M') if isinstance(fecha_inicio, dt.datetime) else fecha_inicio
+    fin = fecha_final.strftime('%d-%m-%Y %H:%M') if isinstance(fecha_final, dt.datetime) else fecha_final
+    return get_id([tipo, inicio, fin])

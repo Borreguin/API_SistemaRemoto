@@ -77,6 +77,9 @@ class NodeExecutor:
     bahias_fallidas: List = list()
     instalaciones_fallidas: List = list()
     entidades_fallidas: List = list()
+    numero_bahias_procesadas: int = 0
+    numero_instalaciones_procesadas: int = 0
+    numero_entidades_procesadas: int = 0
     log: Logger = None
 
     def __init__(self, node: V2SRNode, report_id: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
@@ -169,9 +172,13 @@ class NodeExecutor:
                                            self.log).process()
             if not entity_executor.success or entity_executor.entity_report.disponibilidad_promedio_porcentage == -1:
                 self.entidades_fallidas.append(entity.to_summary())
+                continue
             self.report_node.reportes_entidades.append(entity_executor.entity_report)
             self.bahias_fallidas += entity_executor.bahias_fallidas
             self.instalaciones_fallidas += entity_executor.instalaciones_fallidas
+            self.numero_bahias_procesadas += entity_executor.numero_bahias_procesadas
+            self.numero_instalaciones_procesadas += entity_executor.numero_instalaciones_procesadas
+            self.numero_entidades_procesadas += 1
 
         self.report_node.bahias_fallidas = self.bahias_fallidas
         self.report_node.instalaciones_fallidas = self.instalaciones_fallidas

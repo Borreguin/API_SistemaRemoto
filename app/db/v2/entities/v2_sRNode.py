@@ -114,6 +114,11 @@ class V2SRNode(Document):
         return nodes.first() if len(nodes) > 0 else None
 
     @staticmethod
+    def find_by_id(id_node: str):
+        nodes = V2SRNode.objects(id_node=id_node, document=V2_SR_NODE_LABEL)
+        return nodes.first() if len(nodes) > 0 else None
+
+    @staticmethod
     def find_or_create_if_not_exists_node(tipo: str, nombre: str, create_if_not_exists=False) -> tuple[
         bool, str, 'V2SRNode']:
         node = V2SRNode.find(tipo, nombre)

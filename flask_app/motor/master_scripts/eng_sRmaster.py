@@ -64,7 +64,7 @@ def run_all_nodes(report_ini_date: dt.datetime, report_end_date: dt.datetime, sa
         pass
 
     """ Buscando los nodos con los que se va a trabajar """
-    all_nodes = SRNode.objects()
+    all_nodes = SRNode.objects(document="SRNode")
     all_nodes = [n for n in all_nodes if n.activado]
     if len(all_nodes) == 0:
         msg = f"No hay nodos a procesar en db:[{mongo_config['db']}]"
@@ -218,7 +218,7 @@ def run_summary(report_ini_date: dt.datetime, report_end_date: dt.datetime, save
         return False, final_report_db, msg
 
     """ Buscando los nodos con los que se va a trabajar """
-    all_nodes = SRNode.objects()
+    all_nodes = SRNode.objects(document="SRNode")
     all_nodes = [n for n in all_nodes if n.activado]
     for node in all_nodes:
         report_v = SRNodeDetailsBase(nombre=node.nombre, tipo=node.tipo, fecha_inicio=report_ini_date,

@@ -15,7 +15,7 @@ from app.db.v1.sRNode import SRNodeFromDataFrames, SRNode
 
 def is_excel_file(content_type: str) -> bool:
     return content_type in ['application/xls, application/vnd.ms-excel,  application/xlsx',
-                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv']
 
 
 async def write_temporal_file_from_upload_file(upload_file: UploadFile):

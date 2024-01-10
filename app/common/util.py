@@ -72,7 +72,10 @@ async def get_df_from_upload_file(upload_file: UploadFile, temp_path: str):
         if not success:
             return False, "No fue posible subir este archivo"
         # obtener el dataframe:
-        df = pd.read_excel(temp_file, engine='openpyxl')
+        if 'text/csv' in upload_file.content_type:
+            df = pd.read_csv(temp_file, sep=";")
+        else:
+            df = pd.read_excel(temp_file, engine='openpyxl')
         # una vez leído, eliminar archivo temporal
         os.remove(temp_file)
         return True, df, "Archivo leído correctamente"

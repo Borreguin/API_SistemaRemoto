@@ -18,8 +18,8 @@ def put_calcula_o_sobreescribe_disponibilidad_en_rango_fecha(ini_date, end_date)
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     # check if there is already a calculation:
     path_file = os.path.join(local_repositories.TEMPORAL, "api_sR_cal_disponibilidad.json")
-    time_delta = dt.timedelta(minutes=20)
-    # puede el cálculo estar activo más de 20 minutos?
+    time_delta = dt.timedelta(minutes=5)
+    # puede el cálculo estar activo más de 5 minutos?
     active = is_active(path_file, id, time_delta)
     if active:
         return dict(success=False, result=None,

@@ -17,6 +17,8 @@ Colossians 3:23
 import argparse, os, sys
 import queue
 
+from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange
+
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
 flask_path = os.path.dirname(motor_path)
@@ -91,7 +93,7 @@ eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_c
 def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: dt.datetime):
     # La función encuentra el periodo en el cual se puede examinar la disponibilidad:
     if len(consignaciones) == 0:
-        return [pi._time_range(ini_date, end_date)]
+        return [DateTimeRange(ini_date, end_date)]
 
     # caso inicial:
     # * ++ tiempo de análisis ++*
@@ -109,14 +111,14 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
         start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
         # end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
         tail = consignaciones[0].fecha_final  # siguiente probable periodo (lo que queda restante a analizar)
-        time_ranges = [pi._time_range(start, consignaciones[0].fecha_inicio)]  # primer periodo válido
+        time_ranges = [DateTimeRange(start, consignaciones[0].fecha_inicio)]  # primer periodo válido
 
     elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final >= end_date:
         # --*++++[+++++++++++++++*-----]----------
         # este caso es definitivo y no requiere continuar más alla:
         start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
         end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
-        return [pi._time_range(start, end)]
+        return [DateTimeRange(start, end)]
 
     elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final < end_date:
         # --*[++++++++++]+++++++++*---------------
@@ -136,13 +138,13 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
         start = tail
         end = c.fecha_inicio
         if c.fecha_final < end_date:
-            time_ranges.append(pi._time_range(start, end))
+            time_ranges.append(DateTimeRange(start, end))
             tail = c.fecha_final
         else:
             end = c.fecha_inicio
             break
     # ultimo caso:
-    time_ranges.append(pi._time_range(tail, end))
+    time_ranges.append(DateTimeRange(tail, end))
     return time_ranges
 
 

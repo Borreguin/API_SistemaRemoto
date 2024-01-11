@@ -15,6 +15,11 @@ def generate_time_ranges(consignaciones: List[V2SRConsignment], ini_date: dt.dat
     if len(consignaciones) == 0:
         return [DateTimeRange(ini_date, end_date)]
 
+    if consignaciones[0].fecha_inicio < ini_date and consignaciones[0].fecha_final > end_date:
+        # ----[-*+++++++++++++++++++++++++*--]----
+        # este caso es definitivo y no requiere continuar más alla:
+        return []
+
     # caso inicial:
     # * ++ tiempo de análisis ++*
     # [ periodo de consignación ]

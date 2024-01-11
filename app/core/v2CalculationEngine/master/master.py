@@ -20,6 +20,7 @@ Colossians 3:23
 """
 from __future__ import annotations
 
+import asyncio
 import multiprocessing
 import traceback
 from typing import Tuple
@@ -122,7 +123,7 @@ class MasterEngine:
         except Exception as e:
             msg = f"{head(self.report_ini_date, self.report_end_date)} Error al ejecutar los nodos \n {str(e)}"
             self.nodes_msg.append(msg)
-            tb = traceback.extract_stack()
+            tb = traceback.format_exc()
             report_log.error(f"{msg} \n{tb}")
             return False, msg
 
@@ -151,7 +152,7 @@ class MasterEngine:
         assert not(self.force and final_report is not None) , 'Ya existe un reporte previo'
         if final_report is not None and self.force:
             final_report.delete()
-        self.final_report = create_final_report(self.report_ini_date, self.final_report, self.is_permanent)
+        self.final_report = create_final_report(self.report_ini_date, self.report_end_date, self.is_permanent)
 
     def calculate_final_report(self):
         assert len(self.nodes_report_ids.keys()) > 0, 'No hay reporte de nodos a procesar'
@@ -162,24 +163,27 @@ class MasterEngine:
                 msg = f'No es posible encontrar el nodo con id {id_node}' if node is None else f'No hay reporte detallado para el nodo {node}'
                 report_log.warning(msg)
                 self.nodes_msg.append(msg)
-            self.final_report.append_each_node_detail()
+            self.final_report.append_node_detail_report(detail_report_node)
+        self.final_report.calculate()
+        self.nodes_msg.append(f"El reporte final ha sido calculado exitosamente")
+        self.final_report.save()
+        print(self.final_report.to_dict())
 
-
-    def calculate_all_active_nodes(self, force: bool = False):
+    async def calculate_all_active_nodes(self, force: bool = False):
         try:
             self.force = force
             self.create_final_report()
             self.get_all_nodes()
-            self.run_all_nodes()
+            await self.run_all_nodes()
+            self.calculate_final_report()
             report_log.info(self.msg)
         except Exception as e:
-            report_log.error(f'No able to calculate_all_active_nodes due to {e} \n {traceback.extract_stack()}')
-
+            report_log.error(f'No able to calculate_all_active_nodes due to {e} \n {traceback.format_exc()}')
 
 if __name__ == "__main__":
     ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
     end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
-    MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=False)
+    asyncio.run(MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=False))
     print('finish')
 
 

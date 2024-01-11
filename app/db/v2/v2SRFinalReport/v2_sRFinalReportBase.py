@@ -35,7 +35,7 @@ class V2SRFinalReportBase(Document):
     reportes_nodos = ListField(EmbeddedDocumentField(V2SRNodeSummaryReport))
     reportes_nodos_detalle = ListField(ReferenceField(V2SRNodeDetailsBase, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
-    procesamiento = DictField(default=dict(numero_tags=0,lb_numero_bahias_procesadas=0, numero_instalacions_procesadas=0,
+    procesamiento = DictField(default=dict(numero_tags=0,numero_bahias_procesadas=0, numero_instalacions_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
     novedades = DictField(default=dict(tags_fallidas=0, instalacion_fallidas=0,
                                        entidades_fallidas=0, nodos_fallidos=0, detalle={}))
@@ -78,14 +78,14 @@ class V2SRFinalReportBase(Document):
         return lst_final
 
     def append_each_node_detail(self, label, node_summary_report: V2SRNodeSummaryReport):
-        self.procesamiento[label] += node_summary_report.procesamiento.get(label, 0)
+        self.procesamiento[label] = self.procesamiento.get(label,0) + node_summary_report.procesamiento.get(label, 0)
 
     def count_novedades(self, label, node_summary_report: V2SRNodeSummaryReport):
-        self.novedades[label] += node_summary_report.novedades.get(label, 0)
+        self.novedades[label] = self.novedades.get(label, 0) + node_summary_report.novedades.get(label, 0)
         if self.novedades[label] > 0:
             name = re.sub(r"[^a-zA-Z0-9]+", '_', node_summary_report.nombre)
             self.novedades[lb_detalle][name] = self.novedades[lb_detalle].get(name, {})
-            self.novedades[lb_detalle][name][label] = len(node_summary_report.novedades.get(label, []))
+            self.novedades[lb_detalle][name][label] = node_summary_report.novedades.get(label, 0)
 
     def append_node_detail_report(self, d_report: V2SRNodeDetailsTemporal| V2SRNodeDetailsPermanent):
         summary_report = V2SRNodeSummaryReport().set_values_from_detail_report(d_report)

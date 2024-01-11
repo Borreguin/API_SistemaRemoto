@@ -43,6 +43,7 @@ output_path = init.OUTPUT_MOTOR_REPO
 node_script = os.path.join(motor_path, 'node_scripts', 'eng_sRnode.py')
 debug = init.DEBUG
 log = log_master
+python_command = "python3"
 
 """ Import clases for MongoDB """
 from app.db.v1.SRFinalReport.sRFinalReportPermanente import *
@@ -136,7 +137,7 @@ def executing_node(node, report_ini_date, report_end_date, save_in_db, force):
         # Procesando cada nodo individual:
         log_path = os.path.join(output_path, f'{node}.log')
         with io.open(log_path, mode='wb') as out:
-            to_run = ["python", node_script, node, report_ini_date.strftime(yyyy_mm_dd_hh_mm_ss),
+            to_run = [python_command, node_script, node, report_ini_date.strftime(yyyy_mm_dd_hh_mm_ss),
                       report_end_date.strftime(yyyy_mm_dd_hh_mm_ss)]
             if save_in_db:
                 to_run += ["--s"]

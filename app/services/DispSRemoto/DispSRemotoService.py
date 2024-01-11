@@ -48,10 +48,10 @@ def post_calcula_disponibilidad_en_rango_fecha(ini_date, end_date):
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True)
     not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
-    if all(not_calculated) and len(not_calculated) > 0:
+    if any(not_calculated) and len(not_calculated) > 0:
         return dict(success=False, msg=dict(msg="No ha sido calculado completamente, "
                                                 "ya existe algunos reportes en base de datos. "
-                                                "Considere re-escribir el cálculo", detalle=msg1))
+                                                "Considere re-escribir el cálculo", detalle=msg1)), status.HTTP_409_CONFLICT
     if success1:
         success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
                                              results=result, log_msg=msg1)

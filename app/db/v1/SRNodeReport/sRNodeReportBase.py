@@ -42,7 +42,7 @@ class SRUTRDetails(EmbeddedDocument):
                f" eftv:{self.periodo_efectivo_minutos} => disp_avg:{round(self.disponibilidad_promedio_minutos, 1)} " \
                f" %disp: {round(self.disponibilidad_promedio_porcentage, 2)})"
 
-    def calculate(self, report_ini_date, report_end_date):
+    def calculate(self, report_ini_date, report_end_date, all_consignment=False):
         self.numero_tags = len(self.indisponibilidad_detalle)
         self.indisponibilidad_acumulada_minutos = sum([t.indisponible_minutos for t in self.indisponibilidad_detalle])
         self.consignaciones_acumuladas_minutos = 0
@@ -59,6 +59,12 @@ class SRUTRDetails(EmbeddedDocument):
         if self.periodo_evaluacion_minutos is None and len(self.indisponibilidad_detalle) > 0:
             raise ValueError("Parámetro: 'periodo_efectivo_minutos' y 'indisponibilidad_detalle' son necesarios para "
                              "el cálculo")
+        # este caso ocurre cuando la totalidad del periodo está consignado:
+        if all_consignment:
+            self.disponibilidad_promedio_minutos = -1
+            self.disponibilidad_promedio_porcentage = 100
+            return
+
         if self.periodo_evaluacion_minutos is not None and self.numero_tags > 0:
             # ordenar el reporte de tags:
             self.indisponibilidad_detalle = sorted(self.indisponibilidad_detalle,
@@ -73,10 +79,6 @@ class SRUTRDetails(EmbeddedDocument):
                                                            / self.periodo_efectivo_minutos) * 100
                 assert self.disponibilidad_promedio_porcentage <= 100
                 assert self.disponibilidad_promedio_porcentage >= -1
-            # este caso ocurre cuando la totalidad del periodo está consignado:
-            else:
-                self.disponibilidad_promedio_minutos = -1
-                self.disponibilidad_promedio_porcentage = -1
         else:
             # en caso de no tener tags válidas
             self.disponibilidad_promedio_minutos = -1
@@ -117,7 +119,8 @@ class SREntityDetails(EmbeddedDocument):
         #  en el que se evalua la consignación. En estos casos la disponibilidad es -1
         # y su periodo efectivo en minutos es mayor a cero
         self.numero_tags = sum([u.numero_tags for u in self.reportes_utrs if u.periodo_efectivo_minutos > 0])
-        if self.numero_tags > 0:
+        valid_utrs = [u for u in self.reportes_utrs if u.disponibilidad_promedio_porcentage > 0]
+        if len(valid_utrs) > 0:
             # calculo de las ponderaciones de cada UTR usando el número de tags como criterio
             for u in self.reportes_utrs:
                 if u.periodo_efectivo_minutos > 0:

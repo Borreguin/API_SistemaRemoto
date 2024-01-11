@@ -143,7 +143,7 @@ class NodeExecutor:
         assert self.success, self.error_code
 
     def get_consignments(self):
-        self.log.info(f'[${self.node}] get_consignments')
+        self.log.info(f'[{self.node}] get_consignments')
         self.date_time_range, self.node_consignments = (
             get_date_time_ranges_using_consignments(self.node.get_document_id(), self.ini_report_date,
                                                     self.end_report_date)

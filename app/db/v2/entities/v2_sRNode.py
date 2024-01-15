@@ -55,7 +55,8 @@ class V2SRNode(Document):
                 f"entidades: {len(self.entidades) if self.entidades is not None else 0}")
 
     def to_dict(self):
-        return dict(_id=str(self.pk), id_node=self.id_node, nombre=self.nombre, tipo=self.tipo, actualizado=self.actualizado,
+        return dict(_id=str(self.pk), document_id=self.get_document_id(), id_node=self.id_node, nombre=self.nombre,
+                    tipo=self.tipo, actualizado=self.actualizado,
                     entidades=[e.to_dict() for e in self.entidades] if self.entidades is not None else [],
                     activado=self.activado, n_tags=self.n_tags, n_bahias=self.n_bahias, n_instalaciones=self.n_instalaciones)
 
@@ -72,7 +73,8 @@ class V2SRNode(Document):
             n_bahias += values[lb_n_bahias]
             n_tags += values[lb_n_tags]
             entidades.append(values)
-        return dict(_id=str(self.pk), document= V2_SR_NODE_LABEL,id_node=self.id_node, nombre=self.nombre,
+        return dict(_id=str(self.pk),document_id=self.get_document_id(), document= V2_SR_NODE_LABEL,
+                    id_node=self.id_node, nombre=self.nombre,
                     tipo=self.tipo, entidades=entidades,
                     actualizado=self.actualizado, activado=self.activado, n_entidades=n_entidades,
                     n_instalaciones=n_instalaciones, n_bahias=n_bahias, n_tags=n_tags)

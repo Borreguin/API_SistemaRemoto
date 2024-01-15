@@ -32,9 +32,11 @@ class V2SREntity(EmbeddedDocument):
         if self.document_id is None:
             self.document_id = str(uuid.uuid4())
 
+    def generate_entity_id(self):
+        return str(self.entidad_nombre).lower().strip() + str(self.entidad_tipo).lower().strip() + self.document
+
     def update_entity_id(self):
-        id = str(self.entidad_nombre).lower().strip() + str(self.entidad_tipo).lower().strip() + self.document
-        self.id_entidad = hashlib.md5(id.encode()).hexdigest()
+        self.id_entidad = hashlib.md5(self.generate_entity_id().encode()).hexdigest()
 
     def update_summary(self):
         summary = self.to_summary()

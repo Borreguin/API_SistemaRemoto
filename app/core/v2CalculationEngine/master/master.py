@@ -149,7 +149,7 @@ class MasterEngine:
     def create_final_report(self):
         id_report = get_final_report_id(SR_REPORTE_SISTEMA_REMOTO, self.report_ini_date, self.report_end_date)
         final_report = get_final_report_by_id(id_report, self.is_permanent)
-        assert not(self.force and final_report is not None) , 'Ya existe un reporte previo'
+        assert not (final_report is not None and not self.force), 'Ya existe un reporte previo'
         if final_report is not None and self.force:
             final_report.delete()
         self.final_report = create_final_report(self.report_ini_date, self.report_end_date, self.is_permanent)
@@ -183,7 +183,7 @@ class MasterEngine:
 if __name__ == "__main__":
     ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
     end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
-    asyncio.run(MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=False))
+    asyncio.run(MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=True))
     print('finish')
 
 

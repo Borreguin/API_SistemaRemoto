@@ -110,6 +110,7 @@ def get_details_from_dict(nodes: dict, version:str=None) -> List[Dict]:
         # creando el resumen del nodo
         node["actualizado"] = str(node["actualizado"])
         node["entidades"] = entidades
+        node["document_id"] = node["_id"]
         _nodes.append(node)
     return _nodes
 

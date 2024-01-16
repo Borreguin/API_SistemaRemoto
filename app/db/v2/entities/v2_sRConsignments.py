@@ -29,7 +29,9 @@ class V2SRConsignments(Document):
     id_elemento = StringField(required=True, unique=True)
     desde = DateTimeField(required=False, default=None)
     hasta = DateTimeField(required=False, default=None)
-    element = DictField(required=False)
+    elemento = DictField(required=False)
+    # consignaciones recientes is deprecated
+    consignacion_reciente = EmbeddedDocumentField(V2SRConsignment, required=False, default=None)
     consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment), default=[])
     document = StringField(required=True, default=V2_SR_CONSIGNMENT_LABEL)
     meta = {"collection": "INFO|Consignaciones"}
@@ -46,6 +48,10 @@ class V2SRConsignments(Document):
             self.desde = dt.datetime.strptime(desde, "%Y-%m-%d %H:%M:%S")
         if isinstance(hasta, str) and self.hasta is None:
             self.hasta = dt.datetime.strptime(hasta, "%Y-%m-%d %H:%M:%S")
+
+        if self.consignacion_reciente is not None:
+            # this field is deprecated
+            self.consignacion_reciente = None
 
     def insert_consignment(self, consignment: V2SRConsignment):
         if consignment.fecha_inicio >  consignment.fecha_final:
@@ -77,7 +83,7 @@ class V2SRConsignments(Document):
     def delete_consignment_by_id(self, consignment_id: str):
         consignment_to_delete, consignments = None, list()
         for c in self.consignaciones:
-            if c.consignment_id != consignment_id:
+            if c.id_consignacion != consignment_id:
                 consignments.append(c)
             else:
                 consignment_to_delete = c
@@ -105,14 +111,14 @@ class V2SRConsignments(Document):
 
     def search_consignment_by_id(self, id_to_search):
         for consignment in self.consignaciones:
-            if consignment.consignment_id == id_to_search:
+            if consignment.id_consignacion == id_to_search:
                 return True, consignment
         return False, None
 
     def edit_consignment_by_id(self, id_to_edit: str, consignment: V2SRConsignment):
         found = False
         for consignacion in self.consignaciones:
-            if consignacion.consignment_id == id_to_edit:
+            if consignacion.id_consignacion == id_to_edit:
                 found = True
                 consignacion.edit(consignment.to_dict(as_str=False))
                 break

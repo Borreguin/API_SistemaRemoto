@@ -8,24 +8,24 @@ from app.db.v2.entities.v2_sRConsigmentDetails import V2SRConsignmentDetails
 
 
 class V2SRConsignment(EmbeddedDocument):
-    consignment_id = StringField(default=None, required=True)
+    id_consignacion = StringField(default=None, required=True)
     no_consignacion = StringField(required=True)
     fecha_inicio = DateTimeField(required=True, default=dt.datetime.now())
     fecha_final = DateTimeField(required=True, default=dt.datetime.now())
     t_minutos = IntField(required=True)
-    element_info = EmbeddedDocumentField(V2SRConsignmentDetails, required=False, default=None)
+    detalle = EmbeddedDocumentField(V2SRConsignmentDetails, required=False, default=None)
     folder = StringField(default=None, required=False)
     responsable = StringField(required=True, default=None)
     updated = DateTimeField(required=False, default=dt.datetime.now())
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
-        if self.consignment_id is None:
-            self.consignment_id = str(uuid.uuid4())
+        if self.id_consignacion is None:
+            self.id_consignacion = str(uuid.uuid4())
         self.calculate()
 
     def create_folder(self):
-        this_repo = os.path.join(local_repositories.CONSIGNMENTS, self.consignment_id)
+        this_repo = os.path.join(local_repositories.CONSIGNMENTS, self.id_consignacion)
         if not os.path.exists(this_repo):
             os.makedirs(this_repo)
             self.folder = this_repo
@@ -52,8 +52,8 @@ class V2SRConsignment(EmbeddedDocument):
         return dict(no_consignacion=self.no_consignacion,
                     fecha_inicio=str(self.fecha_inicio) if as_str else self.fecha_inicio,
                     fecha_final=str(self.fecha_final) if as_str else self.fecha_final,
-                    id_consignacion=self.consignment_id, responsable=self.responsable,
-                    element_info=self.element_info.to_dict() if self.element_info is not None else None)
+                    id_consignacion=self.id_consignacion, responsable=self.responsable,
+                    detalle=self.detalle.to_dict() if self.detalle is not None else None)
 
     def edit(self, to_update: dict):
         try:

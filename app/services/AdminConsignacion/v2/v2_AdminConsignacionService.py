@@ -12,6 +12,7 @@ from app.common.util import to_dict
 from app.core.repositories import local_repositories
 from app.db.constants import V2_SR_CONSIGNMENT_LABEL, lb_consignments
 from app.db.db_util import get_v2sr_consignment
+from app.db.v2.entities.v2_sRConsigmentDetails import V2SRConsignmentDetails
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRConsignments import V2SRConsignments
 from app.schemas.RequestSchemas import FormatOption, V2ConsignmentRequest
@@ -56,12 +57,12 @@ def v2_post_consignar_elemento_asociado_id_elemento(id_elemento: str, ini_date: 
                                                                             create_if_not_exists=True)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    consignments.element = to_dict(request_data.element_info.element)
+    consignments.elemento = to_dict(request_data.element_info.element)
     consignments.save()
 
     consignment = V2SRConsignment(no_consignacion=request_data.no_consignacion, fecha_inicio=ini_date,
-                                  fecha_final=end_date, responsable=request_data.responsable,
-                                  element_info=to_dict(request_data.element_info))
+                                  fecha_final=end_date, responsable=request_data.responsable)
+    consignment.detalle = V2SRConsignmentDetails(**to_dict(request_data.element_info))
 
     # ingresando consignación y guardando si es exitoso:
     success, msg = consignments.insert_consignment(consignment)

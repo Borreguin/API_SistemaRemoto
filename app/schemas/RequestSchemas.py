@@ -104,8 +104,8 @@ class DetalleConsignacionRequest(BaseModel):
     responsable: str = "responsable del ingreso de consignación"
 
 class V2ConsignmentDetails(BaseModel):
-    observations: str
-    short_description: str
+    detalle: str
+    descripcion_corta: str
     consignment_type: str
     element: dict
 

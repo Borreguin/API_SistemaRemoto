@@ -152,13 +152,13 @@ class RoutineOptions(str, Enum):
 
 
 class InstallationRequest(BaseModel):
-    instalacion_ems_code: str = "Código EMS de la instalación"
-    instalacion_tipo: str = "Tipo de instalación"
-    instalacion_nombre: str = "Nombre de instalación"
-    activado: bool = True
-    protocolo: str = "Protocolo"
-    longitud: float = 0
-    latitud: float = 0
+    instalacion_ems_code: Optional[str] = "Código EMS de la instalación"
+    instalacion_tipo: Optional[str] = "Tipo de instalación"
+    instalacion_nombre: Optional[str] = "Nombre de instalación"
+    activado: Optional[bool] = True
+    protocolo: Optional[str] = "Protocolo"
+    longitud: Optional[float] = 0
+    latitud: Optional[float] = 0
 
 class BahiaRequest(BaseModel):
     bahia_code: str = "Código de bahía"

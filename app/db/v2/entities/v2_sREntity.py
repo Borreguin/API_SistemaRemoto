@@ -4,6 +4,7 @@ import uuid
 from mongoengine import EmbeddedDocument, StringField, BooleanField, LazyReferenceField, ListField, DateTimeField, \
     IntField
 
+from app.common import error_log
 from app.db.constants import lb_n_tags, lb_n_bahias, V2_SR_ENTITY_LABEL, lb_n_instalaciones
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 import datetime as dt
@@ -50,7 +51,10 @@ class V2SREntity(EmbeddedDocument):
     def to_dict(self):
         instalaciones = []
         for instalacion in self.instalaciones if self.instalaciones is not None else []:
-            instalaciones.append(instalacion.fetch().to_dict())
+            try:
+                instalaciones.append(instalacion.fetch().to_dict())
+            except Exception as e:
+                error_log.error(f"Instalacion no encontrada en nodo {self.entidad_nombre}, debido a: {e}")
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
                     activado=self.activado, instalaciones=instalaciones, document=self.document,
                     document_id=self.document_id)
@@ -63,10 +67,12 @@ class V2SREntity(EmbeddedDocument):
         n_bahias = 0
         if self.instalaciones is not None:
             for instalacion in self.instalaciones:
-                values_dict = instalacion.fetch().to_summary()
-                n_tags += values_dict[lb_n_tags]
-                n_bahias += values_dict[lb_n_bahias]
-
+                try:
+                    values_dict = instalacion.fetch().to_summary()
+                    n_tags += values_dict[lb_n_tags]
+                    n_bahias += values_dict[lb_n_bahias]
+                except Exception as e:
+                    error_log.error(f"Instalacion no encontrada en nodo {self.entidad_nombre}, debido a: {e}")
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
                     n_instalaciones=len(self.instalaciones) if self.instalaciones is not None else 0, n_bahias=n_bahias,
                     n_tags=n_tags, activado=self.activado, created=str(self.created), document=self.document,

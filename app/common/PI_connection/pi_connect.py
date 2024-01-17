@@ -10,7 +10,7 @@ from PIServer.PIPointSimulation import PIPointSimulation
 from PIServer.PIServerBase import PIServerBase
 from PIServer.PIServerSimulation import PIServerSimulation
 
-simulation = False if sys.platform == 'win32' else True
+simulation = True if sys.platform == 'win32' else True
 
 def create_pi_server(name=None) -> PIServerBase:
     if simulation:

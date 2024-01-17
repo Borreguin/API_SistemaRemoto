@@ -9,7 +9,7 @@ from app.common import report_log
 import datetime as dt
 
 from app.common.util import get_time_in_minutes
-from app.db.constants import SR_REPORTE_SISTEMA_REMOTO
+from app.db.constants import SR_REPORTE_SISTEMA_REMOTO, V2_SR_FINAL_REPORT_LABEL
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRFinalReport.V2SRNodeSummaryReport import V2SRNodeSummaryReport
 from app.db.v2.v2SRFinalReport.constants import *
@@ -39,6 +39,7 @@ class V2SRFinalReportBase(Document):
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
     novedades = DictField(default=dict(tags_fallidas=0, instalacion_fallidas=0,
                                        entidades_fallidas=0, nodos_fallidos=0, detalle={}))
+    documento = StringField(default=V2_SR_FINAL_REPORT_LABEL, required=False)
     actualizado = DateTimeField(default=dt.datetime.now())
     meta = {'allow_inheritance': True, 'abstract': True}
     # attributos utilizados para calculos internos:
@@ -141,7 +142,7 @@ class V2SRFinalReportBase(Document):
                     disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
                     reportes_nodos=[r.to_dict() for r in self.reportes_nodos], procesamiento=self.procesamiento,
                     novedades=self.novedades, actualizado=str(self.actualizado),
-                    tiempo_calculo_segundos=self.tiempo_calculo_segundos)
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos, documento=self.documento)
 
     def to_table(self):
         resp = dict(id_report=self.id_report, tipo=self.tipo, fecha_inicio=str(self.fecha_inicio),
@@ -149,7 +150,7 @@ class V2SRFinalReportBase(Document):
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
                     actualizado=str(self.actualizado),
-                    tiempo_calculo_segundos=self.tiempo_calculo_segundos)
+                    tiempo_calculo_segundos=self.tiempo_calculo_segundos, documento=self.documento)
         resp.update(self.procesamiento)
         return resp
 

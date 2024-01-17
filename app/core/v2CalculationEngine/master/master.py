@@ -148,7 +148,7 @@ class MasterEngine:
 
     def create_final_report(self):
         id_report = get_final_report_id(SR_REPORTE_SISTEMA_REMOTO, self.report_ini_date, self.report_end_date)
-        final_report = get_final_report_by_id(id_report, self.is_permanent)
+        final_report = get_final_report_v2_by_id(id_report, self.is_permanent)
         assert not (final_report is not None and not self.force), 'Ya existe un reporte previo'
         if final_report is not None and self.force:
             final_report.delete()
@@ -166,7 +166,7 @@ class MasterEngine:
             self.final_report.append_node_detail_report(detail_report_node)
         self.final_report.calculate()
         self.nodes_msg.append(f"El reporte final ha sido calculado exitosamente")
-        self.final_report.save()
+        self.success, self.msg = save_mongo_document_safely(self.final_report)
         print(self.final_report.to_dict())
 
     async def calculate_all_active_nodes(self, force: bool = False):
@@ -181,9 +181,9 @@ class MasterEngine:
             report_log.error(f'No able to calculate_all_active_nodes due to {e} \n {traceback.format_exc()}')
 
 if __name__ == "__main__":
-    ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
-    end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
-    asyncio.run(MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=True))
+    ini_date = dt.datetime.strptime('2023-12-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+    end_date = dt.datetime.strptime('2024-01-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+    asyncio.run(MasterEngine(ini_date, end_date, permanent_report=True).calculate_all_active_nodes(force=True))
     print('finish')
 
 

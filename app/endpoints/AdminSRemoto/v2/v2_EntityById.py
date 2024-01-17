@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from starlette.responses import Response
 
-from app.services.AdminSRemoto.CommonV1AndV2.AdminSRemotoService import *
 from app.services.AdminSRemoto.v2.EntityService_v2 import get_entity_by_id
 
 

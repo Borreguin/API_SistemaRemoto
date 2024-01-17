@@ -8,6 +8,7 @@ from app.endpoints.AdminSRemoto.v1.v1_Excel import v1_node_from_excel_endpoints
 from app.endpoints.AdminSRemoto.v1.v1_NodeById import v1_node_id_endpoints
 from app.endpoints.AdminSRemoto.v1.v1_NodeByTypeAndName import v1_node_type_and_name_endpoints
 from app.endpoints.AdminSRemoto.v1.v1_SRemoto import v1_admin_sremoto_endpoints
+from app.endpoints.AdminSRemoto.v2.v2_BahiaById import v2_bahia_id_endpoints
 from app.endpoints.AdminSRemoto.v2.v2_EntityById import v2_entity_id_endpoints
 from app.endpoints.AdminSRemoto.v2.v2_Excel import v2_node_from_excel_endpoints
 from app.endpoints.AdminSRemoto.v2.v2_InstallationById import v2_installation_id_endpoints
@@ -35,6 +36,7 @@ def create_grouped_endpoints(_router: APIRouter):
     v2_node_from_excel_endpoints(_router)
     rtu_endpoints(_router)
     tags_endpoints(router)
+    v2_bahia_id_endpoints(_router)
 
 
 

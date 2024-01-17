@@ -86,3 +86,32 @@ class V2SRInstallation(Document):
             if attribute in values.keys():
                 setattr(self, attribute, values[attribute])
 
+    def find_bahia_by_id(self, document_id:str):
+        for bahia in self.bahias:
+            if bahia.document_id == document_id:
+                return bahia
+        return None
+
+    def add_bahia(self, bahia: V2SRBahia):
+        if any([True for b in self.bahias if b.document_id == bahia.document_id]):
+            return False, 'La bahia ya existe'
+        self.bahias.append(bahia)
+        self.save_safely()
+        return True, 'Bahia agregada'
+
+    def remove_bahia(self, bahia: V2SRBahia):
+        original_len = len(self.bahias)
+        self.bahias = [b for b in self.bahias if b.document_id != bahia.document_id]
+        deleted = original_len != len(self.bahias)
+        if deleted:
+            self.save_safely()
+        return deleted, 'Bahia eliminada' if deleted else 'Bahia no encontrada'
+
+    def update_bahia(self, bahia_id:str, bahia: V2SRBahia):
+        for i in range(len(self.bahias)):
+            if self.bahias[i].document_id == bahia_id:
+                bahia.document_id = bahia_id
+                self.bahias[i] = bahia
+                self.save_safely()
+                return True, 'Bahia actualizada'
+        return False, 'Bahia no encontrada'

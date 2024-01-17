@@ -10,6 +10,8 @@ import datetime as dt
 from app.db.constants import attributes_node, attr_id_entidad, attr_entidades, attr_entidad_tipo, attr_entidad_nombre, \
     attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL, V2_SR_INSTALLATION_LABEL
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
+from app.db.v1.SRFinalReport.sRFinalReportPermanente import SRFinalReportPermanente
 from app.db.v1.sRNode import SRNode, SREntity
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRConsignments import V2SRConsignments
@@ -110,13 +112,20 @@ def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNode
 
     return query.first() if query.count() > 0 else None
 
-def get_final_report_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+def get_final_report_v2_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
     if permanent:
         query = V2SRFinalReportPermanent.objects(id_report=id_report)
     else:
         query = V2SRFinalReportTemporal.objects(id_report=id_report)
-
     return query.first() if query.count() > 0 else None
+
+def get_final_report_v1_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+    if permanent:
+        query = SRFinalReportPermanente.objects(id_report=id_report)
+    else:
+        query = SRFinalReportTemporal.objects(id_report=id_report)
+    return query.first() if query.count() > 0 else None
+
 
 def create_final_report(fecha_inicio: dt.datetime, fecha_final: dt.datetime, permanent:bool) -> V2SRFinalReportTemporal|V2SRFinalReportPermanent:
     if permanent:

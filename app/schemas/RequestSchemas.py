@@ -159,3 +159,9 @@ class InstallationRequest(BaseModel):
     protocolo: str = "Protocolo"
     longitud: float = 0
     latitud: float = 0
+
+class BahiaRequest(BaseModel):
+    bahia_code: str = "Código de bahía"
+    voltaje: float = 0
+    bahia_nombre: str = "Nombre de bahía"
+    activado: bool = True

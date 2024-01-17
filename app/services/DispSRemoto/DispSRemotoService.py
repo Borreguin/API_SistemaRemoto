@@ -3,18 +3,19 @@ import time
 from starlette import status
 
 from app.core.repositories import local_repositories
+from app.db.constants import V2_SR_NODE_LABEL
 from app.schemas.RequestSchemas import NodeRequest, NodesRequest
+from app.utils.service_util import get_sr_final_report_by_version, get_sr_final_report
 from flask_app.motor.master_scripts.eng_sRmaster import *
-from app.utils.utils import check_date_yyyy_mm_dd_hh_mm_ss, is_active, save_in_file, isTemporal
+from app.utils.utils import check_date_yyyy_mm_dd_hh_mm_ss, is_active, save_in_file, isTemporal, \
+    check_range_yyyy_mm_dd_hh_mm_ss
 import datetime as dt
 
 
 def put_calcula_o_sobreescribe_disponibilidad_en_rango_fecha(ini_date, end_date):
     id = ini_date + "_" + end_date
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     # check if there is already a calculation:
     path_file = os.path.join(local_repositories.TEMPORAL, "api_sR_cal_disponibilidad.json")
@@ -42,9 +43,8 @@ def put_calcula_o_sobreescribe_disponibilidad_en_rango_fecha(ini_date, end_date)
 
 def post_calcula_disponibilidad_en_rango_fecha(ini_date, end_date):
     success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True)
     not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
@@ -64,17 +64,11 @@ def post_calcula_disponibilidad_en_rango_fecha(ini_date, end_date):
 
 
 def get_obtiene_disponibilidad_en_rango_fecha(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    if isTemporal(ini_date, end_date):
-        final_report_v = SRFinalReportTemporal(fecha_inicio=ini_date, fecha_final=end_date)
-        final_report = SRFinalReportTemporal.objects(id_report=final_report_v.id_report).first()
-    else:
-        final_report_v = SRFinalReportPermanente(fecha_inicio=ini_date, fecha_final=end_date)
-        final_report = SRFinalReportPermanente.objects(id_report=final_report_v.id_report).first()
+    is_permanent = not isTemporal(ini_date, end_date)
+    final_report = get_sr_final_report(ini_date, end_date, is_permanent=is_permanent)
     if final_report is None:
         return dict(success=False, msg="No existe reporte asociado"), status.HTTP_404_NOT_FOUND
     return dict(success=True, report=final_report.to_dict()), status.HTTP_200_OK
@@ -83,10 +77,8 @@ def get_obtiene_disponibilidad_en_rango_fecha(ini_date: str = "yyyy-mm-dd H:M:S"
 def put_calcula_o_sobrescribe_disponibilidad_nodo_en_rango_fecha(ini_date: str = "yyyy-mm-dd H:M:S",
                                                                  end_date: str = "yyyy-mm-dd H:M:S",
                                                                  request_data: NodeRequest = NodeRequest()):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
 
     node_list_name = [request_data.nombre]
@@ -105,10 +97,8 @@ def put_calcula_o_sobrescribe_disponibilidad_nodo_en_rango_fecha(ini_date: str =
 def put_calcula_o_sobrescribe_disponibilidad_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S",
                                                             end_date: str = "yyyy-mm-dd H:M:S",
                                                             request_data: NodesRequest = NodesRequest()):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir: " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
 
     success1, result, msg1 = run_node_list(request_data.nodos, ini_date, end_date, save_in_db=True, force=True)
@@ -125,10 +115,8 @@ def put_calcula_o_sobrescribe_disponibilidad_nodos_en_lista(ini_date: str = "yyy
 
 def post_calcula_disponibilidad_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S",
                                                request_data: NodesRequest = NodesRequest()):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
 
     success1, result, msg1 = run_node_list(request_data.nodos, ini_date, end_date, save_in_db=True, force=False)
@@ -149,10 +137,8 @@ def post_calcula_disponibilidad_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S
 def delete_elimina_disponibilidad_de_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S",
                                                     end_date: str = "yyyy-mm-dd H:M:S",
                                                     request_data: NodesRequest = NodesRequest()):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     not_found = list()
     deleted = list()
@@ -190,10 +176,8 @@ def delete_elimina_disponibilidad_de_nodos_en_lista(ini_date: str = "yyyy-mm-dd 
 def get_obtiene_disponibilidad_por_tipo_nodo(tipo="tipo de nodo", nombre="nombre del nodo",
                                              ini_date: str = "yyyy-mm-dd H:M:S",
                                              end_date: str = "yyyy-mm-dd H:M:S"):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     v_report = SRNodeDetailsBase(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
     if isTemporal(ini_date, end_date):
@@ -210,10 +194,8 @@ def get_obtiene_disponibilidad_por_tipo_nodo(tipo="tipo de nodo", nombre="nombre
 def delete_elimina_reporte_disponibilidad_de_nodo(tipo="tipo de nodo", nombre="nombre del nodo",
                                                   ini_date: str = "yyyy-mm-dd H:M:S",
                                                   end_date: str = "yyyy-mm-dd H:M:S"):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     v_report = SRNodeDetailsBase(tipo=tipo, nombre=nombre, fecha_inicio=ini_date, fecha_final=end_date)
     if isTemporal(ini_date, end_date):
@@ -263,10 +245,8 @@ def get_obtiene_detalle_reporte_disponibilidad(id_report="Id del reporte de deta
 
 
 def get_obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
-    success1, ini_date = u.check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
-    success2, end_date = u.check_date_yyyy_mm_dd_hh_mm_ss(end_date)
-    if not success1 or not success2:
-        msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
+    success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
+    if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     # check the existing nodes:
     all_nodes = SRNode.objects(document="SRNode")

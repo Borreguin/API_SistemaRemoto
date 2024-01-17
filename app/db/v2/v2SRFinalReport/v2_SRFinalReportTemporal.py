@@ -7,6 +7,7 @@ from app.db.v2.v2SRFinalReport.v2_sRFinalReportBase import V2SRFinalReportBase
 class V2SRFinalReportTemporal(V2SRFinalReportBase):
     # Esta configuración permite crear documentos JSON con expiración de tiempo
     created = DateTimeField(default=dt.datetime.utcnow())
+    # TODO: Final TEMPORAL|FinalReports
     meta = {"collection": "TEMPORAL|v2FinalReports", 'indexes': [{
         'cls': False,
         'fields': ['created'],

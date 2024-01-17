@@ -11,3 +11,4 @@
 __pycache__/
 *.pyc
 /app/core/env/prod.env
+/app/common/PI_connection/.idea/

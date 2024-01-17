@@ -2,9 +2,11 @@ V1_SR_NODE_LABEL = "SRNode"
 V2_SR_NODE_LABEL = "SRNode_v2"
 V2_SR_ENTITY_LABEL = "SREntity_v2"
 V2_SR_INSTALLATION_LABEL = "SRInstallationV2"
+V2_SR_CONSIGNMENT_LABEL = "v2SRConsignments"
 
 SR_NODE_COLLECTION = "CONFG|Nodos"
 SR_INSTALLATION_COLLECTION = "CONFG|Instalaciones"
+SR_REPORTE_SISTEMA_REMOTO = "Reporte Sistema Remoto"
 
 attr_nombre = "nombre"
 attr_tipo = "tipo"
@@ -37,3 +39,12 @@ lb_n_tags = "n_tags"
 lb_n_bahias = "n_bahias"
 lb_n_instalaciones = "n_instalaciones"
 lb_n_entidades = "n_entidades"
+lb_consignments = "consignments"
+
+
+attr_no_consignacion = "no_consignacion"
+attr_fecha_inicio = "fecha_inicio"
+attr_fecha_final = "fecha_final"
+attr_detalle = "detalle"
+attr_responsable = "responsable"
+attributes_consignments = [attr_no_consignacion, attr_fecha_inicio, attr_fecha_final, attr_detalle, attr_responsable]

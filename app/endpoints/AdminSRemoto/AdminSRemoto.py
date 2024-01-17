@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-from starlette.responses import Response
 
 from app.core.config import Settings
 

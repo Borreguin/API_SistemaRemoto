@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 
 from mongoengine import EmbeddedDocument, StringField, BooleanField, LazyReferenceField, ListField, DateTimeField, \
     IntField
@@ -18,6 +19,7 @@ class V2SREntity(EmbeddedDocument):
     n_tags = IntField(default=0)
     n_bahias = IntField(default=0)
     n_instalaciones = IntField(default=0)
+    document_id = StringField(required=True, default=None)
     document = StringField(required=True, default=V2_SR_ENTITY_LABEL)
 
     def __init__(self, entidad_tipo: str = None, entidad_nombre: str = None, *args, **values):
@@ -28,10 +30,14 @@ class V2SREntity(EmbeddedDocument):
             self.entidad_nombre = entidad_nombre
         if self.id_entidad is None:
             self.update_entity_id()
+        if self.document_id is None:
+            self.document_id = str(uuid.uuid4())
+
+    def generate_entity_id(self):
+        return str(self.entidad_nombre).lower().strip() + str(self.entidad_tipo).lower().strip() + self.document
 
     def update_entity_id(self):
-        id = str(self.entidad_nombre).lower().strip() + str(self.entidad_tipo).lower().strip() + self.document
-        self.id_entidad = hashlib.md5(id.encode()).hexdigest()
+        self.id_entidad = hashlib.md5(self.generate_entity_id().encode()).hexdigest()
 
     def update_summary(self):
         summary = self.to_summary()
@@ -50,7 +56,11 @@ class V2SREntity(EmbeddedDocument):
             except Exception as e:
                 error_log.error(f"Instalacion no encontrada en nodo {self.entidad_nombre}, debido a: {e}")
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
-                    activado=self.activado, instalaciones=instalaciones, document=self.document)
+                    activado=self.activado, instalaciones=instalaciones, document=self.document,
+                    document_id=self.document_id)
+
+    def get_document_id(self):
+        return str(self.document_id)
 
     def to_summary(self):
         n_tags = 0
@@ -65,4 +75,5 @@ class V2SREntity(EmbeddedDocument):
                     error_log.error(f"Instalacion no encontrada en nodo {self.entidad_nombre}, debido a: {e}")
         return dict(id_entidad=self.id_entidad, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
                     n_instalaciones=len(self.instalaciones) if self.instalaciones is not None else 0, n_bahias=n_bahias,
-                    n_tags=n_tags, activado=self.activado, created=str(self.created), document=self.document)
+                    n_tags=n_tags, activado=self.activado, created=str(self.created), document=self.document,
+                    document_id=self.document_id)

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import re
 
 import pandas as pd
@@ -5,14 +6,17 @@ from mongoengine import StringField, DateTimeField, IntField, FloatField, ListFi
     ReferenceField, DictField, Document
 
 from app.common import report_log
-import hashlib
 import datetime as dt
 
+from app.common.util import get_time_in_minutes
+from app.db.constants import SR_REPORTE_SISTEMA_REMOTO
 from app.db.v2.entities.v2_sRNode import V2SRNode
-from app.db.v2.v2SRFinalReport import V2SRNodeSummaryReport
+from app.db.v2.v2SRFinalReport.V2SRNodeSummaryReport import V2SRNodeSummaryReport
 from app.db.v2.v2SRFinalReport.constants import *
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportBase import V2SRNodeDetailsBase
-from app.db.v2.v2SRNodeReport.v2_sRNodeReportTemporal import V2SRNodeDetailsTemporal
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsBase import V2SRNodeDetailsBase
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
+from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
+from app.db.v2.v2SRNodeReport.report_util import get_final_report_id
 from app.utils import utils as u
 from app.db.v1.SRNodeReport.sRNodeReportPermanente import SRNodeDetailsPermanente
 from multiprocessing.pool import ThreadPool
@@ -21,17 +25,17 @@ import queue
 
 class V2SRFinalReportBase(Document):
     id_report = StringField(required=True, unique=True)
-    tipo = StringField(required=True, default="Reporte Sistema Remoto")
+    tipo = StringField(required=True, default=SR_REPORTE_SISTEMA_REMOTO)
     fecha_inicio = DateTimeField(required=True)
     fecha_final = DateTimeField(required=True)
     periodo_evaluacion_minutos = IntField(required=True)
     # el valor -1 es aceptado en el caso de que la disponibilidad no este definida
-    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
-    disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)
+    disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100, default=-1)
+    disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100, default=-1)
     reportes_nodos = ListField(EmbeddedDocumentField(V2SRNodeSummaryReport))
     reportes_nodos_detalle = ListField(ReferenceField(V2SRNodeDetailsBase, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
-    procesamiento = DictField(default=dict(numero_tags_total=0, numero_instalacions_procesadas=0,
+    procesamiento = DictField(default=dict(numero_tags=0,numero_bahias_procesadas=0, numero_instalacions_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
     novedades = DictField(default=dict(tags_fallidas=0, instalacion_fallidas=0,
                                        entidades_fallidas=0, nodos_fallidos=0, detalle={}))
@@ -45,11 +49,8 @@ class V2SRFinalReportBase(Document):
         super().__init__(*args, **values)
         self.installation_dict = dict()
         if self.id_report is None:
-            id = str(self.tipo).lower().strip() + self.fecha_inicio.strftime('%d-%m-%Y %H:%M') + \
-                 self.fecha_final.strftime('%d-%m-%Y %H:%M')
-            self.id_report = hashlib.md5(id.encode()).hexdigest()
-        t_delta = self.fecha_final - self.fecha_inicio
-        self.periodo_evaluacion_minutos = t_delta.days * (60 * 24) + t_delta.seconds // 60 + (t_delta.seconds % 60)/60
+            self.id_report = get_final_report_id(self.tipo, self.fecha_inicio, self.fecha_final)
+        self.periodo_evaluacion_minutos = get_time_in_minutes(self.fecha_inicio, self.fecha_final)
         if self.actualizado is None:
             self.actualizado = dt.datetime.now()
 
@@ -77,18 +78,22 @@ class V2SRFinalReportBase(Document):
         return lst_final
 
     def append_each_node_detail(self, label, node_summary_report: V2SRNodeSummaryReport):
-        self.procesamiento[label] += node_summary_report.procesamiento.get(label, 0)
+        self.procesamiento[label] = self.procesamiento.get(label,0) + node_summary_report.procesamiento.get(label, 0)
 
     def count_novedades(self, label, node_summary_report: V2SRNodeSummaryReport):
-        self.novedades[label] += node_summary_report.novedades.get(label, 0)
+        self.novedades[label] = self.novedades.get(label, 0) + node_summary_report.novedades.get(label, 0)
         if self.novedades[label] > 0:
             name = re.sub(r"[^a-zA-Z0-9]+", '_', node_summary_report.nombre)
             self.novedades[lb_detalle][name] = self.novedades[lb_detalle].get(name, {})
-            self.novedades[lb_detalle][name][label] = len(node_summary_report.novedades.get(label, []))
+            self.novedades[lb_detalle][name][label] = node_summary_report.novedades.get(label, 0)
+
+    def append_node_detail_report(self, d_report: V2SRNodeDetailsTemporal| V2SRNodeDetailsPermanent):
+        summary_report = V2SRNodeSummaryReport().set_values_from_detail_report(d_report)
+        self.append_node_summary_report(summary_report)
 
     def append_node_summary_report(self, node_summary_report: V2SRNodeSummaryReport):
         self.reportes_nodos.append(node_summary_report)
-        to_work_with = [lb_numero_tags_total, lb_numero_bahias_procesadas, lb_numero_instalaciones_procesadas, lb_numero_entidades_procesadas]
+        to_work_with = [lb_numero_tags, lb_numero_tags_procesadas, lb_numero_bahias_procesadas, lb_numero_instalaciones_procesadas, lb_numero_entidades_procesadas]
         [self.append_each_node_detail(label, node_summary_report) for label in to_work_with]
 
         novedades_to_work_with = [lb_tags_fallidas, lb_bahias_fallidas, lb_instalaciones_fallidas, lb_entidades_fallidas]
@@ -104,7 +109,7 @@ class V2SRFinalReportBase(Document):
             if report.disponibilidad_promedio_ponderada_porcentage > 0:
                 self.disponibilidad_promedio_porcentage += report.disponibilidad_promedio_ponderada_porcentage
                 n_reports += 1
-                n_tags += report.procesamiento[lb_numero_tags_total]
+                n_tags += report.procesamiento[lb_numero_tags]
         if n_reports > 0:
             self.disponibilidad_promedio_porcentage = self.disponibilidad_promedio_porcentage / n_reports
         return n_reports, n_tags
@@ -116,14 +121,11 @@ class V2SRFinalReportBase(Document):
                 if report.disponibilidad_promedio_ponderada_porcentage > 0:
                     self.disponibilidad_promedio_ponderada_porcentage += \
                         report.disponibilidad_promedio_ponderada_porcentage * report.procesamiento[
-                            lb_numero_tags_total] / n_tags
+                            lb_numero_tags] / n_tags
             if self.disponibilidad_promedio_ponderada_porcentage > 100:
                 self.disponibilidad_promedio_ponderada_porcentage = 100
 
     def calculate(self):
-        # initial values:
-        self.disponibilidad_promedio_ponderada_porcentage = -1
-        self.disponibilidad_promedio_porcentage = -1
         # cálculo de la disponibilidad promedio:
         n_report, n_tags = self.calculate_percentage_average()
         # cálculo de la disponibilidad promedio ponderada:
@@ -155,7 +157,7 @@ class V2SRFinalReportBase(Document):
         try:
             self.nodes_info = list()
             # TODO: RS check if needed to write a v2 version
-            nodes_info = V2SRNode.objects().as_pymongo()
+            nodes_info = V2SRNode.objects(document="SRNode").as_pymongo()
             self.nodes_info = [n for n in nodes_info]
         except Exception as e:
             report_log.error(f"{str(e)}")
@@ -181,12 +183,12 @@ class V2SRFinalReportBase(Document):
             row[lb_unidad_negocio] = reporte_entidad.entidad_nombre
             for reporte_instalacion in reporte_entidad.reportes_instalaciones:
                 row[lb_dispo_promedio_instalacion] = reporte_instalacion.disponibilidad_promedio_porcentage / 100
-                row[lb_instalacion] = reporte_instalacion.utr_nombre
+                row[lb_instalacion] = reporte_instalacion.instalacion_nombre
                 row[lb_no_seniales] = reporte_instalacion.numero_tags
                 row[lb_indisponible_minutos_promedio] = \
                     reporte_instalacion.indisponibilidad_acumulada_minutos / reporte_instalacion.numero_tags \
                         if reporte_instalacion.numero_tags > 0 else -1
-                f_utr = self.installation_dict.get(reporte_instalacion.id_utr, None)
+                f_utr = self.installation_dict.get(reporte_instalacion.instalacion_id, None)
                 row[lb_protocolo] = f_utr.get(lb_protocolo, None) if f_utr is not None else None
                 row[lb_latitud] = f_utr.get(lb_latitud, None) if f_utr is not None else None
                 row[lb_longitud] = f_utr.get(lb_longitud, None) if f_utr is not None else None

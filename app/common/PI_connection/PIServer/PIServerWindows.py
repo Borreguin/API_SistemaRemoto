@@ -4,6 +4,9 @@ import numpy as np
 from PIServer.PIServerBase import PIServerBase
 # AF Client modules
 import clr
+
+from app.common.PI_connection.pi_connect import create_pi_point
+
 pi_label = "PI-connect ->"
 AF_PATH = os.path.abspath(os.path.join(os.sep, "Program Files (x86)", "PIPC", "AF", "PublicAssemblies", "4.0"))
 sys.path.append(AF_PATH)
@@ -39,7 +42,7 @@ class PIServerWindows(PIServerBase):
         """
         pt = None
         try:
-            pt = PIPoint.FindPIPoint(self.server, tag_name)
+            pt = create_pi_point(self.server, tag_name)
         except Exception:
             pass
             # print("[pi_connect] [{0}] not found".format(tag_name))
@@ -54,7 +57,7 @@ class PIServerWindows(PIServerBase):
         assert isinstance(list_tag_name, list)
         pi_point_list = list()
         for tag in list_tag_name:
-            pi_point = PI_point(self, tag_name=tag)
+            pi_point = create_pi_point(self, tag_name=tag)
             pi_point_list.append(pi_point)
         return pi_point_list
 
@@ -70,7 +73,7 @@ class PIServerWindows(PIServerBase):
         """
         pi_points = list()
         for tag in tag_list:
-            pi_points.append(PI_point(self, tag))
+            pi_points.append(create_pi_point(self, tag))
 
         df_result = pi_points[0].interpolated(time_range, span, as_df=True, numeric=numeric)
 
@@ -85,7 +88,7 @@ class PIServerWindows(PIServerBase):
 
         for tag in tag_list:
             try:
-                pt = PI_point(self, tag)
+                pt = create_pi_point(self, tag)
                 df_result[tag] = pt.interpolated_value(time)
             except Exception as e:
                 print(e)

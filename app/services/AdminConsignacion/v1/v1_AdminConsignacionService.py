@@ -148,7 +148,7 @@ def get_obtener_consignaciones_en_rango_fecha(formato: FormatOption, ini_date: s
         return dict(success=False,
                     msg=f"No se encontraron consignaciones para [{ini_date} @ {end_date}]"), status.HTTP_404_NOT_FOUND
 
-    if format == 'json':
+    if formato == FormatOption.JSON:
         return dict(success=True, consignaciones=consignment_result), status.HTTP_200_OK
 
     ini_date_str, end_date_str = ini_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")

@@ -59,12 +59,12 @@ def tags_endpoints(router: APIRouter):
 
     @router.put(endpoint_uri + '/from-excel')
     async def edita_lista_de_tags_en_UTR_usando_excel(id_nodo: str, id_entidad: str, id_utr: str,
-                                                excel_file: UploadFile, response: Response = Response()):
+                                                      file: UploadFile, response: Response = Response()):
         """ Edita una lista de TAGS en una UTR basado en tag_name_original de un archivo Excel \n
             Id nodo: id único del nodo \n
             Id entidad: id único de la entidad \n
             Id UTR: id o código único de la UTR \n
             <b>404</b> Si el nodo, entidad o UTR no existe
         """
-        resp, response.status_code = await put_edita_lista_de_tags_en_UTR_usando_excel(id_nodo, id_entidad, id_utr, excel_file)
+        resp, response.status_code = await put_edita_lista_de_tags_en_UTR_usando_excel(id_nodo, id_entidad, id_utr, file)
         return resp

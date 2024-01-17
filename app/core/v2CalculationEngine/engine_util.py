@@ -1,20 +1,24 @@
-
+from __future__ import annotations
 import datetime as dt
-from typing import List
+from typing import List, Tuple
 
-from app.common.PI_connection.pi_util import create_time_range
-from app.core.v2CalculationEngine.constants import yyyy_mm_dd_hh_mm_ss
-from app.db.v1.Info.Consignment import Consignment
-
+from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange
+from app.db.db_util import get_consignments
+from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 
 
 def head(ini: dt.datetime, end: dt.datetime):
-    return f"[{dt.datetime.now().strftime(yyyy_mm_dd_hh_mm_ss)}] ({ini}@{end})"
+    return f"({ini}@{end}) \n"
 
-def generate_time_ranges(consignaciones: List[Consignment], ini_date: dt.datetime, end_date: dt.datetime):
+def generate_time_ranges(consignaciones: List[V2SRConsignment], ini_date: dt.datetime, end_date: dt.datetime) -> List[DateTimeRange]:
     # La función encuentra el periodo en el cual se puede examinar la disponibilidad:
     if len(consignaciones) == 0:
-        return [create_time_range(ini_date, end_date)]
+        return [DateTimeRange(ini_date, end_date)]
+
+    if consignaciones[0].fecha_inicio < ini_date and consignaciones[0].fecha_final > end_date:
+        # ----[-*+++++++++++++++++++++++++*--]----
+        # este caso es definitivo y no requiere continuar más alla:
+        return []
 
     # caso inicial:
     # * ++ tiempo de análisis ++*
@@ -32,14 +36,14 @@ def generate_time_ranges(consignaciones: List[Consignment], ini_date: dt.datetim
         start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
         # end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
         tail = consignaciones[0].fecha_final  # siguiente probable periodo (lo que queda restante a analizar)
-        time_ranges = [create_time_range(start, consignaciones[0].fecha_inicio)]  # primer periodo válido
+        time_ranges = [DateTimeRange(start, consignaciones[0].fecha_inicio)]  # primer periodo válido
 
     elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final >= end_date:
         # --*++++[+++++++++++++++*-----]----------
         # este caso es definitivo y no requiere continuar más alla:
         start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
         end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
-        return [create_time_range(start, end)]
+        return [DateTimeRange(start, end)]
 
     elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final < end_date:
         # --*[++++++++++]+++++++++*---------------
@@ -59,11 +63,25 @@ def generate_time_ranges(consignaciones: List[Consignment], ini_date: dt.datetim
         start = tail
         end = c.fecha_inicio
         if c.fecha_final < end_date:
-            time_ranges.append(create_time_range(start, end))
+            time_ranges.append(DateTimeRange(start, end))
             tail = c.fecha_final
         else:
             end = c.fecha_inicio
             break
     # ultimo caso:
-    time_ranges.append(create_time_range(tail, end))
+    time_ranges.append(DateTimeRange(tail, end))
     return time_ranges
+
+def get_date_time_ranges_using_consignments(element_id:str, ini_date: dt.datetime, end_date: dt.datetime):
+    consignments: List[V2SRConsignment] = get_consignments(element_id, ini_date, end_date)
+    return generate_time_ranges(consignments, ini_date, end_date), consignments
+
+def get_date_time_ranges_from_consignment_time_ranges(element_id:str, time_ranges:List[DateTimeRange]) \
+        -> Tuple[List[DateTimeRange], List[V2SRConsignment]]:
+    result_range_list = list()
+    consignments_list = list()
+    for dt_range in time_ranges:
+        time_range_list, consignment_list = get_date_time_ranges_using_consignments(element_id, dt_range.start, dt_range.end)
+        result_range_list += time_range_list
+        consignments_list += consignment_list
+    return result_range_list, consignments_list

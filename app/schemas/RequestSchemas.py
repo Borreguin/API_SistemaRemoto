@@ -103,13 +103,27 @@ class DetalleConsignacionRequest(BaseModel):
     detalle: Optional[dict] = dict(description="json con detalle de la consignación")
     responsable: str = "responsable del ingreso de consignación"
 
+class V2ConsignmentDetails(BaseModel):
+    detalle: str
+    descripcion_corta: str
+    consignment_type: str
+    element: dict
+
+class V2ConsignmentRequest(BaseModel):
+    no_consignacion: str
+    responsable: str
+    fecha_inicio: Optional[str]
+    fecha_final: Optional[str]
+    element_info: Optional[V2ConsignmentDetails]
+
 
 class ConsignacionRequest(BaseModel):
     elemento: Optional[dict] = dict(description="Descripción del elemento en formato JSON")
     no_consignacion: str = "Id de elemento"
     fecha_inicio: str = "yyyy-mm-dd hh:mm:ss"
     fecha_final: str = "yyyy-mm-dd hh:mm:ss"
-    detalle: Optional[str] = "json con detalle de la consignación"
+    detalle: Optional[dict] = "json con detalle de la consignación"
+    responsable: str = "Responsable"
 
 
 class FormatOption(str, Enum):

@@ -3,6 +3,9 @@ import traceback
 from mongoengine import *
 import datetime as dt
 
+from app.common import error_log
+from app.utils.utils import validate_percentage
+
 
 class TemporalProcessingStateReport(Document):
     id_report = StringField(required=True, unique=True, default=None)
@@ -20,7 +23,7 @@ class TemporalProcessingStateReport(Document):
         'expireAfterSeconds': 360000
     }]}
 
-    def     __init__(self, *args, **values):
+    def __init__(self, *args, **values):
         super().__init__(*args, **values)
         if self.created is None:
             self.created = dt.datetime.now()
@@ -59,5 +62,13 @@ class TemporalProcessingStateReport(Document):
             else:
                 tmp.update(**self.to_dict())
         except Exception as e:
-            print(e)
-            print(traceback.format_exc())
+            error_log.error(e)
+            error_log.error(traceback.format_exc())
+
+    def save_safely(self):
+        try:
+            self.percentage = validate_percentage(self.percentage)
+            self.save()
+        except Exception as e:
+            error_log.error(f"Processing State save_safely error: {e}")
+            error_log.error(traceback.format_exc())

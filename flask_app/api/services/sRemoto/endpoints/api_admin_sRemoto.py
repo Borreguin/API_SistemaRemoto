@@ -403,7 +403,7 @@ class SRNodoAPI(Resource):
                 *ala* => 'pala', 'alambre'
                 ala* => 'alambre'
         """
-        nodes = SRNode.objects().as_pymongo().exclude('id')
+        nodes = SRNode.objects(document="SRNode").as_pymongo().exclude('id')
         if nodes.count() == 0:
             return dict(success=False, msg=f"No hay nodos en la base de datos"), 404
         if filter_str is None or len(filter_str) == 0:

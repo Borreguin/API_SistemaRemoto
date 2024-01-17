@@ -19,19 +19,21 @@ Colossians 3:23
 
 """
 from __future__ import annotations
+
+import asyncio
 import multiprocessing
 import traceback
-from typing import List
-import datetime as dt
+from typing import Tuple
 
 from app.common import report_log
 from app.core.v2CalculationEngine.constants import NUMBER_OF_PROCESSES, TIMEOUT_SECONDS
-from app.core.v2CalculationEngine.node.node import NodeExecutor
 from app.core.v2CalculationEngine.engine_util import head
-from app.db.db_util import get_all_v2_nodes, get_temporal_status
+from app.core.v2CalculationEngine.node.NodeExecutor import NodeExecutor
+from app.db.constants import SR_REPORTE_SISTEMA_REMOTO
+from app.db.db_util import *
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v2.entities.v2_sRNode import V2SRNode
-from app.db.v2.v2SRNodeReport.report_util import get_report_id
+from app.db.v2.v2SRNodeReport.report_util import get_report_id, get_final_report_id
 from app.main import db_connection
 
 
@@ -41,6 +43,8 @@ class MasterEngine:
     success = False
     is_already_running = False
     msg = 'No se ha iniciado el cálculo'
+    force: bool = False
+    final_report: V2SRFinalReportTemporal | V2SRFinalReportPermanent
 
     """ variables para llevar logs"""
     nodes_msg: List[str] = []
@@ -49,15 +53,13 @@ class MasterEngine:
 
     def __init__(self, report_ini_date: dt.datetime, report_end_date: dt.datetime,
                  save_in_db=False, force=False, permanent_report=False):
-        self.permanent_report = permanent_report
+        self.is_permanent = permanent_report
         self.all_nodes: List[V2SRNode] = []
         self.report_ini_date = report_ini_date
         self.report_end_date = report_end_date
         self.save_in_db = save_in_db
         self.force = force
         self.results = None
-        self.log_msg = None
-        self.final_report = None
         self.is_already_running = False
         db_connection()
 
@@ -74,10 +76,12 @@ class MasterEngine:
 
     def get_all_nodes(self):
         """ Buscando los nodos con los que se va a trabajar """
-        all_nodes = get_all_v2_nodes()
+        all_nodes = get_all_v2_nodes(active=True)
         if len(all_nodes) == 0:
             self.success, self.msg = False, f"No hay nodos a procesar"
+        nodes = list()
         for node in all_nodes:
+            nodes.append(node)
             report_id = get_report_id(node.tipo, node.nombre, self.report_ini_date, self.report_end_date)
             self.nodes_report_ids[node.id_node] = report_id
             status = get_temporal_status(report_id)
@@ -85,13 +89,13 @@ class MasterEngine:
             if is_already_running:
                 return False, self.msg
 
-        self.all_nodes = all_nodes
+        self.all_nodes = nodes
         self.success, self.msg = True, f"Se encontraron {len(all_nodes)} nodos a procesar"
         return True, self.msg
 
-    def run_all_nodes(self):
+    async def run_all_nodes(self):
         if not self.success or self.is_already_running:
-            return False, self.msg, None
+            return False, f"Existen nodos que están siendo procesados"
         msg = f"{head(self.report_ini_date, self.report_end_date)} Empezando el cálculo {len(self.all_nodes)} nodos"
         report_log.info(msg)
         self.nodes_msg.append(msg)
@@ -104,42 +108,84 @@ class MasterEngine:
                                                              self.report_end_date,
                                                              self.save_in_db,
                                                              self.force,
-                                                             self.permanent_report
+                                                             self.is_permanent
                                                              ))
                                       for node in self.all_nodes]
                 results = [res.get(timeout=TIMEOUT_SECONDS) for res in multiple_responses]
                 self.success = all([res[0] for res in results])
-                msg = [res[1] for res in results]
+                self.nodes_msg += [res[1] for res in results]
                 head_value = f"{head(self.report_ini_date, self.report_end_date)} "
                 success_msg = f"{head_value} Todos los nodos han sido procesados"
-                unsuccessful_msg = f"{head_value} No se pudo procesar todos los nodos \nDetalles:\n" + "\n".join(msg)
+                unsuccessful_msg = f"{head_value} No se pudo procesar todos los nodos \nDetalles:\n" + "\n".join(self.nodes_msg)
                 self.msg = success_msg if self.success else unsuccessful_msg
-                report_log.info(self.msg)
+                self.nodes_msg.append(self.msg)
+                return self.success, self.msg
         except Exception as e:
             msg = f"{head(self.report_ini_date, self.report_end_date)} Error al ejecutar los nodos \n {str(e)}"
             self.nodes_msg.append(msg)
-            tb = traceback.extract_stack()
-            report_log.error(f"{msg} \n {tb}")
-            return False, msg, None
+            tb = traceback.format_exc()
+            report_log.error(f"{msg} \n{tb}")
+            return False, msg
 
     @staticmethod
     def run_node(node: V2SRNode, id_report: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
-                 save_in_db: bool, force: bool, permanent_report: bool):
+                 save_in_db: bool, force: bool, permanent_report: bool) -> Tuple[bool, str]:
+        msg = f"Empezando el cálculo de {node.tipo} {node.nombre}"
         try:
-            msg = f"Empezando el cálculo de {node.tipo} {node.nombre}"
             status = TemporalProcessingStateReport(id_report=id_report, percentage=0, processing=True, msg=msg)
             status.save()
             """ Running the complete process for a single node """
             node_executor = NodeExecutor(node, id_report, ini_report_date, end_report_date, save_in_db, force, permanent_report)
+            success, msg = node_executor.processing_node()
             report_log.info(head(ini_report_date, end_report_date) + msg)
-            success, msg = True, f"El nodo {node.nombre} ha sido procesado exitosamente"
         except Exception as e:
             msg = f"Error al procesar el nodo {node}:\n{str(e)}"
-            report_log.error(msg)
+            report_log.error(f'{msg} {traceback.format_exc()}')
             success, msg = False, msg
         status = get_temporal_status(id_report)
         status.delete()
         return success, msg
+
+    def create_final_report(self):
+        id_report = get_final_report_id(SR_REPORTE_SISTEMA_REMOTO, self.report_ini_date, self.report_end_date)
+        final_report = get_final_report_by_id(id_report, self.is_permanent)
+        assert not (final_report is not None and not self.force), 'Ya existe un reporte previo'
+        if final_report is not None and self.force:
+            final_report.delete()
+        self.final_report = create_final_report(self.report_ini_date, self.report_end_date, self.is_permanent)
+
+    def calculate_final_report(self):
+        assert len(self.nodes_report_ids.keys()) > 0, 'No hay reporte de nodos a procesar'
+        for id_node, report_id in self.nodes_report_ids.items():
+            detail_report_node = get_node_details_report(report_id, self.is_permanent)
+            if detail_report_node is None:
+                node = V2SRNode.find_by_id(id_node)
+                msg = f'No es posible encontrar el nodo con id {id_node}' if node is None else f'No hay reporte detallado para el nodo {node}'
+                report_log.warning(msg)
+                self.nodes_msg.append(msg)
+            self.final_report.append_node_detail_report(detail_report_node)
+        self.final_report.calculate()
+        self.nodes_msg.append(f"El reporte final ha sido calculado exitosamente")
+        self.final_report.save()
+        print(self.final_report.to_dict())
+
+    async def calculate_all_active_nodes(self, force: bool = False):
+        try:
+            self.force = force
+            self.create_final_report()
+            self.get_all_nodes()
+            await self.run_all_nodes()
+            self.calculate_final_report()
+            report_log.info(self.msg)
+        except Exception as e:
+            report_log.error(f'No able to calculate_all_active_nodes due to {e} \n {traceback.format_exc()}')
+
+if __name__ == "__main__":
+    ini_date = dt.datetime.strptime('2023-10-01 00:00:00', '%Y-%m-%d %H:%M:%S')
+    end_date = dt.datetime.strptime('2023-10-30 00:00:00', '%Y-%m-%d %H:%M:%S')
+    asyncio.run(MasterEngine(ini_date, end_date).calculate_all_active_nodes(force=True))
+    print('finish')
+
 
 # TODO: RS Check this code down
 #             child_processes = list()
@@ -365,8 +411,3 @@ class MasterEngine:
 #     success, results, msg = run_all_nodes(report_ini_date, report_end_date, save_in_db=True, force=True)
 #     run_summary(report_ini_date, report_end_date, force=True, results=results, log_msg=msg)
 
-
-if __name__ == "__main__":
-    master_engine = MasterEngine(report_ini_date=dt.datetime(2020, 10, 11), report_end_date=dt.datetime(2020, 10, 12))
-    master_engine.get_all_nodes()
-    master_engine.run_all_nodes()

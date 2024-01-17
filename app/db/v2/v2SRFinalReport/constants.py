@@ -25,7 +25,8 @@ details_columns = [lb_fecha_ini, lb_fecha_fin, lb_empresa, lb_unidad_negocio, lb
                    lb_dispo_ponderada_unidad, lb_dispo_promedio_instalacion, lb_no_seniales, lb_latitud,
                    lb_longitud]
 
-lb_numero_tags_total = "numero_tags_total"
+lb_numero_tags = "numero_tags"
+lb_numero_tags_procesadas = "numero_tags_procesadas"
 lb_numero_bahias_procesadas = "numero_bahias_procesadas"
 lb_numero_instalaciones_procesadas = "numero_instalaciones_procesadas"
 lb_numero_entidades_procesadas = "numero_entidades_procesadas"

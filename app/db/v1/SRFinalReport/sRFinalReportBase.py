@@ -197,7 +197,7 @@ class SRFinalReportBase(Document):
         try:
             self.nodes_info = list()
             # TODO: RS check if needed to write a v2 version
-            nodes_info = SRNode.objects().as_pymongo()
+            nodes_info = SRNode.objects(document="SRNode").as_pymongo()
             self.nodes_info = [n for n in nodes_info]
         except Exception as e:
             log.error(f"{str(e)}")

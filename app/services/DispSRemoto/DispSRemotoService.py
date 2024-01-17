@@ -18,8 +18,8 @@ def put_calcula_o_sobreescribe_disponibilidad_en_rango_fecha(ini_date, end_date)
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     # check if there is already a calculation:
     path_file = os.path.join(local_repositories.TEMPORAL, "api_sR_cal_disponibilidad.json")
-    time_delta = dt.timedelta(minutes=20)
-    # puede el cálculo estar activo más de 20 minutos?
+    time_delta = dt.timedelta(minutes=5)
+    # puede el cálculo estar activo más de 5 minutos?
     active = is_active(path_file, id, time_delta)
     if active:
         return dict(success=False, result=None,
@@ -48,10 +48,10 @@ def post_calcula_disponibilidad_en_rango_fecha(ini_date, end_date):
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True)
     not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
-    if all(not_calculated) and len(not_calculated) > 0:
+    if any(not_calculated) and len(not_calculated) > 0:
         return dict(success=False, msg=dict(msg="No ha sido calculado completamente, "
                                                 "ya existe algunos reportes en base de datos. "
-                                                "Considere re-escribir el cálculo", detalle=msg1))
+                                                "Considere re-escribir el cálculo", detalle=msg1)), status.HTTP_409_CONFLICT
     if success1:
         success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
                                              results=result, log_msg=msg1)
@@ -269,7 +269,7 @@ def get_obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_d
         msg = "No se puede convertir. " + (ini_date if not success1 else end_date)
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     # check the existing nodes:
-    all_nodes = SRNode.objects()
+    all_nodes = SRNode.objects(document="SRNode")
     all_nodes = [n for n in all_nodes if n.activado]
     if len(all_nodes) == 0:
         msg = f"No se encuentran nodos que procesar"

@@ -13,6 +13,7 @@ Consignación:
 from typing import List
 
 from app.db.v1.Info import *
+from app.utils.utils import check_date
 
 
 class Consignment(EmbeddedDocument):
@@ -28,6 +29,10 @@ class Consignment(EmbeddedDocument):
 
     def __init__(self, *args, **values):
         super().__init__(*args, **values)
+        if isinstance(self.fecha_inicio, str):
+            self.fecha_inicio = dt.datetime.strptime(self.fecha_inicio, "%Y-%m-%d %H:%M:%S")
+        if isinstance(self.fecha_final, str):
+            self.fecha_final = dt.datetime.strptime(self.fecha_final, "%Y-%m-%d %H:%M:%S")
         if self.id_consignacion is None:
             # print(self.no_consignacion)
             if self.no_consignacion is None:
@@ -61,9 +66,10 @@ class Consignment(EmbeddedDocument):
         return f"({self.no_consignacion}: min={self.t_minutos}) [{self.fecha_inicio.strftime('%d-%m-%Y %H:%M')}, " \
                f"{self.fecha_final.strftime('%d-%m-%Y %H:%M')}]"
 
-    def to_dict(self):
+    def to_dict(self, as_str=True):
         return dict(no_consignacion=self.no_consignacion,
-                    fecha_inicio=str(self.fecha_inicio), fecha_final=str(self.fecha_final),
+                    fecha_inicio=str(self.fecha_inicio) if as_str else self.fecha_inicio,
+                    fecha_final=str(self.fecha_final) if as_str else self.fecha_final,
                     id_consignacion=self.id_consignacion, responsable=self.responsable,
                     detalle=self.detalle)
 
@@ -236,7 +242,7 @@ class Consignments(Document):
         for consignacion in self.consignaciones:
             if consignacion.id_consignacion == id_to_edit:
                 found = True
-                consignacion.edit(consignment.to_dict())
+                consignacion.edit(consignment.to_dict(as_str=False))
                 break
         return found, f"La consignación {consignment.no_consignacion} ha sido editada correctamente" if found \
             else f"La consignación no ha sido encontrada"

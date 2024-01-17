@@ -17,6 +17,8 @@ Colossians 3:23
 import argparse, os, sys
 import queue
 
+from app.core.v2CalculationEngine.DatetimeRange import DateTimeRange
+
 script_path = os.path.dirname(os.path.abspath(__file__))
 motor_path = os.path.dirname(script_path)
 flask_path = os.path.dirname(motor_path)
@@ -91,7 +93,11 @@ eng_results = [_0_ok, _1_inesperado, _2_no_existe, _3_no_reconocido, _4_no_hay_c
 def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: dt.datetime):
     # La función encuentra el periodo en el cual se puede examinar la disponibilidad:
     if len(consignaciones) == 0:
-        return [pi._time_range(ini_date, end_date)]
+        return [DateTimeRange(ini_date, end_date)]
+    if consignaciones[0].fecha_inicio < ini_date and consignaciones[0].fecha_final > end_date:
+        # ----[-*+++++++++++++++++++++++++*--]----
+        # este caso es definitivo y no requiere continuar más alla:
+        return []
 
     # caso inicial:
     # * ++ tiempo de análisis ++*
@@ -109,14 +115,14 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
         start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
         # end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
         tail = consignaciones[0].fecha_final  # siguiente probable periodo (lo que queda restante a analizar)
-        time_ranges = [pi._time_range(start, consignaciones[0].fecha_inicio)]  # primer periodo válido
+        time_ranges = [DateTimeRange(start, consignaciones[0].fecha_inicio)]  # primer periodo válido
 
     elif consignaciones[0].fecha_inicio > ini_date and consignaciones[0].fecha_final >= end_date:
         # --*++++[+++++++++++++++*-----]----------
         # este caso es definitivo y no requiere continuar más alla:
         start = ini_date  # fecha desde la que se empieza un periodo válido para calc. disponi
         end = consignaciones[0].fecha_inicio  # fecha fin del periodo válido para calc. disponi
-        return [pi._time_range(start, end)]
+        return [DateTimeRange(start, end)]
 
     elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final < end_date:
         # --*[++++++++++]+++++++++*---------------
@@ -136,15 +142,67 @@ def generate_time_ranges(consignaciones: list, ini_date: dt.datetime, end_date: 
         start = tail
         end = c.fecha_inicio
         if c.fecha_final < end_date:
-            time_ranges.append(pi._time_range(start, end))
+            time_ranges.append(DateTimeRange(start, end))
             tail = c.fecha_final
         else:
             end = c.fecha_inicio
             break
     # ultimo caso:
-    time_ranges.append(pi._time_range(tail, end))
+    time_ranges.append(DateTimeRange(tail, end))
     return time_ranges
 
+def process_all_tags(tag_list, condition_list, utr_report, fault_tags, time_ranges, msg):
+    for tag, condition in zip(tag_list, condition_list):
+        try:
+            # buscando la Tag en el servidor PI
+            pt = pi.create_pi_point(pi_svr, tag)
+            if pt.pt is None:
+                fault_tags.append(tag)  # La tag no fue encontrada en el servidor PI
+                continue  # continue con la siguiente tag
+            # creando la condición de indisponibilidad:
+            if not "expr:" in condition:
+                # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc. v1
+                #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
+                conditions = str(condition).split("#")
+                # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
+                expression = f'Compare(DigText(\'{tag}\'), "{conditions[0].strip()}")'
+                for c in conditions[1:]:
+                    # expression += f" OR '{tag}' = \"{c}\""
+                    expression += f' OR Compare(DigText(\'{tag}\'), "{c.strip()}")'
+            else:
+                expression = condition.replace("expr:", "")
+
+            # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
+            #       tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
+            #       consignación:                  [-------------------]
+            #       ocurrido:           [...::.....:::::::::::::::::::..:...:::........]
+            #       minutos_disp:       [...::.....]                  [.:...:::........]
+            #       disponibilidad = #minutos_dispo/(tiempo_evaluacion - #minutos_consignados)
+            #
+            #                   UTR x: tiempo mes:               30*60*24 =  43200 minutos
+            #                          tiempo consignado:         2*24*60 =   2880 minutos
+            #                          tiempo evaluar:       43200 - 2880 =  40320 minutos
+            #                          tiempo disponible(RS):             = t1 + t2   -> (t1+t2)/40320
+            # Reporte final:
+            #                          tiempo disponible                        = 40300 minutos  (20 minutos indispo)
+            #                          tiempo evaluar                           = 40320
+            #                          tiempo consignado                        = 2880  minutos
+            #                          tiempo a evaluar (t_operacion + t_consig)= 43200 minutos
+            #
+            indisponible_minutos = 0  # indisponibilidad acumulada
+
+            for time_range in time_ranges:
+                value = pt.time_filter(time_range, expression, span=None, time_unit="mi")
+                # acumulando el tiempo de indisponibilidad
+                indisponible_minutos += value[tag].iloc[0]
+            tag_report = SRTagDetails(tag_name=tag, indisponible_minutos=indisponible_minutos)
+            utr_report.indisponibilidad_detalle.append(tag_report)
+
+        except Exception as e:
+            fault_tags.append(tag)
+            msg += f"[tag]: \n {str(e)} \n {traceback.format_exc()}\n"
+            print(msg) if verbosity else None
+    return utr_report, fault_tags, msg
 
 # La función devuelve el reporte por UTR
 # busca las consignaciones existentes (si existe)
@@ -178,70 +236,22 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
         utr_report.consignaciones_detalle = consignaciones_utr
 
         # reportar por cada tag e incluir en el reporte utr
-        msg = str()
-        for tag, condition in zip(tag_list, condition_list):
-            try:
-                # buscando la Tag en el servidor PI
-                pt = pi.create_pi_point(pi_svr, tag)
-                if pt.pt is None:
-                    fault_tags.append(tag)  # La tag no fue encontrada en el servidor PI
-                    continue  # continue con la siguiente tag
-                # creando la condición de indisponibilidad:
-                if not "expr:" in condition:
-                    # 'tag1' = "condicion1" OR 'tag1' = "condicion2" OR etc. v1
-                    #  Compare(DigText('tag1'), "condicion1*") OR Compare(DigText('tag1'), "condicion2*")
-                    conditions = str(condition).split("#")
-                    # expression = f"'{tag}' = \"{conditions[0].strip()}\"" v1
-                    expression = f'Compare(DigText(\'{tag}\'), "{conditions[0].strip()}")'
-                    for c in conditions[1:]:
-                        # expression += f" OR '{tag}' = \"{c}\""
-                        expression += f' OR Compare(DigText(\'{tag}\'), "{c.strip()}")'
-                else:
-                    expression = condition.replace("expr:", "")
-
-                # Calculando el tiempo en el que se mantiene la condición de indisponibilidad
-                #       tiempo_evaluacion:  [++++++++++++++++++++++++++++++++++++++++++++++]
-                #       consignación:                  [-------------------]
-                #       ocurrido:           [...::.....:::::::::::::::::::..:...:::........]
-                #       minutos_disp:       [...::.....]                  [.:...:::........]
-                #       disponibilidad = #minutos_dispo/(tiempo_evaluacion - #minutos_consignados)
-                #
-                #                   UTR x: tiempo mes:               30*60*24 =  43200 minutos
-                #                          tiempo consignado:         2*24*60 =   2880 minutos
-                #                          tiempo evaluar:       43200 - 2880 =  40320 minutos
-                #                          tiempo disponible(RS):             = t1 + t2   -> (t1+t2)/40320
-                # Reporte final:
-                #                          tiempo disponible                        = 40300 minutos  (20 minutos indispo)
-                #                          tiempo evaluar                           = 40320
-                #                          tiempo consignado                        = 2880  minutos
-                #                          tiempo a evaluar (t_operacion + t_consig)= 43200 minutos
-                #
-                indisponible_minutos = 0  # indisponibilidad acumulada
-
-                for time_range in time_ranges:
-                    value = pt.time_filter(time_range, expression, span=None, time_unit="mi")
-                    # acumulando el tiempo de indisponibilidad
-                    indisponible_minutos += value[tag].iloc[0]
-                tag_report = SRTagDetails(tag_name=tag, indisponible_minutos=indisponible_minutos)
-                utr_report.indisponibilidad_detalle.append(tag_report)
-
-            except Exception as e:
-                fault_tags.append(tag)
-                msg += f"[tag]: \n {str(e)} \n"
-                print(msg) if verbosity else None
-
+        msgs = str()
+        if len(time_ranges) > 0:
+            utr_report, fault_tags, msgs = process_all_tags(tag_list, condition_list, utr_report, fault_tags,
+                                                           time_ranges, msgs)
         # la UTR no tiene tags válidas para el cálculo:
-        if len(utr_report.indisponibilidad_detalle) == 0:
+        if len(utr_report.indisponibilidad_detalle) == 0 and len(time_ranges) > 0:
             utr_report.calculate(report_ini_date, report_end_date)
             if q is not None:
                 q.put((False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"))
             return False, utr_report, fault_tags, f"La UTR {utr.utr_nombre} no tiene tags válidas"
 
         # All is OK until here:
-        utr_report.calculate(report_ini_date, report_end_date)
+        utr_report.calculate(report_ini_date, report_end_date, all_consignment=len(time_ranges) == 0)
         if q is not None:
-            q.put((True, utr_report, fault_tags, msg))
-        return True, utr_report, fault_tags, msg
+            q.put((True, utr_report, fault_tags, msgs))
+        return True, utr_report, fault_tags, msgs
     except Exception as e:
         tb = traceback.format_exc()
         if "dereference unknown document" in str(e):
@@ -249,12 +259,12 @@ def processing_tags(utr: SRUTR, tag_list, condition_list, q: queue.Queue = None)
                       "vuelva a crear el elemento a través del archivo Excel"
         else:
             detalle = "Error no determinado"
-        msg = f"Error al momento de procesar las tags, observe detalles a continuación: \n{detalle}\n{str(e)} \n{tb}"
+        msgs = f"Error al momento de procesar las tags, observe detalles a continuación: \n{detalle}\n{str(e)} \n{tb}"
 
         if q is not None:
             utr_report.calculate(report_ini_date, report_end_date)
-            q.put((False, utr_report, [], msg))
-        return False, utr_report, [], msg
+            q.put((False, utr_report, [], msgs))
+        return False, utr_report, [], msgs
 
 
 def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_db=False, force=False):
@@ -348,7 +358,7 @@ def processing_node(nodo, ini_date: dt.datetime, end_date: dt.datetime, save_in_
      for k in in_memory_reports.keys()]
     report_node.reportes_entidades = [in_memory_reports[k] for k in in_memory_reports.keys()]
     report_node.reportes_entidades.sort(key=lambda x: x.disponibilidad_promedio_ponderada_porcentage)
-    report_node.entidades_fallidas = [r.entidad_nombre for r in report_node.reportes_entidades if r.numero_tags == 0]
+    report_node.entidades_fallidas = [r.entidad_nombre for r in report_node.reportes_entidades if r.disponibilidad_promedio_ponderada_porcentage == -1]
     report_node.calculate_all()
     report_node.tiempo_calculo_segundos = run_time.total_seconds()
     if report_node.numero_tags_total == 0:
@@ -540,7 +550,7 @@ def test():
     # get date for last month:
     # report_ini_date, report_end_date = u.get_dates_for_last_month()
 
-    all_nodes = SRNode.objects()
+    all_nodes = SRNode.objects(document="SRNode")
     if len(all_nodes) == 0:
         print("No hay nodos a procesar")
         exit(-1)

@@ -1,17 +1,17 @@
 from __future__ import annotations
+import datetime as dt
 import hashlib
 import traceback
-from typing import Tuple, List
 
 import pandas as pd
 from mongoengine import Document, StringField, DateTimeField, ListField, BooleanField, EmbeddedDocumentField, IntField
-import datetime as dt
 
 from app.common import error_log
 from app.db.constants import V2_SR_NODE_LABEL, SR_NODE_COLLECTION, lb_n_bahias, lb_n_tags, lb_n_instalaciones, \
     lb_n_entidades
 from app.db.v2.entities.v2_sREntity import V2SREntity
-from app.db.v2.v2_util import get_or_replace_entities_and_installations_from_dataframe, get_or_replace_bahias_and_tags_from_dataframe
+from app.db.v2.v2_util import get_or_replace_entities_and_installations_from_dataframe, \
+    get_or_replace_bahias_and_tags_from_dataframe
 
 
 class V2SRNode(Document):
@@ -52,12 +52,16 @@ class V2SRNode(Document):
 
     def __str__(self):
         return (f"v2SRNode [({self.tipo}) {self.nombre}] "
-                f"entidades: {[str(e) for e in self.entidades] if self.entidades is not None else 0}")
+                f"entidades: {len(self.entidades) if self.entidades is not None else 0}")
 
     def to_dict(self):
-        return dict(_id=str(self.pk), id_node=self.id_node, nombre=self.nombre, tipo=self.tipo, actualizado=self.actualizado,
+        return dict(_id=str(self.pk), document_id=self.get_document_id(), id_node=self.id_node, nombre=self.nombre,
+                    tipo=self.tipo, actualizado=self.actualizado,
                     entidades=[e.to_dict() for e in self.entidades] if self.entidades is not None else [],
                     activado=self.activado, n_tags=self.n_tags, n_bahias=self.n_bahias, n_instalaciones=self.n_instalaciones)
+
+    def get_document_id(self):
+        return str(self.pk)
 
     def to_summary(self):
         n_entidades, n_instalaciones, n_bahias, n_tags = 0, 0, 0, 0
@@ -69,7 +73,8 @@ class V2SRNode(Document):
             n_bahias += values[lb_n_bahias]
             n_tags += values[lb_n_tags]
             entidades.append(values)
-        return dict(_id=str(self.pk), document= V2_SR_NODE_LABEL,id_node=self.id_node, nombre=self.nombre,
+        return dict(_id=str(self.pk),document_id=self.get_document_id(), document= V2_SR_NODE_LABEL,
+                    id_node=self.id_node, nombre=self.nombre,
                     tipo=self.tipo, entidades=entidades,
                     actualizado=self.actualizado, activado=self.activado, n_entidades=n_entidades,
                     n_instalaciones=n_instalaciones, n_bahias=n_bahias, n_tags=n_tags)
@@ -108,6 +113,11 @@ class V2SRNode(Document):
     @staticmethod
     def find(tipo: str, nombre: str):
         nodes = V2SRNode.objects(tipo=tipo, nombre=nombre, document=V2_SR_NODE_LABEL)
+        return nodes.first() if len(nodes) > 0 else None
+
+    @staticmethod
+    def find_by_id(id_node: str):
+        nodes = V2SRNode.objects(id_node=id_node, document=V2_SR_NODE_LABEL)
         return nodes.first() if len(nodes) > 0 else None
 
     @staticmethod

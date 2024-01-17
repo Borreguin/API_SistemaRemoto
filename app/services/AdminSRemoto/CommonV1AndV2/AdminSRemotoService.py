@@ -76,7 +76,7 @@ def get_retorna_entidades_de_nodo(tipo: str, nombre: str, entidad_tipo: str, ent
 def get_muestra_todos_los_nombres_nodos_existentes(filter_str=None, version=None) -> Tuple[dict, int]:
     if version is None:
         version = V1_SR_NODE_LABEL
-    nodes = SRNode.objects().as_pymongo()
+    nodes = SRNode.objects(document=version).as_pymongo()
     if nodes.count() == 0:
         return dict(success=False, msg=f"No hay nodos en la base de datos"), status.HTTP_404_NOT_FOUND
     if filter_str is None or len(filter_str) == 0:
@@ -110,6 +110,7 @@ def get_details_from_dict(nodes: dict, version:str=None) -> List[Dict]:
         # creando el resumen del nodo
         node["actualizado"] = str(node["actualizado"])
         node["entidades"] = entidades
+        node["document_id"] = node["_id"]
         _nodes.append(node)
     return _nodes
 

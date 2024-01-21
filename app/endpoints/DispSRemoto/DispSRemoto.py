@@ -181,3 +181,11 @@ def obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_date:
     """
     resp, response.status_code = get_obtiene_estado_calculo_reporte(ini_date, end_date)
     return resp
+
+status_report = '/estado/{report_id}'
+@router.get(status_report)
+def obtiene_estado_by_id_report(report_id="Id del reporte de detalle", response: Response = Response()):
+    """ Obtiene el estado del cálculo de los reportes de disponibilidad existentes en el periodo especificado
+    """
+    resp, response.status_code = get_obtiene_estado_by_id_report(report_id)
+    return resp

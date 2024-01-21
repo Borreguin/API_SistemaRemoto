@@ -101,23 +101,31 @@ class EntityExecutor:
         return True, installation_db.bahias, installation_report, inst_time_ranges
 
     def process_bahia(self, bahia: V2SRBahia, installation_time_ranges: List[DateTimeRange]) -> Tuple[bool, str, None|V2SRBahiaReportDetails]:
-        bahia_time_ranges, bahia_consignments_list = (
-            get_date_time_ranges_from_consignment_time_ranges(bahia.get_document_id(), installation_time_ranges)
-        )
-        self.consignments += bahia_consignments_list
-        if bahia.tags is None or len(bahia.tags) == 0:
-            return False, f"No hay tags a procesar para bahia {bahia}", None
-        bahia_report = V2SRBahiaReportDetails()
-        bahia_report.set_values(bahia, self.minutes_in_period, bahia_consignments_list)
-        success, msg, tag_reports, failed_tags = processing_unavailability_of_tags(bahia.tags, bahia_time_ranges, self.pi_svr)
-        if not success or len(failed_tags) == len(bahia.tags):
+        try:
+            # log.info(f"processing_tags started with [{len(time_ranges)}] time_ranges")
+            bahia_time_ranges, bahia_consignments_list = (
+                get_date_time_ranges_from_consignment_time_ranges(bahia.get_document_id(), installation_time_ranges)
+            )
+            self.consignments += bahia_consignments_list
+            if bahia.tags is None or len(bahia.tags) == 0:
+                return False, f"No hay tags a procesar para bahia {bahia}", None
+            bahia_report = V2SRBahiaReportDetails()
+            bahia_report.set_values(bahia, self.minutes_in_period, bahia_consignments_list)
+            success, msg, tag_reports, failed_tags = processing_unavailability_of_tags(bahia.tags, bahia_time_ranges, self.pi_svr)
+            if not success or len(failed_tags) == len(bahia.tags):
+                self.bahias_fallidas.append(bahia.to_summary())
+                return False, msg, None
+            self.numero_bahias_procesadas += 1
+            bahia_report.periodo_efectivo_minutos = get_total_time_in_minutes(bahia_time_ranges)
+            bahia_report.reportes_tags = tag_reports
+            bahia_report.tags_fallidas = failed_tags
+            bahia_report.calculate()
+            self.log.info(f"Processed Bahia [{bahia}] "
+                          f"ProcessedTags:{len(tag_reports)} bahiaTimeRanges:{len(bahia_time_ranges)}")
+        except Exception as e:
+            self.log.error(f'Not able to process a bahia: {str(e)} \n{traceback.format_exc()}')
             self.bahias_fallidas.append(bahia.to_summary())
-            return False, msg, None
-        self.numero_bahias_procesadas += 1
-        bahia_report.periodo_efectivo_minutos = get_total_time_in_minutes(bahia_time_ranges)
-        bahia_report.reportes_tags = tag_reports
-        bahia_report.tags_fallidas = failed_tags
-        bahia_report.calculate()
+            return False, f'Not able to process a bahia: {str(e)}', None
         return True, f'Reporte de Bahia calculado', bahia_report
 
     def process_bahias(self, installation, ix):
@@ -144,12 +152,14 @@ class EntityExecutor:
         self.validate_entities()
         self.entity_time_ranges = self.get_entity_consignments()
         self.create_entity_report()
-        for ix, installation in enumerate(self.entity.instalaciones):
+        active_installations = [i for i in self.entity.instalaciones if i.fetch().activado]
+        for ix, installation in enumerate(active_installations):
             try:
                 self.process_bahias(installation, ix)
             except Exception as e:
                 msg = f'Not able to process an installation: {str(e)}'
                 error_log.error(f'{msg} \n{traceback.format_exc()}')
+                self.instalaciones_fallidas.append(installation.fetch().to_summary())
 
         self.entity_report.periodo_evaluacion_minutos = get_total_time_in_minutes(self.entity_time_ranges)
         self.entity_report.calculate()

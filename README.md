@@ -6,7 +6,7 @@ fortalecer la toma de decisiones en lo referente a la administración del SCADA.
 sistema Central.
 
 **Nota**: Esta API utiliza software especializado de CENACE, por lo que es exclusivo para su uso interno. Ninguna
-información sensible es expuesta, simplemente debido a que CENACE no dispone de una herramienta corporativa para
+información sensible es expuesta, debido a que CENACE no dispone de una herramienta corporativa para
 versionamiento de software se ha utilizado Github como herramienta temporal.
 
 ## Instalación:

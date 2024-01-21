@@ -35,9 +35,9 @@ class V2SRFinalReportBase(Document):
     reportes_nodos = ListField(EmbeddedDocumentField(V2SRNodeSummaryReport))
     reportes_nodos_detalle = ListField(ReferenceField(V2SRNodeDetailsBase, dbref=True), required=False)
     tiempo_calculo_segundos = FloatField(default=0)
-    procesamiento = DictField(default=dict(numero_tags=0,numero_bahias_procesadas=0, numero_instalacions_procesadas=0,
+    procesamiento = DictField(default=dict(numero_tags=0,numero_bahias_procesadas=0, numero_instalaciones_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
-    novedades = DictField(default=dict(tags_fallidas=0, instalacion_fallidas=0,
+    novedades = DictField(default=dict(tags_fallidas=0, instalaciones_fallidas=0,
                                        entidades_fallidas=0, nodos_fallidos=0, detalle={}))
     documento = StringField(default=V2_SR_FINAL_REPORT_LABEL, required=False)
     actualizado = DateTimeField(default=dt.datetime.now())

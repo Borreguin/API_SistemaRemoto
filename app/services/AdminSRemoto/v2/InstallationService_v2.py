@@ -3,7 +3,7 @@ from typing import Tuple
 from starlette import status
 
 from app.common.util import to_dict
-from app.db.db_util import find_installation_by_id, find_node_by_id_entidad
+from app.db.db_util import find_installation_by_id, find_node_by_id_entidad, save_mongo_document_safely
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.schemas.RequestSchemas import InstallationRequest
 
@@ -44,7 +44,7 @@ def put_installation(installation_id: str, request_data: InstallationRequest):
                 msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
 
 
-def delete_installation(entity_id: str,installation_id: str):
+def delete_installation(entity_id: str, installation_id: str):
     installation = find_installation_by_id(installation_id)
 
     if installation is None:
@@ -64,9 +64,8 @@ def delete_installation(entity_id: str,installation_id: str):
     success, msg = nodo.replace_entity_by_id(entity_id, entity)
     if not success:
         return dict(success=False, instalacion=None, msg=msg), status.HTTP_404_NOT_FOUND
+    installation.delete()
     success_save, msg = nodo.save_safely()
-    if success_save:
-        success_delete, msg = installation.delete()
-        if success_delete:
-            return dict(success=True, msg=msg), status.HTTP_200_OK
-    return dict(success=success, msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+    if not success_save:
+            return dict(success=False, msg=msg), status.HTTP_304_NOT_MODIFIED
+    return dict(success=True, msg=f'Instalación [{installation.instalacion_nombre}] eliminada'), status.HTTP_200_OK

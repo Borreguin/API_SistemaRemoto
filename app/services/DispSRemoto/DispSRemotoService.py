@@ -3,7 +3,6 @@ import time
 from starlette import status
 
 from app.core.repositories import local_repositories
-from app.db.constants import V2_SR_NODE_LABEL
 from app.schemas.RequestSchemas import NodeRequest, NodesRequest
 from app.utils.service_util import get_sr_final_report_by_version, get_sr_final_report
 from flask_app.motor.master_scripts.eng_sRmaster import *
@@ -42,25 +41,13 @@ def put_calcula_o_sobreescribe_disponibilidad_en_rango_fecha(ini_date, end_date)
 
 
 def post_calcula_disponibilidad_en_rango_fecha(ini_date, end_date):
-    success1, ini_date = check_date_yyyy_mm_dd_hh_mm_ss(ini_date)
+    from app.core.v2CalculationEngine.master.master import run_all_active_nodes
     success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    success1, result, msg1 = run_all_nodes(ini_date, end_date, save_in_db=True)
-    not_calculated = [True for k in result.keys() if "No ha sido calculado" in result[k]]
-    if any(not_calculated) and len(not_calculated) > 0:
-        return dict(success=False, msg=dict(msg="No ha sido calculado completamente, "
-                                                "ya existe algunos reportes en base de datos. "
-                                                "Considere re-escribir el cálculo", detalle=msg1)), status.HTTP_409_CONFLICT
-    if success1:
-        success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
-                                             results=result, log_msg=msg1)
-        if success2:
-            return dict(result=result, msg=msg1, report=report.to_dict()), status.HTTP_200_OK
-        else:
-            return dict(success=False, msg=msg2), status.HTTP_400_BAD_REQUEST
-    elif not success1:
-        return dict(success=False, msg=result), status.HTTP_400_BAD_REQUEST
+    is_permanent = not isTemporal(ini_date, end_date)
+    success, msg, report_id= run_all_active_nodes(ini_date, end_date, force=False, permanent_report=is_permanent)
+    return dict(success=success, msg=msg, report_id=report_id), status.HTTP_200_OK if success else 409
 
 
 def get_obtiene_disponibilidad_en_rango_fecha(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
@@ -242,6 +229,13 @@ def get_obtiene_detalle_reporte_disponibilidad(id_report="Id del reporte de deta
     dict_to_send = general_report.to_dict()
     dict_to_send["reportes_nodos_detalles"] = detail_report_list
     return dict(success=True, report=dict_to_send, msg="El reporte ha sido obtenido de manera correcta")
+
+def get_obtiene_estado_by_id_report(id_report:str):
+    query = TemporalProcessingStateReport.objects(id_report=id_report)
+    if query.count() == 0:
+        return dict(success=False, report=None, msg="El reporte no ha sido encontrado"), status.HTTP_404_NOT_FOUND
+    report = query.first()
+    return dict(success=True, report=report.to_dict(), msg="Reporte encontrado"), status.HTTP_200_OK
 
 
 def get_obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):

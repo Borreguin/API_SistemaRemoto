@@ -54,9 +54,6 @@ def processing_unavailability_of_tags(tag_list: List[V2SRTag], time_ranges: List
     tag_report_list: List[V2SRTagDetails] = list()
     failed_tags: List[str] = list()
     try:
-        log.info(f"processing_tags started with [{len(tag_list)}] tags")
-        log.info(f"processing_tags started with [{len(time_ranges)}] time_ranges")
-
         # obtener la indisponibilidad de cada tag:
         for tag in tag_list:
             success, unavailability_minutes, msg = get_tag_unavailability_from_history(tag.tag_name, tag.filter_expression, time_ranges, pi_svr)

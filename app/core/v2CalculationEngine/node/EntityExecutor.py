@@ -120,8 +120,8 @@ class EntityExecutor:
             bahia_report.reportes_tags = tag_reports
             bahia_report.tags_fallidas = failed_tags
             bahia_report.calculate()
-            self.log.info(f"Processed Bahia [{bahia}] "
-                          f"ProcessedTags:{len(tag_reports)} bahiaTimeRanges:{len(bahia_time_ranges)}")
+            # self.log.info(f"Processed Bahia [{bahia}] "
+            #               f"ProcessedTags:{len(tag_reports)} bahiaTimeRanges:{len(bahia_time_ranges)}")
         except Exception as e:
             self.log.error(f'Not able to process a bahia: {str(e)} \n{traceback.format_exc()}')
             self.bahias_fallidas.append(bahia.to_summary())

@@ -1,43 +1,24 @@
-import time
 
 from starlette import status
 
-from app.core.repositories import local_repositories
+from app.db.db_util import get_temporal_status, get_node_details_report_by_id_node
+from app.db.v2.entities.v2_sRNode import V2SRNode
+from app.db.v2.v2SRNodeReport.report_util import get_report_id
 from app.schemas.RequestSchemas import NodeRequest, NodesRequest
-from app.utils.service_util import get_sr_final_report_by_version, get_sr_final_report
-from flask_app.motor.master_scripts.eng_sRmaster import *
-from app.utils.utils import check_date_yyyy_mm_dd_hh_mm_ss, is_active, save_in_file, isTemporal, \
+from app.utils.service_util import get_sr_final_report
+from app.utils.utils import isTemporal, \
     check_range_yyyy_mm_dd_hh_mm_ss
-import datetime as dt
+from flask_app.motor.master_scripts.eng_sRmaster import *
 
 
 def put_calcula_o_sobreescribe_disponibilidad_en_rango_fecha(ini_date, end_date):
-    id = ini_date + "_" + end_date
+    from app.core.v2CalculationEngine.master.master import run_all_active_nodes
     success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    # check if there is already a calculation:
-    path_file = os.path.join(local_repositories.TEMPORAL, "api_sR_cal_disponibilidad.json")
-    time_delta = dt.timedelta(minutes=5)
-    # puede el cálculo estar activo más de 5 minutos?
-    active = is_active(path_file, id, time_delta)
-    if active:
-        return dict(success=False, result=None,
-                    msg=f"Ya existe un cálculo en proceso con las fechas: {ini_date} al {end_date}. "
-                        f"Tiempo restante: {int(time_delta.total_seconds() / 60)} min "
-                        f"{time_delta.total_seconds() % 60} seg"), status.HTTP_409_CONFLICT
-
-    # preparandose para cálculo: (permite bloquear futuras peticiones si ya existe un cálculo al momento)
-    dict_value = dict(fecha=dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), activo=True)
-    save_in_file(path_file, id, dict_value)
-
-    # realizando el cálculo por cada nodo:
-    success, report, msg = run_nodes_and_summarize(ini_date, end_date, save_in_db=True, force=True)
-    # desbloqueando la instancia:
-    dict_value["activo"] = False
-    save_in_file(path_file, id, dict_value)
-    result = report.to_dict() if success else None
-    return dict(success=success, report=result, msg=msg), status.HTTP_200_OK if success else 409
+    is_permanent = not isTemporal(ini_date, end_date)
+    success, msg, report_id = run_all_active_nodes(ini_date, end_date, force=True, permanent_report=is_permanent)
+    return dict(success=success, msg=msg, report_id=report_id), status.HTTP_200_OK if success else 409
 
 
 def post_calcula_disponibilidad_en_rango_fecha(ini_date, end_date):
@@ -175,7 +156,7 @@ def get_obtiene_disponibilidad_por_tipo_nodo(tipo="tipo de nodo", nombre="nombre
         return dict(success=False,
                     msg="No existe el cálculo para este nodo en la fecha indicada"), status.HTTP_404_NOT_FOUND
     else:
-        return report.to_dict(), status.HTTP_200_OK
+        return dict(success=True, report=report.to_dict(), msg='Reporte enconetrado'), status.HTTP_200_OK
 
 
 def delete_elimina_reporte_disponibilidad_de_nodo(tipo="tipo de nodo", nombre="nombre del nodo",
@@ -203,12 +184,10 @@ def delete_elimina_reporte_disponibilidad_de_nodo(tipo="tipo de nodo", nombre="n
 
 
 def get_obtiene_reporte_disponibilidad_por_id_reporte(id_report="Id del reporte de detalle"):
-    report = SRNodeDetailsPermanente.objects(id_report=id_report).first()
-    if report is None:
-        report = SRNodeDetailsTemporal.objects(id_report=id_report).first()
+    report = get_node_details_report_by_id_node(id_report)
     if report is None:
         return dict(success=False, report=None, msg="El reporte no ha sido encontrado"), status.HTTP_404_NOT_FOUND
-    return dict(success=True, report=report.to_dict(), msg="Reporte encontrado")
+    return dict(success=True, report=report.to_dict(), msg="Reporte encontrado"), status.HTTP_200_OK
 
 
 def get_obtiene_detalle_reporte_disponibilidad(id_report="Id del reporte de detalle"):
@@ -238,37 +217,33 @@ def get_obtiene_estado_by_id_report(id_report:str):
     return dict(success=True, report=report.to_dict(), msg="Reporte encontrado"), status.HTTP_200_OK
 
 
-def get_obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S"):
+def get_obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S", version: str = None):
     success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    # check the existing nodes:
-    all_nodes = SRNode.objects(document="SRNode")
-    all_nodes = [n for n in all_nodes if n.activado]
-    if len(all_nodes) == 0:
-        msg = f"No se encuentran nodos que procesar"
-        return dict(success=False, msg=msg), status.HTTP_404_NOT_FOUND
+    if version is None:
+        query = SRNode.objects(document="SRNode")
+    else:
+        query = V2SRNode.objects(document=version)
+    if query.count() == 0:
+        return dict(success=False, msg="No se encuentran nodos que procesar"), status.HTTP_404_NOT_FOUND
+    all_nodes = [n for n in query if n.activado]
+    permanent_report = not isTemporal(ini_date, end_date)
 
     # scan reports within this date range:
     to_send = list()
     for node in all_nodes:
-        if isTemporal(ini_date, end_date):
-            v_report = SRNodeDetailsTemporal(nodo=node, nombre=node.nombre, tipo=node.tipo,
-                                             fecha_inicio=ini_date, fecha_final=end_date)
-        else:
-            v_report = SRNodeDetailsPermanente(nodo=node, nombre=node.nombre, tipo=node.tipo,
-                                               fecha_inicio=ini_date, fecha_final=end_date)
-        tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
+        report_id = get_report_id(node.tipo, node.nombre, ini_date, end_date)
+        status_report = get_temporal_status(report_id)
+        if status_report is None:
+            continue
+        to_send.append(status_report.to_summary())
+    if len(to_send) == 0:
+        return dict(success=False, msg="No se encuentran reportes para esta fecha"), status.HTTP_404_NOT_FOUND
+    return dict(success=True, status=to_send), status.HTTP_200_OK
 
-        if tmp_report is None:
-            for i in range(20):
-                tmp_report = TemporalProcessingStateReport.objects(id_report=v_report.id_report).first()
-                if tmp_report is not None:
-                    break
-                else:
-                    time.sleep(2)
-        to_send.append(tmp_report.to_summary())
-    if len(all_nodes) == len(to_send):
-        return dict(success=True, status=to_send), status.HTTP_200_OK
-    else:
-        return dict(success=False, status=None), status.HTTP_409_CONFLICT
+def get_details_report_by_id_report(id_report:str):
+    node_report = get_node_details_report_by_id_node(id_report)
+    if node_report is None:
+        return dict(success=False, report=None, msg="El reporte no ha sido encontrado"), status.HTTP_404_NOT_FOUND
+    return dict(success=True, report=node_report.to_dict(), msg="Reporte encontrado"), status.HTTP_200_OK

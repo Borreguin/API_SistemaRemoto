@@ -38,7 +38,7 @@ class V2SRFinalReportBase(Document):
     procesamiento = DictField(default=dict(numero_tags=0,numero_bahias_procesadas=0, numero_instalaciones_procesadas=0,
                                            numero_entidades_procesadas=0, numero_nodos_procesados=0))
     novedades = DictField(default=dict(tags_fallidas=0, instalaciones_fallidas=0,
-                                       entidades_fallidas=0, nodos_fallidos=0, detalle={}))
+                                       entidades_fallidas=0, nodos_fallidos=0, detalle={}), required=False)
     documento = StringField(default=V2_SR_FINAL_REPORT_LABEL, required=False)
     actualizado = DateTimeField(default=dt.datetime.now())
     meta = {'allow_inheritance': True, 'abstract': True}

@@ -66,3 +66,24 @@ class V2SRBahiaReportDetails(EmbeddedDocument):
             self.nota = 'Se considera consignaciones a nivel superior'
             self.consignaciones_acumuladas_minutos = self.periodo_evaluacion_minutos - self.periodo_efectivo_minutos
         self.numero_tags = len(self.reportes_tags) + len(self.tags_fallidas)
+
+    def to_dict(self):
+        return {
+            'document_id': self.document_id,
+            'bahia_code': self.bahia_code,
+            'voltaje': self.voltaje,
+            'bahia_nombre': self.bahia_nombre,
+            'reportes_tags': [rt.to_dict() for rt in self.reportes_tags],
+            'numero_tags': self.numero_tags,
+            'numero_tags_procesadas': self.numero_tags_procesadas,
+            'tags_fallidas': self.tags_fallidas,
+            'periodo_evaluacion_minutos': self.periodo_evaluacion_minutos,
+            'periodo_efectivo_minutos': self.periodo_efectivo_minutos,
+            'indisponibilidad_acumulada_minutos': self.indisponibilidad_acumulada_minutos,
+            'indisponibilidad_promedio_minutos': self.indisponibilidad_promedio_minutos,
+            'disponibilidad_promedio_minutos': self.disponibilidad_promedio_minutos,
+            'disponibilidad_promedio_porcentage': self.disponibilidad_promedio_porcentage,
+            'consignaciones': [c.to_dict() for c in self.consignaciones],
+            'consignaciones_acumuladas_minutos': self.consignaciones_acumuladas_minutos,
+            'nota': self.nota
+        }

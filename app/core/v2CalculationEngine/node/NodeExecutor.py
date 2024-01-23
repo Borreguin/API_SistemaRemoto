@@ -180,7 +180,7 @@ class NodeExecutor:
             self.init()
             self.processing_entities()
             self.save_report()
-            self.msg = f'Nodo {self.node} fue procesado exitosamente'
+            self.msg = f'Nodo [({self.node.tipo}) {self.node.nombre}] fue procesado exitosamente'
             self.success = True
         except Exception as e:
             self.success = False

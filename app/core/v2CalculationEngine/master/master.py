@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import multiprocessing
 import traceback
+from multiprocessing import Process
 from typing import Tuple
 
 from app.common import report_log
@@ -67,16 +68,17 @@ class MasterEngine:
         db_connection()
 
     def check_if_node_is_already_running(self, status: TemporalProcessingStateReport | None, label: str):
-        if self.force and status is not None:
-            status.delete()
-            return False
         if status is None:
             return False
-        assert dt.datetime.now() - status.modified > dt.timedelta(seconds=TIMEOUT_SECONDS), f"Ya existe un cálculo asociado a {label}. \nFecha [{status.modified}]"
-        if status is not None:
+        if self.force and status is not None and status.finish:
             status.delete()
+            return False
+        if status is not None:
+            running = dt.datetime.now() - status.modified < dt.timedelta(seconds=TIMEOUT_SECONDS) or not status.finish
+            assert not running, f"Ya existe un cálculo asociado a {label}. \nFecha [{status.modified}]"
+            if status is not None:
+                status.delete()
         return False
-
 
     def get_all_nodes(self):
         """ Buscando los nodos con los que se va a trabajar """
@@ -133,11 +135,19 @@ class MasterEngine:
 
     def create_status_report(self):
         self.general_status = get_temporal_status(self.general_report_id)
-        self.check_if_node_is_already_running(self.general_status, f'Reporte {self.report_ini_date} @ {self.report_end_date}')
-        self.general_status = TemporalProcessingStateReport(id_report=self.general_report_id, percentage=0, processing=True,
+        self.check_if_node_is_already_running(self.general_status,
+                                              f'Reporte {self.report_ini_date} @ {self.report_end_date}')
+        self.general_status = TemporalProcessingStateReport(id_report=self.general_report_id, percentage=0,
+                                                            processing=True,
+                                                            finish=False, fail=False,
                                                             msg=f"Empezando el cálculo del reporte "
                                                                 f"{self.report_ini_date} @ {self.report_end_date}")
         self.general_status.save()
+
+    def finish_status_report(self):
+        self.general_status.finished()
+        self.general_status.msg = self.msg
+        self.general_status.save_safely()
 
     def run_node(self, node: V2SRNode, id_report: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
                  force: bool, permanent_report: bool) -> Tuple[bool, str]:
@@ -162,9 +172,10 @@ class MasterEngine:
     def create_final_report(self):
         id_report = get_final_report_id(SR_REPORTE_SISTEMA_REMOTO, self.report_ini_date, self.report_end_date)
         final_report = get_final_report_v2_by_id(id_report, self.is_permanent)
-        assert not (final_report is not None and not self.force), f'Ya existe un reporte previo [{final_report.actualizado}]'
         if final_report is not None and self.force:
             final_report.delete()
+            final_report = None
+        assert not (final_report is not None and not self.force), f'Ya existe un reporte previo'
         self.final_report = create_final_report(self.report_ini_date, self.report_end_date, self.is_permanent)
 
     def calculate_final_report(self):
@@ -198,6 +209,7 @@ class MasterEngine:
             self.get_all_nodes()
             await self.run_all_nodes()
             self.calculate_final_report()
+            self.finish_status_report()
             report_log.info(self.msg)
         except Exception as e:
             msg = f'No se pudo calcular el reporte, debido a: {e}'
@@ -207,12 +219,17 @@ class MasterEngine:
             self.general_status.failed()
             self.general_status.save_safely()
 
+
+def run_async(master):
+    asyncio.run(master.calculate_all_active_nodes())
+
+
 def run_all_active_nodes(ini_report: dt.datetime, en_report: dt.datetime, force=False, permanent_report=False):
     """ Ejecutando el nodo master """
     master = MasterEngine(ini_report, en_report, force=force, permanent_report=permanent_report)
-    asyncio.run(master.calculate_all_active_nodes())
+    process = Process(target=run_async, args=(master,))
+    process.start()
     return True, 'Running all active nodes', master.general_report_id
-
 
 # if __name__ == "__main__":
 #     ini_date = dt.datetime.strptime('2023-12-01 00:00:00', '%Y-%m-%d %H:%M:%S')

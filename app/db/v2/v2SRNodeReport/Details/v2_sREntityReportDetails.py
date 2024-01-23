@@ -71,7 +71,7 @@ class V2SREntityReportDetails(EmbeddedDocument):
 
     def to_dict(self):
         return dict(entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo, numero_tags=self.numero_tags,
-                    reportes_utrs=[r.to_dict() for r in self.reportes_instalaciones],
+                    reportes_instalaciones=[r.to_dict() for r in self.reportes_instalaciones],
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     disponibilidad_promedio_ponderada_minutos=self.disponibilidad_promedio_ponderada_minutos,
                     periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,

@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from starlette.responses import Response
 
 from app.core.config import Settings
+from app.db.constants import V2_SR_NODE_LABEL
 from app.services.DispSRemoto.DispSRemotoService import *
 
 router = APIRouter(
@@ -114,8 +115,6 @@ def elimina_disponibilidad_de_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S",
 
 
 disponibilidad_by_tipo_nodo_and_date_range = '/disponibilidad/{tipo}/{nombre}/{ini_date}/{end_date}'
-
-
 @router.get(disponibilidad_by_tipo_nodo_and_date_range)
 def obtiene_disponibilidad_por_tipo_nodo(tipo="tipo de nodo", nombre="nombre del nodo",
                                          ini_date: str = "yyyy-mm-dd H:M:S",
@@ -142,9 +141,7 @@ def elimina_reporte_disponibilidad_de_nodo(tipo="tipo de nodo", nombre="nombre d
     return resp
 
 
-disponibilidad_by_report_id = '/disponibilidad/nodo/{id_report}'
-
-
+disponibilidad_by_report_id = '/disponibilidad/nodo/report-id/{id_report}'
 @router.get(disponibilidad_by_report_id)
 def obtiene_reporte_disponibilidad_por_id_reporte(id_report="Id del reporte de detalle",
                                                   response: Response = Response()):
@@ -179,7 +176,7 @@ def obtiene_estado_calculo_reporte(ini_date: str = "yyyy-mm-dd H:M:S", end_date:
         Fecha inicial formato:  <b>yyyy-mm-dd H:M:S</b> \n
         Fecha final formato:    <b>yyyy-mm-dd H:M:S</b>
     """
-    resp, response.status_code = get_obtiene_estado_calculo_reporte(ini_date, end_date)
+    resp, response.status_code = get_obtiene_estado_calculo_reporte(ini_date, end_date, version=V2_SR_NODE_LABEL)
     return resp
 
 status_report = '/estado/{report_id}'

@@ -83,9 +83,13 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
 
     def to_dict(self):
         return dict(id_utr=self.instalacion_id, nombre=self.instalacion_nombre, tipo=self.instalacion_tipo,
-                    tag_details=[t.to_dict() for t in self.reportes_bahias],
-                    numero_tags=len(self.reportes_bahias),
+                    bahia_details=[t.to_dict() for t in self.reportes_bahias],
+                    numero_bahias=len(self.reportes_bahias),
+                    numero_tags=self.numero_tags,
+                    numero_tags_procesadas=self.numero_tags_procesadas,
                     indisponibilidad_acumulada_minutos=self.indisponibilidad_acumulada_minutos,
                     consignaciones_acumuladas_minutos=self.consignaciones_acumuladas_minutos,
                     disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
-                    ponderacion=self.ponderacion)
+                    ponderacion=self.ponderacion,
+                    consignaciones=[c.to_dict() for c in self.consignaciones]
+                    )

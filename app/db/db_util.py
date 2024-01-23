@@ -112,6 +112,16 @@ def get_node_details_report(id_report: str, permanent: bool = False) -> V2SRNode
 
     return query.first() if query.count() > 0 else None
 
+def get_node_details_report_by_id_node(id_report: str) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+    query_t = V2SRNodeDetailsPermanent.objects(id_report=id_report)
+    query_p = V2SRNodeDetailsTemporal.objects(id_report=id_report)
+    if query_p.count() > 0:
+        return query_p.first()
+    if query_t.count() > 0:
+        return query_t.first()
+    return None
+
+
 def get_final_report_v2_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
     if permanent:
         query = V2SRFinalReportPermanent.objects(id_report=id_report)

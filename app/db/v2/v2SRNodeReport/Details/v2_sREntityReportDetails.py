@@ -1,3 +1,5 @@
+import uuid
+
 from mongoengine import EmbeddedDocument, StringField, ListField, EmbeddedDocumentField, IntField, FloatField
 
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
@@ -7,6 +9,7 @@ from app.utils.utils import validate_percentage
 
 
 class V2SREntityReportDetails(EmbeddedDocument):
+    document_id = StringField(required=False)
     entidad_nombre = StringField(required=True)
     entidad_tipo = StringField(required=True)
     reportes_instalaciones = ListField(EmbeddedDocumentField(V2SRInstallationReportDetails), required=True, default=list())
@@ -28,6 +31,8 @@ class V2SREntityReportDetails(EmbeddedDocument):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.document_id is None:
+            self.document_id = f"{uuid.uuid4()}"
 
     def set_values(self, entity: V2SREntity):
         self.entidad_tipo = entity.entidad_tipo
@@ -70,7 +75,7 @@ class V2SREntityReportDetails(EmbeddedDocument):
                f" min_avg_pond:{round(self.disponibilidad_promedio_ponderada_minutos, 1)})"
 
     def to_dict(self):
-        return dict(entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo, numero_tags=self.numero_tags,
+        return dict(document_id=self.document_id, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo, numero_tags=self.numero_tags,
                     reportes_instalaciones=[r.to_dict() for r in self.reportes_instalaciones],
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     disponibilidad_promedio_ponderada_minutos=self.disponibilidad_promedio_ponderada_minutos,

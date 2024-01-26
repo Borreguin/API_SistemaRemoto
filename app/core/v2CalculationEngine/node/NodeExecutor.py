@@ -48,7 +48,8 @@ class NodeExecutor:
     report_id: str = None
     executor: ProcessPoolExecutor = None
     entities: List[V2SREntity] = None
-    node_consignments: List[V2SRConsignment]
+    node_consignments: List[V2SRConsignment] = list()
+    inner_consignments: List[V2SRConsignment] = list()
     date_time_range: List[DateTimeRange]
     bahias_fallidas: List = list()
     instalaciones_fallidas: List = list()
@@ -154,6 +155,7 @@ class NodeExecutor:
                 self.instalaciones_fallidas += entity_executor.instalaciones_fallidas
                 self.numero_bahias_procesadas += entity_executor.numero_bahias_procesadas
                 self.numero_instalaciones_procesadas += entity_executor.numero_instalaciones_procesadas
+                self.inner_consignments += entity_executor.consignments
                 self.numero_entidades_procesadas += 1
             except Exception as e:
                 self.log.error(f'Not able to process a entity: {str(e)} \n{traceback.format_exc()}')
@@ -162,6 +164,7 @@ class NodeExecutor:
         self.report_node.bahias_fallidas = self.bahias_fallidas
         self.report_node.instalaciones_fallidas = self.instalaciones_fallidas
         self.report_node.entidades_fallidas = self.entidades_fallidas
+        self.report_node.consignaciones_internas = self.inner_consignments
         self.report_node.calculate()
         self.report_node.tiempo_calculo_segundos = get_time_in_seconds(self.start_time, dt.datetime.now())
         self.log.info(f'[{self.node}] All entities were processed')

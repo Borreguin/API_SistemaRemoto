@@ -52,6 +52,7 @@ class V2SRConsignment(EmbeddedDocument):
         return dict(no_consignacion=self.no_consignacion,
                     fecha_inicio=str(self.fecha_inicio) if as_str else self.fecha_inicio,
                     fecha_final=str(self.fecha_final) if as_str else self.fecha_final,
+                    t_minutos=self.t_minutos,
                     id_consignacion=self.id_consignacion, responsable=self.responsable,
                     detalle=self.detalle.to_dict() if self.detalle is not None else None)
 

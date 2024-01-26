@@ -139,8 +139,11 @@ class EntityExecutor:
                 continue
             installation_report.reportes_bahias.append(bahia_report)
             installation_report.tags_fallidas += bahia_report.tags_fallidas
+            installation_report.numero_consignaciones_internas += len(bahia_report.consignaciones)
+            installation_report.consignaciones_internas += bahia_report.consignaciones
 
-        installation_report.periodo_evaluacion_minutos = get_total_time_in_minutes(installation_time_ranges)
+        installation_report.periodo_efectivo_minutos = get_total_time_in_minutes(installation_time_ranges)
+        installation_report.periodo_evaluacion_minutos = self.minutes_in_period
         installation_report.calculate()
         if installation_report.disponibilidad_promedio_porcentage == -1:
             self.instalaciones_fallidas.append(installation.fetch().to_summary())

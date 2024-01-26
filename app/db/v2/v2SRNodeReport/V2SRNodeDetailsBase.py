@@ -25,7 +25,7 @@ class V2SRNodeDetailsBase(Document):
     reportes_entidades = ListField(EmbeddedDocumentField(V2SREntityReportDetails), required=True, default=list())
     consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment), required=False, default=list())
     consignaciones_acumuladas_minutos = IntField(required=True, default=0)
-    consignaciones_internas = ListField(EmbeddedDocumentField(V2SREntityReportDetails), required=False, default=list())
+    consignaciones_internas = ListField(EmbeddedDocumentField(V2SRConsignment), required=False, default=list())
     # se acepta el caso de -1 para indicar que la disponibilidad no pudo ser establecida
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100)

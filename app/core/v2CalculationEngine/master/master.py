@@ -171,7 +171,7 @@ class MasterEngine:
 
     def create_final_report(self):
         id_report = get_final_report_id(SR_REPORTE_SISTEMA_REMOTO, self.report_ini_date, self.report_end_date)
-        final_report = get_final_report_v2_by_id(id_report, self.is_permanent)
+        final_report = get_final_report_by_id(id_report, self.is_permanent)
         if final_report is not None and self.force:
             final_report.delete()
             final_report = None

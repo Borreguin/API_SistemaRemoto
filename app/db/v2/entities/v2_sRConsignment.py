@@ -5,6 +5,7 @@ from app.core.repositories import local_repositories
 from app.db.constants import attributes_consignments
 from app.db.v1.Info import *
 from app.db.v2.entities.v2_sRConsigmentDetails import V2SRConsignmentDetails
+from app.schemas.RequestSchemas import V2ConsignmentRequest
 
 
 class V2SRConsignment(EmbeddedDocument):
@@ -67,4 +68,13 @@ class V2SRConsignment(EmbeddedDocument):
             msg = f"Error al actualizar {self}: {str(e)}"
             error_log.error(msg)
             return False, msg
+
+    def updated_from_request_data(self, request_data: V2ConsignmentRequest):
+        self.no_consignacion = request_data.no_consignacion
+        self.fecha_inicio = request_data.fecha_inicio
+        self.fecha_final = request_data.fecha_final
+        self.responsable = request_data.responsable
+        if request_data.element_info is not None:
+            self.detalle = V2SRConsignmentDetails(**to_dict(request_data.element_info))
+        self.calculate()
 

@@ -11,7 +11,7 @@ from starlette.responses import FileResponse
 from app.common.util import to_dict
 from app.core.repositories import local_repositories
 from app.db.constants import V2_SR_CONSIGNMENT_LABEL, lb_consignments
-from app.db.db_util import get_v2sr_consignment
+from app.db.db_util import get_v2sr_consignment, save_mongo_document_safely
 from app.db.v2.entities.v2_sRConsigmentDetails import V2SRConsignmentDetails
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRConsignments import V2SRConsignments
@@ -38,7 +38,7 @@ def validate_ini_end_date_and_get_consignments(id_elemento: str,
 def v2_get_obtener_consignaciones_asociadas_elemento_id_por_fecha(id_elemento, ini_date: str, end_date: str):
     success, msg, consignments = validate_ini_end_date_and_get_consignments(id_elemento, ini_date, end_date)
     if not success:
-        return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
+        return dict(success=False, msg=msg), status.HTTP_404_NOT_FOUND
     consignaciones = consignments.consignments_in_time_range(ini_date, end_date)
     if len(consignaciones) == 0:
         return dict(success=False,
@@ -93,18 +93,15 @@ def v2_put_edita_consignacion_por_elemento_id_y_consignacion_id(id_elemento: str
         return dict(success=False,
                     msg="No existen consignaciones para este elemento. El elemento no existe"), status.HTTP_404_NOT_FOUND
     consignments = query.first()
-    success, msg = consignments.delete_consignment_by_id(consignment_id)
+    success, consignment = consignments.search_consignment_by_id(consignment_id)
+    if not success:
+        return dict(success=False, msg="No existe consignación para este elemento"), status.HTTP_404_NOT_FOUND
+    consignment.updated_from_request_data(request_data)
+    success, msg = consignments.edit_consignment_by_id(consignment_id, consignment)
     if not success:
         return dict(success=success, msg=msg), status.HTTP_404_NOT_FOUND
 
-    consignment = V2SRConsignment(no_consignacion=request_data.no_consignacion, fecha_inicio=request_data.fecha_inicio,
-                                  fecha_final=request_data.fecha_final, responsable=request_data.responsable,
-                                  element_info=to_dict(request_data.element_info), consignment_id=consignment_id)
-
-    # ingresando consignación y guardando si es exitoso:
-    success, msg = consignments.insert_consignment(consignment)
-    if success:
-        consignments.save()
+    success, msg = save_mongo_document_safely(consignments)
     return dict(success=success, msg=msg), status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST
 
 

@@ -136,6 +136,12 @@ def get_final_report_v1_by_id(id_report: str, permanent: bool = False) -> V2SRNo
         query = SRFinalReportTemporal.objects(id_report=id_report)
     return query.first() if query.count() > 0 else None
 
+def get_final_report_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+    report = get_final_report_v2_by_id(id_report, permanent)
+    if report is None:
+        report = get_final_report_v1_by_id(id_report, permanent)
+    return report
+
 
 def create_final_report(fecha_inicio: dt.datetime, fecha_final: dt.datetime, permanent:bool) -> V2SRFinalReportTemporal|V2SRFinalReportPermanent:
     if permanent:

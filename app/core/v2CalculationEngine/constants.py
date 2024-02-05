@@ -1,7 +1,7 @@
 """ Constants for the calculation engine """
 
 NUMBER_OF_PROCESSES = 4
-TIMEOUT_SECONDS = 600 # 10 minutes
+TIMEOUT_SECONDS = 900 # 15 minutes
 
 """ Time format """
 yyyy_mm_dd = "%Y-%m-%d"

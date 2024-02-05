@@ -80,7 +80,7 @@ class V2SRConsignments(Document):
             if self.hasta < until_date:
                 self.hasta = until_date
 
-    def delete_consignment_by_id(self, consignment_id: str):
+    def delete_consignment_by_id(self, consignment_id: str, remove_folder=True):
         consignment_to_delete, consignments = None, list()
         for c in self.consignaciones:
             if c.id_consignacion != consignment_id:
@@ -92,9 +92,10 @@ class V2SRConsignments(Document):
             return False, f"No existe la consignación [{consignment_id}] en elemento [{self.id_elemento}]"
 
         self.consignaciones = consignments
-        # Se procede a eliminar si existe:
-        if consignment_to_delete.folder is not None and os.path.exists(consignment_to_delete.folder):
-            rmtree(consignment_to_delete.folder)
+        if remove_folder:
+            # Se procede a eliminar si existe:
+            if consignment_to_delete.folder is not None and os.path.exists(consignment_to_delete.folder):
+                rmtree(consignment_to_delete.folder)
         # Order consignments:
         self.consignaciones.sort(key=lambda csg: csg.fecha_inicio, reverse=False)
         if len(self.consignaciones) > 0:
@@ -116,14 +117,8 @@ class V2SRConsignments(Document):
         return False, None
 
     def edit_consignment_by_id(self, id_to_edit: str, consignment: V2SRConsignment):
-        found = False
-        for consignacion in self.consignaciones:
-            if consignacion.id_consignacion == id_to_edit:
-                found = True
-                consignacion.edit(consignment.to_dict(as_str=False))
-                break
-        return found, f"La consignación {consignment.no_consignacion} ha sido editada correctamente" if found \
-            else f"La consignación no ha sido encontrada"
+        self.delete_consignment_by_id(id_to_edit, remove_folder=False)
+        return self.insert_consignment(consignment)
 
     def __str__(self):
         return f"{self.id_elemento}: [from: {self.desde}, until: {self.hasta}] " \

@@ -4,7 +4,7 @@ from app.services.AdminSRemoto.v1.TagsService import *
 from starlette.responses import Response
 
 
-def tags_endpoints(router: APIRouter):
+def v1_tags_endpoints(router: APIRouter):
     endpoint_uri = '/tags/{id_nodo}/{id_entidad}/{id_utr}'
     router.tags = ["admin-sRemoto - TAGS"]
 

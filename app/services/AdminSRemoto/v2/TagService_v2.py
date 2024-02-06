@@ -24,6 +24,9 @@ def get_values_for_tags(tag_list: TagListRequest):
             result.append(dict(name=tag.tag_name, value=None, timestamp=None))
             continue
         snapshot = point.snapshot()
+        if isinstance(snapshot, dict):
+            result.append(snapshot)
+            continue
         value, timestamp = str(snapshot.Value), snapshot.Timestamp.LocalTime
         result.append(dict(name=point.pt.Name, value=value, timestamp=str(timestamp)))
     return result

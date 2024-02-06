@@ -93,7 +93,8 @@ class V2SRInstallation(Document):
         return None
 
     def add_bahia(self, bahia: V2SRBahia):
-        if any([True for b in self.bahias if b.document_id == bahia.document_id]):
+        if any([True for b in self.bahias if b.document_id == bahia.document_id or
+                                             (str(b.bahia_code).lower() == str(bahia.bahia_code).lower() and b.voltaje == bahia.voltaje)]):
             return False, 'La bahia ya existe'
         self.bahias.append(bahia)
         self.save_safely()

@@ -19,7 +19,8 @@ def create_bahia(installation_id: str, bahia: dict):
     if installation is None:
         return dict(success=False, bahia=None, msg="Instalación no encontrado"), status.HTTP_404_NOT_FOUND
     success, msg = installation.add_bahia(V2SRBahia(**bahia))
-    return dict(success=success, bahia=bahia, msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+    installation.save_safely()
+    return dict(success=success, bahia=bahia, msg=msg), status.HTTP_200_OK if success else status.HTTP_406_NOT_ACCEPTABLE
 
 
 def update_bahia(installation_id: str, bahia_id: str, bahia: dict):
@@ -27,7 +28,7 @@ def update_bahia(installation_id: str, bahia_id: str, bahia: dict):
     if installation is None:
         return dict(success=False, bahia=None, msg="Instalación no encontrado"), status.HTTP_404_NOT_FOUND
     success, msg = installation.update_bahia(bahia_id, V2SRBahia(**bahia))
-    return dict(success=success, bahia=bahia, msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+    return dict(success=success, bahia=bahia, msg=msg), status.HTTP_200_OK if success else status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 def delete_bahia(installation_id: str, document_id: str):
@@ -35,4 +36,4 @@ def delete_bahia(installation_id: str, document_id: str):
     if installation is None:
         return dict(success=False, bahia=None, msg="Instalación no encontrado"), status.HTTP_404_NOT_FOUND
     success, msg = installation.remove_bahia(V2SRBahia(document_id=document_id))
-    return dict(success=success, bahia=None, msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+    return dict(success=success, bahia=None, msg=msg), status.HTTP_200_OK if success else status.HTTP_422_UNPROCESSABLE_ENTITY

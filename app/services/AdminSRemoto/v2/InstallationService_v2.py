@@ -30,7 +30,7 @@ def post_installation(entidad_id: str, request_data: InstallationRequest):
         return dict(success=False, instalacion=None, msg=msg), status.HTTP_404_NOT_FOUND
     success, msg = nodo.save_safely()
     return dict(success=success, instalacion=new_installation.to_dict(),
-                msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+                msg=msg), status.HTTP_200_OK if success else status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 def put_installation(installation_id: str, request_data: InstallationRequest):
@@ -41,7 +41,7 @@ def put_installation(installation_id: str, request_data: InstallationRequest):
     installation.update_from_dict(to_dict(request_data))
     success, msg = installation.save_safely()
     return dict(success=success, instalacion=installation.to_dict(),
-                msg=msg), status.HTTP_200_OK if success else status.HTTP_304_NOT_MODIFIED
+                msg=msg), status.HTTP_200_OK if success else status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
 def delete_installation(entity_id: str, installation_id: str):
@@ -67,5 +67,5 @@ def delete_installation(entity_id: str, installation_id: str):
     installation.delete()
     success_save, msg = nodo.save_safely()
     if not success_save:
-            return dict(success=False, msg=msg), status.HTTP_304_NOT_MODIFIED
+            return dict(success=False, msg=msg), status.HTTP_422_UNPROCESSABLE_ENTITY
     return dict(success=True, msg=f'Instalación [{installation.instalacion_nombre}] eliminada'), status.HTTP_200_OK

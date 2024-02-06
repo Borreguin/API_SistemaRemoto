@@ -1,20 +1,36 @@
 from fastapi import APIRouter
 from starlette.responses import Response
 
-from app.common.PI_connection.pi_util import search_pi_points_and_values
-from app.core.v2CalculationEngine.util import get_pi_server
+from app.schemas.RequestSchemas import TagListRequest
+from app.services.AdminSRemoto.v2.TagService_v2 import get_values_for_tags_using_regex, get_values_for_tags
 
 
 def v2_tags_endpoints(router: APIRouter):
-    endpoint_uri = 'v2/tags'
+    endpoint_uri = '/v2/tags'
     router.tags = ["v2-admin-sRemoto - TAGS"]
 
-    search_tags_uri = endpoint_uri + '/search/{regex}'
+    search_tags_uri = endpoint_uri + '/search/{filter}'
+
     @router.get(search_tags_uri)
-    def buscar_tags(regex: str, response: Response = Response()):
+    def buscar_tags(filter: str):
+        return buscar_tags_con_regex(filter, None)
+
+    search_tags_with_regex_uri = endpoint_uri + '/search/{filter}/{regex}'
+
+    @router.get(search_tags_with_regex_uri)
+    def buscar_tags_con_regex(filter: str, regex: str = None, response: Response = Response()):
         """ Busca tags en el servidor PI """
-        pi_server = get_pi_server()
-        result = search_pi_points_and_values(pi_server, regex)
-        success = len(result) > 0
+        tags_values = get_values_for_tags_using_regex(filter, regex)
+        success = len(tags_values) > 0
         response.status_code = 200 if success else 404
-        return result
+        return dict(success=success, tags=tags_values, msg="Not found" if not success else "Values were found")
+
+    get_tag_values_uri = endpoint_uri + '/values'
+
+    @router.post(get_tag_values_uri)
+    def obtener_valores_de_tags(request_data: TagListRequest, response: Response = Response()):
+        """ Obtiene valores de tags en el servidor PI """
+        tags_values = get_values_for_tags(request_data)
+        success = len(tags_values) > 0
+        response.status_code = 200 if success else 404
+        return dict(success=success, tags=tags_values, msg="Not found" if not success else "Values were found")

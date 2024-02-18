@@ -2,6 +2,7 @@ from typing import List
 
 from mongoengine import EmbeddedDocument, StringField, IntField, ListField, EmbeddedDocumentField, FloatField
 
+from app.db.constants import consignacion_total_procentaje
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRInstallation import V2SRInstallation
 from app.db.v2.v2SRNodeReport.Details.v2_sRBahiaReportDetails import V2SRBahiaReportDetails
@@ -55,6 +56,15 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
     def representation(self):
         return f'{self.instalacion_nombre}'
 
+    def consignacion_total(self):
+        self.nota = f'Consignación total de {self.instalacion_tipo} {self.instalacion_nombre}'
+        self.periodo_efectivo_minutos = 0
+        self.disponibilidad_promedio_porcentage = consignacion_total_procentaje
+        self.numero_tags_procesadas = 0
+        self.indisponibilidad_acumulada_minutos = 0
+        self.ponderacion = 0
+        return
+
     def calculate(self):
         self.numero_tags = sum([rb.numero_tags for rb in self.reportes_bahias])
         self.numero_tags_procesadas = sum([rb.numero_tags_procesadas for rb in self.reportes_bahias])
@@ -64,6 +74,8 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
             self.nota = 'Se considera consignaciones a nivel superior'
         elif consignaciones_acumuladas_minutos > 0:
             self.nota = 'La instalación ha sido consignada'
+        if self.periodo_efectivo_minutos <= 0:
+            return self.consignacion_total()
 
         if len(self.reportes_bahias) > 0 and self.numero_tags_procesadas > 0 and self.periodo_efectivo_minutos > 0:
             self.indisponibilidad_acumulada_minutos = int(sum(

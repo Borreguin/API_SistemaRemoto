@@ -1,3 +1,4 @@
+from app.db.constants import consignacion_total_procentaje
 from app.db.v1.sRNode import *
 from app.utils import utils as u
 
@@ -42,6 +43,10 @@ class SRUTRDetails(EmbeddedDocument):
                f" eftv:{self.periodo_efectivo_minutos} => disp_avg:{round(self.disponibilidad_promedio_minutos, 1)} " \
                f" %disp: {round(self.disponibilidad_promedio_porcentage, 2)})"
 
+    def consignacion_total(self):
+        self.disponibilidad_promedio_minutos = 0
+        self.disponibilidad_promedio_porcentage = consignacion_total_procentaje
+
     def calculate(self, report_ini_date, report_end_date, all_consignment=False):
         self.numero_tags = len(self.indisponibilidad_detalle)
         self.indisponibilidad_acumulada_minutos = sum([t.indisponible_minutos for t in self.indisponibilidad_detalle])
@@ -61,9 +66,7 @@ class SRUTRDetails(EmbeddedDocument):
                              "el cálculo")
         # este caso ocurre cuando la totalidad del periodo está consignado:
         if all_consignment:
-            self.disponibilidad_promedio_minutos = -1
-            self.disponibilidad_promedio_porcentage = 100
-            return
+            return self.consignacion_total()
 
         if self.periodo_evaluacion_minutos is not None and self.numero_tags > 0:
             # ordenar el reporte de tags:

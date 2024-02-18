@@ -2,6 +2,7 @@ from typing import List
 
 from mongoengine import EmbeddedDocument, StringField, ListField, EmbeddedDocumentField, IntField, FloatField
 
+from app.db.constants import consignacion_total_procentaje
 from app.db.v2.entities.v2_sRBahia import V2SRBahia
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.v2SRNodeReport.Details.v2_sRTagReportDetails import V2SRTagDetails
@@ -50,16 +51,25 @@ class V2SRBahiaReportDetails(EmbeddedDocument):
     def representation(self):
         return f'{self.bahia_code if len(self.bahia_nombre) > 0 else self.bahia_nombre}'
 
+    def consignacion_total(self):
+        self.nota = f'Consignación total de {self.bahia_nombre}'
+        self.periodo_efectivo_minutos = 0
+        self.disponibilidad_promedio_porcentage = consignacion_total_procentaje
+        self.numero_tags_procesadas = 0
+        self.indisponibilidad_promedio_minutos = 0
+        return
+
     def calculate(self):
         if self.reportes_tags is not None and len(self.reportes_tags) > 0:
             self.numero_tags_procesadas = len(self.reportes_tags)
             self.indisponibilidad_acumulada_minutos = sum([tr.indisponible_minutos for tr in self.reportes_tags])
             self.indisponibilidad_promedio_minutos = int(
                 self.indisponibilidad_acumulada_minutos / self.numero_tags_procesadas)
+            if self.periodo_efectivo_minutos <=0:
+                return self.consignacion_total()
             if self.periodo_efectivo_minutos > 0:
                 self.disponibilidad_promedio_minutos = self.periodo_efectivo_minutos - self.indisponibilidad_promedio_minutos
-                self.disponibilidad_promedio_porcentage = (
-                                                                      self.disponibilidad_promedio_minutos / self.periodo_efectivo_minutos) * 100
+                self.disponibilidad_promedio_porcentage = (self.disponibilidad_promedio_minutos / self.periodo_efectivo_minutos) * 100
                 self.disponibilidad_promedio_porcentage = validate_percentage(self.disponibilidad_promedio_porcentage)
         if len(self.consignaciones) > 0:
             self.consignaciones_acumuladas_minutos = sum([c.t_minutos for c in self.consignaciones])

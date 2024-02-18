@@ -2,6 +2,7 @@ from mongoengine import Document, StringField, LazyReferenceField, IntField, Dat
     EmbeddedDocumentField, FloatField, DictField
 
 from app.common.util import get_time_in_minutes, clean_alphanumeric_name
+from app.db.constants import consignacion_total_procentaje
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRNodeReport.Details.v2_sREntityReportDetails import V2SREntityReportDetails
@@ -55,6 +56,17 @@ class V2SRNodeDetailsBase(Document):
     def representation(self):
         return f'{self.nombre}'
 
+    def consignacion_total(self):
+        self.nota = f'Consignación total de {self.tipo} {self.nombre}'
+        self.periodo_efectivo_minutos = 0
+        self.disponibilidad_promedio_porcentage = consignacion_total_procentaje
+        self.numero_tags_procesadas = 0
+        self.numero_bahias_procesadas = 0
+        self.numero_instalaciones_procesadas =0
+        self.disponibilidad_promedio_ponderada_porcentage = consignacion_total_procentaje
+        self.ponderacion = 0
+        return
+
     def calculate(self):
         # en caso que la disponibilidad de una entidad sea -1, significa que ha sido consignado en su totalidad
         # o que no se puede calcular ya que no tiene tags correctas para el cálculo:
@@ -67,7 +79,11 @@ class V2SRNodeDetailsBase(Document):
         if len(self.consignaciones_internas) > 0:
             self.nota = f'Contiene consignaciones internas'
 
-        n_valid_report = sum([1 for rb in self.reportes_entidades if rb.disponibilidad_promedio_porcentage > 0])
+        # consignacion total:
+        if self.periodo_efectivo_minutos <= 0:
+            return self.consignacion_total()
+
+        n_valid_report = sum([1 for rb in self.reportes_entidades if rb.periodo_efectivo_minutos > 0])
         if (len(self.reportes_entidades) == 0 or self.periodo_efectivo_minutos == 0 or
                 self.numero_tags_procesadas == 0 or n_valid_report == 0):
             self.disponibilidad_promedio_ponderada_porcentage = -1
@@ -77,7 +93,7 @@ class V2SRNodeDetailsBase(Document):
 
         avg_acc, weight_avg = 0, 0
         for e_report in self.reportes_entidades:
-            if e_report.disponibilidad_promedio_porcentage > 0:
+            if e_report.periodo_efectivo_minutos > 0:
                 avg_acc += e_report.disponibilidad_promedio_porcentage
                 e_report.ponderacion = e_report.numero_tags_procesadas / self.numero_tags_procesadas
                 weight_avg +=  e_report.ponderacion * e_report.disponibilidad_promedio_porcentage

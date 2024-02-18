@@ -7,6 +7,7 @@ from bson import ObjectId
 from mongoengine import Document, NotUniqueError
 import datetime as dt
 
+from app.common import error_log
 from app.db.constants import attributes_node, attr_id_entidad, attr_entidades, attr_entidad_tipo, attr_entidad_nombre, \
     attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL, V2_SR_INSTALLATION_LABEL
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
@@ -130,11 +131,15 @@ def get_final_report_v2_by_id(id_report: str, permanent: bool = False) -> V2SRFi
     return query.first() if query.count() > 0 else None
 
 def get_final_report_v1_by_id(id_report: str, permanent: bool = False) -> SRFinalReportPermanente | SRFinalReportTemporal | None:
-    if permanent:
-        query = SRFinalReportPermanente.objects(id_report=id_report)
-    else:
-        query = SRFinalReportTemporal.objects(id_report=id_report)
-    return query.first() if query.count() > 0 else None
+    try:
+        if permanent:
+            query = SRFinalReportPermanente.objects(id_report=id_report)
+        else:
+            query = SRFinalReportTemporal.objects(id_report=id_report)
+        return query.first() if query.count() > 0 else None
+    except Exception as e:
+        error_log.error(f"get_final_report_v1_by_id: {e}")
+        return None
 
 def get_final_report_by_id(id_report: str, permanent: bool = False) ->\
         SRFinalReportTemporal | SRFinalReportTemporal | V2SRFinalReportPermanent | V2SRFinalReportTemporal | None:

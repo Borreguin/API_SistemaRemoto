@@ -28,11 +28,11 @@ def create_v2sr_node_report(ini_report_date: dt.datetime, end_report_date: dt.da
     if permanent:
         report_node = V2SRNodeDetailsPermanent(nodo=node, nombre=node.nombre, tipo=node.tipo,
                                                fecha_inicio=ini_report_date,
-                                               fecha_final=end_report_date)
+                                               fecha_final=end_report_date, id_node=node.id_node)
     else:
         report_node = V2SRNodeDetailsTemporal(nodo=node, nombre=node.nombre, tipo=node.tipo,
                                               fecha_inicio=ini_report_date,
-                                              fecha_final=end_report_date)
+                                              fecha_final=end_report_date, id_node=node.id_node)
     return report_node
 
 def delete_v2sr_node_report_if_exists(report_id: str, permanent_report: bool) \

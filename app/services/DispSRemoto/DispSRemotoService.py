@@ -5,7 +5,7 @@ from app.db.db_util import get_temporal_status, get_node_details_report_by_id_no
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRNodeReport.report_util import get_report_id
 from app.schemas.RequestSchemas import NodeRequest, NodesRequest
-from app.utils.service_util import get_sr_final_report
+from app.utils.service_util import get_sr_final_report, check_if_report_is_in_progress
 from app.utils.utils import isTemporal, \
     check_range_yyyy_mm_dd_hh_mm_ss
 from flask_app.motor.master_scripts.eng_sRmaster import *
@@ -36,6 +36,10 @@ def get_obtiene_disponibilidad_en_rango_fecha(ini_date: str = "yyyy-mm-dd H:M:S"
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
     is_permanent = not isTemporal(ini_date, end_date)
+    status_report = check_if_report_is_in_progress(ini_date, end_date, is_permanent)
+    if status_report is not None and status_report.processing:
+        return dict(success=False, msg=f"Hay un cálculo que se encuentra en progreso, iniciado al {status_report.created}, vuelva a intentar mirar su estado en 5 min."), status.HTTP_409_CONFLICT
+
     final_report = get_sr_final_report(ini_date, end_date, is_permanent=is_permanent)
     if final_report is None:
         return dict(success=False, msg="No existe reporte asociado"), status.HTTP_404_NOT_FOUND
@@ -65,20 +69,14 @@ def put_calcula_o_sobrescribe_disponibilidad_nodo_en_rango_fecha(ini_date: str =
 def put_calcula_o_sobrescribe_disponibilidad_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S",
                                                             end_date: str = "yyyy-mm-dd H:M:S",
                                                             request_data: NodesRequest = NodesRequest()):
+    from app.core.v2CalculationEngine.master.master import overwrite_node_reports_by_node_ids
     success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
 
-    success1, result, msg1 = run_node_list(request_data.nodos, ini_date, end_date, save_in_db=True, force=True)
-    if success1:
-        success2, report, msg2 = run_summary(ini_date, end_date, save_in_db=True, force=True,
-                                             results=result, log_msg=msg1)
-        if success2:
-            return dict(result=result, msg=msg1, report=report.to_dict()), status.HTTP_200_OK
-        else:
-            return dict(success=False, msg=msg2), status.HTTP_409_CONFLICT
-    elif not success1:
-        return dict(success=False, msg=result), status.HTTP_409_CONFLICT
+    is_permanent = not isTemporal(ini_date, end_date)
+    success, msg, report_id = overwrite_node_reports_by_node_ids(request_data.nodos, ini_date, end_date, permanent_report=is_permanent)
+    return dict(success=success, msg=msg, report_id=report_id), status.HTTP_200_OK if success else 409
 
 
 def post_calcula_disponibilidad_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S", end_date: str = "yyyy-mm-dd H:M:S",
@@ -105,41 +103,13 @@ def post_calcula_disponibilidad_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S
 def delete_elimina_disponibilidad_de_nodos_en_lista(ini_date: str = "yyyy-mm-dd H:M:S",
                                                     end_date: str = "yyyy-mm-dd H:M:S",
                                                     request_data: NodesRequest = NodesRequest()):
+    from app.core.v2CalculationEngine.master.master import delete_node_reports_by_node_ids
     success, ini_date, end_date, msg = check_range_yyyy_mm_dd_hh_mm_ss(ini_date, end_date)
     if not success:
         return dict(success=False, msg=msg), status.HTTP_400_BAD_REQUEST
-    not_found = list()
-    deleted = list()
-    for node in request_data.nodos:
-        sr_node = SRNode.objects(nombre=node).first()
-        if sr_node is None:
-            not_found.append(node)
-            continue
-        report_v = SRNodeDetailsBase(nodo=sr_node, nombre=sr_node.nombre, tipo=sr_node.tipo,
-                                     fecha_inicio=ini_date, fecha_final=end_date)
-        # delete status report if exists
-        status_report = TemporalProcessingStateReport.objects(id_report=report_v.id_report).first()
-        if status_report is not None:
-            status_report.delete()
-        if isTemporal(ini_date, end_date):
-            report = SRNodeDetailsTemporal.objects(id_report=report_v.id_report).first()
-        else:
-            report_v = SRNodeDetailsPermanente(nodo=sr_node, nombre=sr_node.nombre, tipo=sr_node.tipo,
-                                               fecha_inicio=ini_date, fecha_final=end_date)
-            report = SRNodeDetailsPermanente.objects(id_report=report_v.id_report).first()
-        if report is None:
-            not_found.append(node)
-            continue
-        report.delete()
-        deleted.append(node)
-
-    if len(deleted) == 0:
-        return dict(success=False, deleted=deleted, not_found=not_found), status.HTTP_404_NOT_FOUND
-    success, _, msg = run_summary(ini_date, end_date, save_in_db=True, force=True)
-    if not success:
-        return dict(success=False, deleted=[], not_found=not_found), status.HTTP_400_BAD_REQUEST
-    return dict(success=True, deleted=deleted, not_found=not_found), status.HTTP_200_OK
-
+    is_permanent = not isTemporal(ini_date, end_date)
+    success, msg, report_id = delete_node_reports_by_node_ids(request_data.nodos, ini_date, end_date, permanent_report=is_permanent)
+    return dict(success=success, msg=msg, report_id=report_id), status.HTTP_200_OK if success else 409
 
 def get_obtiene_disponibilidad_por_tipo_nodo(tipo="tipo de nodo", nombre="nombre del nodo",
                                              ini_date: str = "yyyy-mm-dd H:M:S",

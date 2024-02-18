@@ -14,6 +14,7 @@ from app.utils.utils import validate_percentage
 class V2SRNodeDetailsBase(Document):
     id_report = StringField(required=True, unique=True)
     nodo = LazyReferenceField(V2SRNode, required=True, dbref=True, passthrough=False)
+    id_node = StringField(required=False, default=None)
     nombre = StringField(required=True, default=None)
     tipo = StringField(required=True, default=None)
     periodo_evaluacion_minutos = IntField(required=True)

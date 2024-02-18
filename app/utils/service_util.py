@@ -1,6 +1,6 @@
 from app.db.constants import SR_REPORTE_SISTEMA_REMOTO, V1_SR_NODE_LABEL, V2_SR_NODE_LABEL
-from app.db.db_util import get_final_report_v1_by_id, get_final_report_v2_by_id
-from app.db.v2.v2SRNodeReport.report_util import get_final_report_id
+from app.db.db_util import get_final_report_v1_by_id, get_final_report_v2_by_id, get_temporal_status
+from app.db.v2.v2SRNodeReport.report_util import get_final_report_id, get_general_report_id
 
 
 def get_sr_final_report_by_version(ini_date: str, end_date: str, version: str = None, is_permanent: bool = False):
@@ -16,7 +16,10 @@ def get_sr_final_report(ini_date: str, end_date: str, is_permanent: bool = False
         return final_report
     return get_sr_final_report_by_version(ini_date, end_date, V1_SR_NODE_LABEL, is_permanent)
 
-
+def check_if_report_is_in_progress(ini_date: str, end_date: str, is_permanent: bool = False):
+    report_id = get_general_report_id(is_permanent, ini_date, end_date)
+    status = get_temporal_status(report_id)
+    return status
 
 
 

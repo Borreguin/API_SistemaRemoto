@@ -9,6 +9,7 @@ from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemp
 
 class V2SRNodeSummaryReport(EmbeddedDocument):
     id_report = StringField(required=True)
+    id_node = StringField(required=False)
     nombre = StringField(required=True)
     tipo = StringField(required=True)
     # el valor -1 es aceptado en el caso de que la disponibilidad no este definida
@@ -19,7 +20,7 @@ class V2SRNodeSummaryReport(EmbeddedDocument):
     actualizado = DateTimeField(default=dt.datetime.now())
 
     def to_dict(self):
-        return dict(id_report=self.id_report, nombre=self.nombre, tipo=self.tipo,
+        return dict(id_report=self.id_report,id_node=self.id_node, nombre=self.nombre, tipo=self.tipo,
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     procesamiento=self.procesamiento, novedades=self.novedades,
                     tiempo_calculo_segundos=self.tiempo_calculo_segundos,
@@ -27,6 +28,7 @@ class V2SRNodeSummaryReport(EmbeddedDocument):
 
     def set_values_from_detail_report(self, d_report: V2SRNodeDetailsPermanent| V2SRNodeDetailsTemporal):
         self.id_report = d_report.id_report
+        self.id_node = d_report.id_node
         self.nombre = d_report.nombre
         self.tipo = d_report.tipo
         self.disponibilidad_promedio_ponderada_porcentage = d_report.disponibilidad_promedio_ponderada_porcentage

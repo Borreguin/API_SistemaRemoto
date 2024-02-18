@@ -122,21 +122,22 @@ def get_node_details_report_by_id_node(id_report: str) -> V2SRNodeDetailsTempora
     return None
 
 
-def get_final_report_v2_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+def get_final_report_v2_by_id(id_report: str, permanent: bool = False) -> V2SRFinalReportPermanent | V2SRFinalReportTemporal | None:
     if permanent:
         query = V2SRFinalReportPermanent.objects(id_report=id_report)
     else:
         query = V2SRFinalReportTemporal.objects(id_report=id_report)
     return query.first() if query.count() > 0 else None
 
-def get_final_report_v1_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+def get_final_report_v1_by_id(id_report: str, permanent: bool = False) -> SRFinalReportPermanente | SRFinalReportTemporal | None:
     if permanent:
         query = SRFinalReportPermanente.objects(id_report=id_report)
     else:
         query = SRFinalReportTemporal.objects(id_report=id_report)
     return query.first() if query.count() > 0 else None
 
-def get_final_report_by_id(id_report: str, permanent: bool = False) -> V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent | None:
+def get_final_report_by_id(id_report: str, permanent: bool = False) ->\
+        SRFinalReportTemporal | SRFinalReportTemporal | V2SRFinalReportPermanent | V2SRFinalReportTemporal | None:
     report = get_final_report_v2_by_id(id_report, permanent)
     if report is None:
         report = get_final_report_v1_by_id(id_report, permanent)

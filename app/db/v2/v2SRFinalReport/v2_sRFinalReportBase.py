@@ -88,12 +88,21 @@ class V2SRFinalReportBase(Document):
             self.novedades[lb_detalle][name] = self.novedades[lb_detalle].get(name, {})
             self.novedades[lb_detalle][name][label] = node_summary_report.novedades.get(label, 0)
 
+    def remove_report_node(self, id_report: str):
+        current_size = len(self.reportes_nodos)
+        self.reportes_nodos = [r for r in self.reportes_nodos if r.id_report != id_report]
+        return len(self.reportes_nodos) < current_size
     def append_node_detail_report(self, d_report: V2SRNodeDetailsTemporal| V2SRNodeDetailsPermanent):
         summary_report = V2SRNodeSummaryReport().set_values_from_detail_report(d_report)
         self.append_node_summary_report(summary_report)
 
     def append_node_summary_report(self, node_summary_report: V2SRNodeSummaryReport):
-        self.reportes_nodos.append(node_summary_report)
+        idx_report = [i for i, r in enumerate(self.reportes_nodos) if r.id_report == node_summary_report.id_report]
+        if len(idx_report) > 0:
+            idx_report = idx_report[0]
+            self.reportes_nodos[idx_report] = node_summary_report
+        else:
+            self.reportes_nodos.append(node_summary_report)
         to_work_with = [lb_numero_tags, lb_numero_tags_procesadas, lb_numero_bahias_procesadas, lb_numero_instalaciones_procesadas, lb_numero_entidades_procesadas]
         [self.append_each_node_detail(label, node_summary_report) for label in to_work_with]
 

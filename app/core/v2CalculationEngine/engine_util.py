@@ -47,8 +47,6 @@ def generate_time_ranges(consignaciones: List[V2SRConsignment], ini_date: dt.dat
 
     elif consignaciones[0].fecha_inicio == ini_date and consignaciones[0].fecha_final < end_date:
         # --*[++++++++++]+++++++++*---------------
-        start = consignaciones[0].fecha_final  # fecha desde la que se empieza un periodo válido para calc. disponi
-        end = end_date  # fecha fin del periodo válido para calc. disponi
         tail = consignaciones[0].fecha_final  # siguiente probable periodo (lo que queda restante a analizar)
         time_ranges = []  # No hay periodo valido a evaluar
 
@@ -60,16 +58,18 @@ def generate_time_ranges(consignaciones: List[V2SRConsignment], ini_date: dt.dat
 
     # creando los demás rangos:
     for c in consignaciones[1:]:
-        start = tail
-        end = c.fecha_inicio
-        if c.fecha_final < end_date:
-            time_ranges.append(DateTimeRange(start, end))
-            tail = c.fecha_final
-        else:
-            end = c.fecha_inicio
+        if end_date < c.fecha_final:
             break
+        start = tail
+        _end = c.fecha_inicio
+        if c.fecha_final < end_date and start < _end:
+            time_ranges.append(DateTimeRange(start, _end))
+            tail = c.fecha_final
+        elif c.fecha_final < end_date:
+            _end = c.fecha_inicio
+
     # ultimo caso:
-    time_ranges.append(DateTimeRange(tail, end))
+    time_ranges.append(DateTimeRange(tail, end_date))
     return time_ranges
 
 def get_date_time_ranges_using_consignments(element_id:str, ini_date: dt.datetime, end_date: dt.datetime):
@@ -81,7 +81,8 @@ def get_date_time_ranges_from_consignment_time_ranges(element_id:str, time_range
     result_range_list = list()
     consignments_list = list()
     for dt_range in time_ranges:
-        time_range_list, consignment_list = get_date_time_ranges_using_consignments(element_id, dt_range.start, dt_range.end)
-        result_range_list += time_range_list
-        consignments_list += consignment_list
+        if dt_range.start < dt_range.end:
+            time_range_list, consignment_list = get_date_time_ranges_using_consignments(element_id, dt_range.start, dt_range.end)
+            result_range_list += time_range_list
+            consignments_list += consignment_list
     return result_range_list, consignments_list

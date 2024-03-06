@@ -50,4 +50,4 @@ attr_detalle = "detalle"
 attr_responsable = "responsable"
 attributes_consignments = [attr_no_consignacion, attr_fecha_inicio, attr_fecha_final, attr_detalle, attr_responsable]
 
-consignacion_total_procentaje = 100
+consignacion_total_procentaje = -1

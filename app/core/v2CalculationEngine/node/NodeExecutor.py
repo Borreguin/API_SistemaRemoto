@@ -170,6 +170,8 @@ class NodeExecutor:
         self.log.info(f'[{self.node}] All entities were processed')
         if self.report_node.disponibilidad_promedio_porcentage == -1:
             self.success, self.msg = False, f"No able to calculate this nodo {self.node}"
+        else:
+            self.success, self.msg = True, f"Saving information for this node"
 
     def save_report(self):
         self.report_node.numero_bahias_procesadas = self.numero_bahias_procesadas

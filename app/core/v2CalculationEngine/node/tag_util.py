@@ -52,12 +52,16 @@ def get_tag_unavailability_from_history(tag_name:str, condition:str, time_ranges
 
         indisponible_minutos = 0  # indisponibilidad acumulada
         # in minutes "mi"
+        n_success = 0
         for time_range in time_ranges:
             af_time_range = create_time_range(time_range.start, time_range.end)
             value = pt.time_filter(af_time_range, expression, span=None, time_unit="mi")
+            if value is None:
+                continue
             # acumulando el tiempo de indisponibilidad
             indisponible_minutos += value[tag_name].iloc[0]
-        return True, indisponible_minutos, f'Tag {tag_name} was unavailable for {indisponible_minutos} minutes'
+            n_success += 1
+        return n_success > 0, indisponible_minutos, f'Tag {tag_name} was unavailable for {indisponible_minutos} minutes'
 
     except Exception as e:
         log.error(f"Error al momento de procesar la tag {tag_name}, detalles: \n{str(e)}")

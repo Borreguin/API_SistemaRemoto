@@ -1,6 +1,7 @@
 from typing import List
 
-from mongoengine import EmbeddedDocument, StringField, ListField, EmbeddedDocumentField, IntField, FloatField
+from mongoengine import EmbeddedDocument, StringField, ListField, EmbeddedDocumentField, IntField, FloatField, \
+    BooleanField
 
 from app.db.constants import consignacion_total_procentaje
 from app.db.v2.entities.v2_sRBahia import V2SRBahia
@@ -29,6 +30,7 @@ class V2SRBahiaReportDetails(EmbeddedDocument):
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100, default=-1)
     consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment), required=False, default=[])
     consignaciones_acumuladas_minutos = IntField(required=True, default=0)
+    consignada_totalmente = BooleanField(required=False, default=False)
     nota = StringField(required=False, default='Normal')
 
     def __init__(self, *args, **kwargs):
@@ -57,16 +59,17 @@ class V2SRBahiaReportDetails(EmbeddedDocument):
         self.disponibilidad_promedio_porcentage = consignacion_total_procentaje
         self.numero_tags_procesadas = 0
         self.indisponibilidad_promedio_minutos = 0
+        self.consignada_totalmente = True
         return
 
     def calculate(self):
         if self.reportes_tags is not None and len(self.reportes_tags) > 0:
+            if self.periodo_efectivo_minutos <=0:
+                return self.consignacion_total()
             self.numero_tags_procesadas = len(self.reportes_tags)
             self.indisponibilidad_acumulada_minutos = sum([tr.indisponible_minutos for tr in self.reportes_tags])
             self.indisponibilidad_promedio_minutos = int(
                 self.indisponibilidad_acumulada_minutos / self.numero_tags_procesadas)
-            if self.periodo_efectivo_minutos <=0:
-                return self.consignacion_total()
             if self.periodo_efectivo_minutos > 0:
                 self.disponibilidad_promedio_minutos = self.periodo_efectivo_minutos - self.indisponibilidad_promedio_minutos
                 self.disponibilidad_promedio_porcentage = (self.disponibilidad_promedio_minutos / self.periodo_efectivo_minutos) * 100
@@ -96,5 +99,6 @@ class V2SRBahiaReportDetails(EmbeddedDocument):
             disponibilidad_promedio_porcentage=self.disponibilidad_promedio_porcentage,
             consignaciones=[c.to_dict() for c in self.consignaciones],
             consignaciones_acumuladas_minutos=self.consignaciones_acumuladas_minutos,
-            nota=self.nota
+            nota=self.nota,
+            consignada_totalmente=self.consignada_totalmente if self.consignada_totalmente is not None else False
         )

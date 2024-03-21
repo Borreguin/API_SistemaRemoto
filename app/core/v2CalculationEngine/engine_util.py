@@ -24,9 +24,9 @@ def generate_time_ranges(consignaciones: List[V2SRConsignment], ini_date: dt.dat
     # * ++ tiempo de análisis ++*
     # [ periodo de consignación ]
     time_ranges = list()  # lleva la lista de periodos válidos
-    tail = None  # inicialización
+    tail = ini_date  # inicialización
     end = end_date  # inicialización posible fecha final valida
-    if consignaciones[0].fecha_inicio < ini_date:
+    if consignaciones[0].fecha_inicio <= ini_date:
         # [-----*++++]+++++++++++++++++++++*------
         tail = consignaciones[0].fecha_final  # lo que queda restante a analizar
         end = end_date  # por ser caso inicial se asume que se puede hacer el cálculo hasta el final del periodo
@@ -55,6 +55,9 @@ def generate_time_ranges(consignaciones: List[V2SRConsignment], ini_date: dt.dat
         # este caso es definitivo y no requiere continuar más alla
         # nada que procesar en este caso
         return []
+
+    if tail >= end:
+        return time_ranges
 
     # creando los demás rangos:
     for c in consignaciones[1:]:

@@ -29,7 +29,7 @@ from app.core.v2CalculationEngine.engine_util import get_date_time_ranges_using_
 from app.core.v2CalculationEngine.node.EntityExecutor import EntityExecutor
 from app.core.v2CalculationEngine.util import *
 from app.db.constants import attr_nombre, attr_tipo
-from app.db.db_util import get_or_create_temporal_report
+from app.db.db_util import get_or_create_temporal_report, get_temporal_status
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sREntity import V2SREntity
@@ -43,9 +43,11 @@ from app.utils.utils import validate_percentage
 class NodeExecutor:
     report_node: V2SRNodeDetailsTemporal | V2SRNodeDetailsPermanent = None
     status_node: TemporalProcessingStateReport = None
+    general_status: TemporalProcessingStateReport = None
     pi_svr: PIServerBase = None
     node: V2SRNode = None
     report_id: str = None
+    general_report_id: str = None
     executor: ProcessPoolExecutor = None
     entities: List[V2SREntity] = None
     node_consignments: List[V2SRConsignment] = list()
@@ -59,11 +61,13 @@ class NodeExecutor:
     numero_entidades_procesadas: int = 0
     log: Logger = None
 
-    def __init__(self, node: V2SRNode, report_id: str, ini_report_date: dt.datetime, end_report_date: dt.datetime,
+    def __init__(self, node: V2SRNode, report_id: str, general_report_id: str,
+                 ini_report_date: dt.datetime, end_report_date: dt.datetime,
                  force: bool, permanent_report: bool):
         self.start_time = dt.datetime.now()
         self.node = node
         self.report_id = report_id
+        self.general_report_id = general_report_id
         self.ini_report_date = ini_report_date
         self.end_report_date = end_report_date
         self.force = force
@@ -74,6 +78,8 @@ class NodeExecutor:
         self.minutes_in_period = None
         self.start_time = dt.datetime.now()
         self.executor = ProcessPoolExecutor()
+        self.inner_consignments = list()
+        self.consignments = list()
         self.log = configure_logger(log_name=f'{self.node.nombre}.log',
                                     log_path=os.path.join(default_log_path, 'v2Engine'))
 
@@ -94,11 +100,20 @@ class NodeExecutor:
         self.status_node.info[attr_tipo] = self.node.tipo
         self.status_node.update_now()
 
+    def get_general_report(self):
+        self.log.info(f"get_general_report")
+        self.general_status = get_temporal_status(self.general_report_id)
+
+
     def update_info_status_report(self, msg: str, percentage: float):
         self.log.info(msg)
         self.status_node.msg = msg
         self.status_node.percentage = round(percentage, 2)
         self.status_node.save_safely()
+        self.general_status.reload()
+        self.general_status.msg = msg
+        self.general_status.percentage += percentage * 15
+        self.general_status.save_safely()
 
     def update_fail_status_report(self, msg: str):
         self.status_node.failed()
@@ -130,6 +145,7 @@ class NodeExecutor:
 
     def init(self):
         self.get_status_report()
+        self.get_general_report()
         self.update_info_status_report(f'Get all settings for node {self.node}', 0)
         self.check_connection()
         self.minutes_in_period = get_time_in_minutes(self.ini_report_date, self.end_report_date)
@@ -147,7 +163,7 @@ class NodeExecutor:
                 entity_executor = EntityExecutor(self.pi_svr, entity, self.status_node, self.date_time_range,
                                                self.ini_report_date, self.end_report_date, min_percentage, max_percentage,
                                                self.log).process()
-                if not entity_executor.success or entity_executor.entity_report.disponibilidad_promedio_porcentage == -1:
+                if not entity_executor.success:
                     self.entidades_fallidas.append(entity.to_summary())
                     continue
                 self.report_node.reportes_entidades.append(entity_executor.entity_report)
@@ -155,8 +171,9 @@ class NodeExecutor:
                 self.instalaciones_fallidas += entity_executor.instalaciones_fallidas
                 self.numero_bahias_procesadas += entity_executor.numero_bahias_procesadas
                 self.numero_instalaciones_procesadas += entity_executor.numero_instalaciones_procesadas
-                self.inner_consignments += entity_executor.consignments
-                self.numero_entidades_procesadas += 1
+                print("------->", entity_executor.inner_consignments, entity_executor.consignments)
+                self.inner_consignments = unique_consignments(self.inner_consignments, entity_executor.inner_consignments + entity_executor.consignments)
+                self.numero_entidades_procesadas += 1 if not entity_executor.entity_report.consignada_totalmente else 0
             except Exception as e:
                 self.log.error(f'Not able to process a entity: {str(e)} \n{traceback.format_exc()}')
                 self.entidades_fallidas.append(entity.to_summary())

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import traceback
 from random import randint
-from typing import Tuple
+from typing import Tuple, List
 
 from app.common import report_node_log as log
 from app.common.PI_connection.PIServer.PIServerBase import PIServerBase
@@ -12,6 +12,7 @@ from app.core.config import Settings
 from app.core.v2CalculationEngine.NodeStatusCalculation import NodeStatusCalculation as nodeStatus
 from app.db.db_util import get_node_details_report
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
+from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
 from app.db.v2.entities.v2_sRNode import V2SRNode
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsPermanent import V2SRNodeDetailsPermanent
 from app.db.v2.v2SRNodeReport.V2SRNodeDetailsTemporal import V2SRNodeDetailsTemporal
@@ -74,3 +75,17 @@ def get_active_entities(node: V2SRNode):
     if len(entities) == 0:
         return False, "No hay entidades activas a procesar en el nodo", None
     return True, f"{len(entities)} entidades", entities
+
+def unique_consignments(consignments: List[V2SRConsignment], new_consignments: List[V2SRConsignment]):
+    if new_consignments is None:
+        return consignments
+    for new_consignment in new_consignments:
+        found = False
+        for consignment in consignments:
+            if consignment.id_consignacion == new_consignment.id_consignacion:
+                found = True
+        if not found:
+            consignments.append(new_consignment)
+    return consignments
+
+

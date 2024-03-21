@@ -74,7 +74,10 @@ class MasterEngine:
             status.delete()
             return False
         if status is not None:
-            running = dt.datetime.now() - status.modified < dt.timedelta(seconds=TIMEOUT_SECONDS) or not status.finish
+            running_seconds = (dt.datetime.now() - status.modified).total_seconds()
+            timeout_seconds = dt.timedelta(seconds=TIMEOUT_SECONDS).total_seconds()
+            time_out = running_seconds > timeout_seconds
+            running = not status.finish and not time_out
             assert not running, f"Ya existe un cálculo en proceso asociado a {label}. \nFecha de ejecución: [{status.modified}]"
             if status is not None:
                 status.delete()
@@ -166,7 +169,7 @@ class MasterEngine:
             status = TemporalProcessingStateReport(id_report=id_report, percentage=0, processing=True, msg=msg)
             status.save()
             """ Running the complete process for a single node """
-            node_executor = NodeExecutor(node, id_report, ini_report_date, end_report_date, force, permanent_report)
+            node_executor = NodeExecutor(node, id_report, self.general_report_id, ini_report_date, end_report_date, force, permanent_report)
             success, msg = node_executor.processing_node()
             if not success:
                 self.node_error[node.nombre] = msg
@@ -220,6 +223,7 @@ class MasterEngine:
                 nodos_fallidos += 1
                 continue
             self.final_report.append_node_detail_report(detail_report_node)
+            self.final_report.numero_consignaciones += len(detail_report_node.consignaciones) + len(detail_report_node.consignaciones_internas)
             results[detail_report_node.nombre] = f"Reporte en base de datos: {detail_report_node.actualizado}"
         self.final_report.calculate()
         self.save_final_report('El reporte final ha sido calculado exitosamente', nodos_fallidos, results)

@@ -38,7 +38,8 @@ def get_obtiene_disponibilidad_en_rango_fecha(ini_date: str = "yyyy-mm-dd H:M:S"
     is_permanent = not isTemporal(ini_date, end_date)
     status_report = check_if_report_is_in_progress(ini_date, end_date, is_permanent)
     if status_report is not None and status_report.processing:
-        return dict(success=False, msg=f"Hay un cálculo que se encuentra en progreso, iniciado al {status_report.created}, vuelva a intentar mirar su estado en 5 min."), status.HTTP_409_CONFLICT
+        return dict(success=False, msg=f"Hay un cálculo que se encuentra en progreso, iniciado al {status_report.created}. "
+                                       f"Estado actual ({round(status_report.percentage,2)}%): {status_report.msg}"), status.HTTP_409_CONFLICT
 
     final_report = get_sr_final_report(ini_date, end_date, is_permanent=is_permanent)
     if final_report is None:

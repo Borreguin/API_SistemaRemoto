@@ -1,6 +1,7 @@
 import uuid
 
-from mongoengine import EmbeddedDocument, StringField, ListField, EmbeddedDocumentField, IntField, FloatField
+from mongoengine import EmbeddedDocument, StringField, ListField, EmbeddedDocumentField, IntField, FloatField, \
+    BooleanField
 
 from app.db.constants import consignacion_total_procentaje
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
@@ -18,6 +19,7 @@ class V2SREntityReportDetails(EmbeddedDocument):
     numero_tags_procesadas = IntField(required=True, default=0)
     tags_fallidas = ListField(StringField(), default=[])
     consignaciones = ListField(EmbeddedDocumentField(V2SRConsignment), required=False, default=list())
+    consignaciones_internas = ListField(EmbeddedDocumentField(V2SRConsignment), required=False, default=list())
     consignaciones_acumuladas_minutos = IntField(required=True, default=0)
     periodo_evaluacion_minutos = IntField(required=True, default=0)
     periodo_efectivo_minutos = IntField(required=True, default=0)
@@ -28,6 +30,7 @@ class V2SREntityReportDetails(EmbeddedDocument):
     disponibilidad_promedio_ponderada_porcentage = FloatField(required=True, min_value=-1, max_value=100, default=0)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100, default=0)
     nota = StringField(required=False, default='Normal')
+    consignada_totalmente = BooleanField(required=False, default=False)
     ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
 
     def __init__(self, *args, **kwargs):
@@ -51,6 +54,7 @@ class V2SREntityReportDetails(EmbeddedDocument):
         self.disponibilidad_promedio_ponderada_minutos = 0
         self.numero_tags_procesadas = 0
         self.ponderacion = 0
+        self.consignada_totalmente = True
         return
 
     def calculate(self):
@@ -60,13 +64,13 @@ class V2SREntityReportDetails(EmbeddedDocument):
         self.periodo_efectivo_minutos = self.periodo_evaluacion_minutos - self.consignaciones_acumuladas_minutos
 
         if self.periodo_efectivo_minutos <= 0:
-            self.consignacion_total()
+            return self.consignacion_total()
 
         if self.consignaciones_acumuladas_minutos < self.periodo_evaluacion_minutos - self.periodo_efectivo_minutos:
             self.nota = 'Se considera consignaciones a nivel superior'
             self.consignaciones_acumuladas_minutos = self.periodo_evaluacion_minutos - self.periodo_efectivo_minutos
 
-        n_valid_reports = sum([1 for rb in self.reportes_instalaciones if rb.periodo_efectivo_minutos > 0])
+        n_valid_reports = sum([1 for rb in self.reportes_instalaciones if rb.periodo_efectivo_minutos > 0 or rb.consignada_totalmente])
         if len(self.reportes_instalaciones) == 0 or self.periodo_efectivo_minutos == 0 or n_valid_reports == 0:
             self.disponibilidad_promedio_ponderada_porcentage = -1
             self.disponibilidad_promedio_ponderada_minutos = -1
@@ -91,9 +95,12 @@ class V2SREntityReportDetails(EmbeddedDocument):
                f" min_avg_pond:{round(self.disponibilidad_promedio_ponderada_minutos, 1)})"
 
     def to_dict(self):
-        return dict(document_id=self.document_id, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo, numero_tags=self.numero_tags,
+        return dict(document_id=self.document_id, entidad_nombre=self.entidad_nombre, entidad_tipo=self.entidad_tipo,
+                    numero_tags=self.numero_tags,
                     reportes_instalaciones=[r.to_dict() for r in self.reportes_instalaciones],
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     disponibilidad_promedio_ponderada_minutos=self.disponibilidad_promedio_ponderada_minutos,
                     periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
+                    consignaciones=[c.to_dict() for c in self.consignaciones],
+                    consignaciones_internas=[c.to_dict() for c in self.consignaciones_internas],
                     ponderacion=self.ponderacion)

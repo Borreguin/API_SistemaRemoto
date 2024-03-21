@@ -9,7 +9,7 @@ import datetime as dt
 
 from app.common import error_log
 from app.db.constants import attributes_node, attr_id_entidad, attr_entidades, attr_entidad_tipo, attr_entidad_nombre, \
-    attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL, V2_SR_INSTALLATION_LABEL
+    attributes_entity, V2_SR_NODE_LABEL, V1_SR_NODE_LABEL, V2_SR_INSTALLATION_LABEL, attr_document_id, attr_actualizado
 from app.db.v1.ProcessingState import TemporalProcessingStateReport
 from app.db.v1.SRFinalReport.SRFinalReportTemporal import SRFinalReportTemporal
 from app.db.v1.SRFinalReport.sRFinalReportPermanente import SRFinalReportPermanente
@@ -47,6 +47,31 @@ def node_query(id: str, version=None) -> SRNode | V2SRNode | None:
             node = query.first()
             return node
     return None
+
+def node_activation(id:str, activate: bool, version:str=None):
+    try:
+        if version is None or version == V1_SR_NODE_LABEL:
+            SRNode.objects(id_node=id, document=V1_SR_NODE_LABEL).update_one(set__activado=activate)
+            node = SRNode.objects(id_node=id, document=V1_SR_NODE_LABEL).as_pymongo().exclude(attr_entidades).first()
+            return True, parse_node_dict(node)
+        if version == V2_SR_NODE_LABEL:
+            _id = valid_object_id(id)
+            if _id is None:
+                return False, None
+            V2SRNode.objects(id=_id, document=version).update_one(set__activado=activate)
+            node = V2SRNode.objects(id=_id, document=version).as_pymongo().exclude(attr_entidades).first()
+            return True, parse_node_dict(node)
+    except Exception as e:
+        error_log.error(f"Problema al activar el nodo {e}")
+        return False, None
+
+
+def parse_node_dict(node: dict):
+    node['_id'] = str(node['_id'])
+    node[attr_document_id] = str(node['_id'])
+    node[attr_actualizado] = node[attr_actualizado].isoformat()
+    return node
+
 
 def valid_object_id(id:str)-> ObjectId | None:
     try:

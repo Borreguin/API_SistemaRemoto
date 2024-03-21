@@ -1,6 +1,7 @@
 from typing import List
 
-from mongoengine import EmbeddedDocument, StringField, IntField, ListField, EmbeddedDocumentField, FloatField
+from mongoengine import EmbeddedDocument, StringField, IntField, ListField, EmbeddedDocumentField, FloatField, \
+    BooleanField
 
 from app.db.constants import consignacion_total_procentaje
 from app.db.v2.entities.v2_sRConsignment import V2SRConsignment
@@ -24,9 +25,10 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
     consignaciones_acumuladas_minutos = IntField(required=True, default=0)
     numero_tags = IntField(required=True, default=0)
     numero_tags_procesadas = IntField(required=True, default=0)
+    numero_bahias_procesadas = IntField(required=True, default=0)
     tags_fallidas = ListField(StringField(), default=[])
     periodo_evaluacion_minutos = IntField(required=True)
-    periodo_efectivo_minutos = IntField(required=True, default=0)
+    periodo_efectivo_minutos = IntField(required=False, default=0)
     # periodo_efectivo_minutos:
     # el periodo real a evaluar = periodo_evaluacion_minutos - consignaciones_acumuladas_minutos
     # se admite el valor de -1 para los casos en los que la disponibilidad queda indefinida
@@ -34,6 +36,7 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
     disponibilidad_promedio_minutos = IntField(required=True, min_value=-1, default=0)
     disponibilidad_promedio_porcentage = FloatField(required=True, min_value=-1, max_value=100, default=0)
     nota = StringField(required=True, default='Normal')
+    consignada_totalmente = BooleanField(required=False, default=False)
     ponderacion = FloatField(required=True, min_value=0, max_value=1, default=1)
 
     def __init__(self, *args, **kwargs):
@@ -63,6 +66,7 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
         self.numero_tags_procesadas = 0
         self.indisponibilidad_acumulada_minutos = 0
         self.ponderacion = 0
+        self.consignada_totalmente = True
         return
 
     def calculate(self):
@@ -74,8 +78,11 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
             self.nota = 'Se considera consignaciones a nivel superior'
         elif consignaciones_acumuladas_minutos > 0:
             self.nota = 'La instalación ha sido consignada'
-        if self.periodo_efectivo_minutos <= 0:
+        if (self.periodo_efectivo_minutos <= 0 or
+                sum([1 for rb in self.reportes_bahias if rb.consignada_totalmente]) == len(self.reportes_bahias)):
             return self.consignacion_total()
+
+        self.numero_bahias_procesadas = sum([1 for rb in self.reportes_bahias if rb.numero_tags_procesadas > 0])
 
         if len(self.reportes_bahias) > 0 and self.numero_tags_procesadas > 0 and self.periodo_efectivo_minutos > 0:
             self.indisponibilidad_acumulada_minutos = int(sum(
@@ -107,5 +114,7 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
                     numero_consignaciones_internas=self.numero_consignaciones_internas,
                     periodo_evaluacion_minutos=self.periodo_evaluacion_minutos,
                     periodo_efectivo_minutos=self.periodo_efectivo_minutos,
-                    nota=self.nota
+                    nota=self.nota,
+                    consignada_totalmente=self.consignada_totalmente,
+                    numero_bahias_procesadas=self.numero_bahias_procesadas
                     )

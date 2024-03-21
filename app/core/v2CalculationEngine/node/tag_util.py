@@ -23,6 +23,9 @@ def create_unavailability_condition(tag_name:str, condition:str):
 
 # time_ranges is a list of AFTimeRange
 def get_tag_unavailability_from_history(tag_name:str, condition:str, time_ranges:List[DateTimeRange], pi_svr: PIServerBase) -> (bool, int, str):
+    if len(time_ranges) == 0:
+        return True, -1, "No hay periodos de tiempo a evaluar la indisponibilidad"
+
     try:
         # buscando la Tag en el servidor PI
         pt = create_pi_point(pi_svr, tag_name)

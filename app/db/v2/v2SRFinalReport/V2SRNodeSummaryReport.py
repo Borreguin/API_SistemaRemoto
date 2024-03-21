@@ -1,5 +1,5 @@
 from __future__ import annotations
-from mongoengine import EmbeddedDocument, StringField, FloatField, DictField, DateTimeField
+from mongoengine import EmbeddedDocument, StringField, FloatField, DictField, DateTimeField, IntField
 import datetime as dt
 
 from app.db.v2.v2SRFinalReport.constants import *
@@ -17,6 +17,7 @@ class V2SRNodeSummaryReport(EmbeddedDocument):
     procesamiento = DictField(required=True, default=dict())
     novedades = DictField(required=True, default=dict())
     tiempo_calculo_segundos = FloatField(required=False)
+    numero_consignaciones = IntField(required=False, default=0)
     actualizado = DateTimeField(default=dt.datetime.now())
 
     def to_dict(self):
@@ -24,6 +25,7 @@ class V2SRNodeSummaryReport(EmbeddedDocument):
                     disponibilidad_promedio_ponderada_porcentage=self.disponibilidad_promedio_ponderada_porcentage,
                     procesamiento=self.procesamiento, novedades=self.novedades,
                     tiempo_calculo_segundos=self.tiempo_calculo_segundos,
+                    numero_consignaciones=self.numero_consignaciones,
                     actualizado=str(self.actualizado))
 
     def set_values_from_detail_report(self, d_report: V2SRNodeDetailsPermanent| V2SRNodeDetailsTemporal):
@@ -35,6 +37,7 @@ class V2SRNodeSummaryReport(EmbeddedDocument):
         self.set_procesamiento(d_report)
         self.set_novedades(d_report)
         self.tiempo_calculo_segundos = max(d_report.tiempo_calculo_segundos, 1)
+        self.numero_consignaciones = len(d_report.consignaciones) + len(d_report.consignaciones_internas)
         return self
 
     def set_procesamiento(self, d_report:  V2SRNodeDetailsPermanent| V2SRNodeDetailsTemporal):

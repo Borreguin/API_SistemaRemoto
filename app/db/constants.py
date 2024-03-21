@@ -32,6 +32,7 @@ attr_longitud = 'longitud'
 attr_latitud = 'latitud'
 attr_bahias = 'bahias'
 attr_actualizado = 'actualizado'
+attr_document_id = 'document_id'
 
 attributes_editable_installation = [attr_instalacion_ems_code, attr_instalacion_nombre, attr_instalacion_tipo,
                                     attr_activado, attr_protocolo, attr_longitud, attr_latitud]

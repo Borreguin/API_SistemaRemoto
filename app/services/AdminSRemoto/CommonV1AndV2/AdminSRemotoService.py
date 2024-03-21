@@ -8,19 +8,15 @@ from starlette import status
 
 from app.common.util import to_dict
 from app.db.constants import V1_SR_NODE_LABEL, V2_SR_NODE_LABEL
-from app.db.db_util import node_query, find_node_by_name_and_type, update_summary_node_info, create_node
+from app.db.db_util import node_query, find_node_by_name_and_type, update_summary_node_info, create_node, \
+    node_activation
 from app.schemas.RequestSchemas import BasicNodeInfoRequest
 from app.utils.excel_util import *
 
 
 def put_activa_desactiva_nodo(id_nodo: str = "ID del nodo a cambiar", activado=True, version:str=None) -> Tuple[dict, int]:
-    nodo = node_query(id_nodo, version)
-    if nodo is None:
-        return dict(success=False, nodo=None, msg="No encontrado"), status.HTTP_404_NOT_FOUND
-    nodo.actualizado, nodo.activado = dt.datetime.now(), activado
-    msg_active = "Nodo activado" if activado else "Nodo desactivado"
-    success, msg = nodo.save_safely()
-    return (dict(success=success, nodo=nodo.to_dict(), msg=msg_active if success else "No able to activate"),
+    success, node = node_activation(id_nodo, activado, version)
+    return (dict(success=success, nodo=node, msg=f'activado {activado}' if success else "No able to activate"),
             status.HTTP_200_OK if success else status.HTTP_400_BAD_REQUEST)
 
 

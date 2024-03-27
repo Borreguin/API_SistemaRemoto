@@ -63,7 +63,7 @@ class V2SREntityReportDetails(EmbeddedDocument):
         self.consignaciones_acumuladas_minutos = sum([c.t_minutos for c in self.consignaciones if c.t_minutos > 0])
         self.periodo_efectivo_minutos = self.periodo_evaluacion_minutos - self.consignaciones_acumuladas_minutos
 
-        if self.periodo_efectivo_minutos <= 0:
+        if self.periodo_efectivo_minutos <= 0 or sum([1 for rb in self.reportes_instalaciones if rb.consignada_totalmente]) == len(self.reportes_instalaciones):
             return self.consignacion_total()
 
         if self.consignaciones_acumuladas_minutos < self.periodo_evaluacion_minutos - self.periodo_efectivo_minutos:

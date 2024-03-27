@@ -58,6 +58,8 @@ class TagRequest(BaseModel):
 class TagListRequest(BaseModel):
     tags: List[TagRequest]
 
+class RegexRequest(BaseModel):
+    regex: str = "Expresión regular"
 
 class EditTagRequest(BaseModel):
     tag_name: str = "Nombre editado de la tag, es el nuevo nombre de la tag"
@@ -165,3 +167,4 @@ class BahiaRequest(BaseModel):
     voltaje: float = 0
     bahia_nombre: str = "Nombre de bahía"
     activado: bool = True
+    tags: Optional[List[TagRequest]] = []

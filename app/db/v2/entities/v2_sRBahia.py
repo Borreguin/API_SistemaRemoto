@@ -37,11 +37,12 @@ class V2SRBahia(EmbeddedDocument):
     def to_dict(self):
         return dict(bahia_code=self.bahia_code, bahia_nombre=self.bahia_nombre, voltaje=self.voltaje,
                     tags=[t.to_dict() for t in self.tags] if self.tags is not None else [],
-                    document_id=self.document_id)
+                    document_id=self.document_id, activado=self.activado, created=str(self.created))
 
     def to_summary(self):
         return dict(bahia_code=self.bahia_code, bahia_nombre=self.bahia_nombre, voltaje=self.voltaje,
-                    n_tags=len(self.tags) if self.tags is not None else 0, document_id=self.document_id)
+                    n_tags=len(self.tags) if self.tags is not None else 0, document_id=self.document_id,
+                    activado=self.activado)
 
     def get_document_id(self):
         return str(self.document_id)

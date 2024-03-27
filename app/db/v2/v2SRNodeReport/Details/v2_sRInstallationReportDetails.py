@@ -87,7 +87,7 @@ class V2SRInstallationReportDetails(EmbeddedDocument):
         if len(self.reportes_bahias) > 0 and self.numero_tags_procesadas > 0 and self.periodo_efectivo_minutos > 0:
             self.indisponibilidad_acumulada_minutos = int(sum(
                 [rb.indisponibilidad_acumulada_minutos for rb in self.reportes_bahias if
-                 rb.indisponibilidad_acumulada_minutos != -1]
+                 rb.indisponibilidad_acumulada_minutos != -1 and not rb.consignada_totalmente]
             ))
             self.indisponibilidad_promedio_minutos = self.indisponibilidad_acumulada_minutos / self.numero_tags_procesadas
             self.disponibilidad_promedio_minutos = self.periodo_efectivo_minutos - self.indisponibilidad_promedio_minutos

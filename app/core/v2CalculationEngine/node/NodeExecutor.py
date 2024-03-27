@@ -155,6 +155,7 @@ class NodeExecutor:
         self.update_info_status_report(f'All settings are ok for node {self.node}', 0)
 
     def processing_entities(self):
+        self.report_node.consignaciones = self.node_consignments
         for ix, entity in enumerate(self.entities):
             try:
                 self.update_info_status_report(f'Procesando Entidad: {entity}', ix / len(self.entities))
@@ -171,7 +172,6 @@ class NodeExecutor:
                 self.instalaciones_fallidas += entity_executor.instalaciones_fallidas
                 self.numero_bahias_procesadas += entity_executor.numero_bahias_procesadas
                 self.numero_instalaciones_procesadas += entity_executor.numero_instalaciones_procesadas
-                print("------->", entity_executor.inner_consignments, entity_executor.consignments)
                 self.inner_consignments = unique_consignments(self.inner_consignments, entity_executor.inner_consignments + entity_executor.consignments)
                 self.numero_entidades_procesadas += 1 if not entity_executor.entity_report.consignada_totalmente else 0
             except Exception as e:

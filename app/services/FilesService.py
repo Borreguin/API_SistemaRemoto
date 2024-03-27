@@ -39,9 +39,9 @@ def get_descarga_archivo_del_repositorio(repo="Nombre del repositorio", nombre="
     files = [f for f in os.listdir(path_repo) if os.path.isfile(os.path.join(path_repo, f))]
     files = [str(file).lower() for file in files]
     if nombre.lower() not in files:
-        return dict(success=False, msg="No existe el archivo buscado")
+        return dict(success=False, msg="No existe el archivo buscado"), status.HTTP_404_NOT_FOUND
     # resp = send_from_directory(repo, nombre, as_attachment=True)
     # return set_max_age_to_response(resp, 3)
     file_path = os.path.join(path_repo, nombre)
     return FileResponse(path=file_path, filename=nombre, media_type='application/octet-stream',
-                        content_disposition_type="attachment")
+                        content_disposition_type="attachment"), status.HTTP_200_OK

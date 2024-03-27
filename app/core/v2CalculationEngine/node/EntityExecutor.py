@@ -186,7 +186,7 @@ class EntityExecutor:
                 error_log.error(f'{msg} \n{traceback.format_exc()}')
                 self.instalaciones_fallidas.append(installation.fetch().to_summary())
 
-        self.entity_report.periodo_evaluacion_minutos = get_total_time_in_minutes(self.entity_time_ranges)
+        self.entity_report.periodo_evaluacion_minutos = self.minutes_in_period
         self.entity_report.consignaciones = self.consignments
         self.entity_report.consignaciones_internas = self.inner_consignments
         self.entity_report.calculate()

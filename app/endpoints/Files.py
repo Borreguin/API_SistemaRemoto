@@ -31,7 +31,7 @@ def obtiene_lista_archivos_en_repositorio(repo="Nombre del repositorio",
     return resp
 
 
-file_uri = '/file/{repo}/{nombre}'
+file_uri = '/-/file/{repo}/{nombre}'
 
 
 @router.get(file_uri, response_class=FileResponse)
